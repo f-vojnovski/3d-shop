@@ -1,0 +1,30 @@
+.header {
+  background: var(--clr-2);
+  padding: 20px;
+  margin: 0 0 15px 0;
+  text-align: center;
+  color: white;
+  font-size: 15px;
+  display: flex;
+  flex-direction: row;
+  gap: 70px;
+  font-size: large;
+}
+
+.title {
+  justify-content: start;
+  color: var(--clr-4);
+}
+
+.navigation {
+  margin-left: auto;
+  margin-right: 0;
+  display: flex;
+  gap: 9px;
+  align-self: center;
+  color: var(--clr-1);
+}
+
+.navigation_item {
+  font-weight: 450;
+}

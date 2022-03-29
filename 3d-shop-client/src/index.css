@@ -1,0 +1,22 @@
+:root {
+  /* color palette */
+  --clr-1: #6ccff6;
+  --clr-2: #001011;
+  --clr-3: #757780;
+  --clr-4: #fffffc;
+  --clr-5: #98ce00;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
