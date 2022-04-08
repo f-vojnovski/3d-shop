@@ -20,3 +20,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.bolded-label {
+  font-weight: 500;
+  color: greenyellow;
+}
+
+.max-width-350 {
+  max-width: 350px;
+}
+
+.max-width-1600 {
+  max-width: 1600px;
+}
+
+.font-size-small {
+  font-size: 0.8rem;
+}
