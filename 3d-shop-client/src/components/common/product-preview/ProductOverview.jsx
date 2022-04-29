@@ -10,8 +10,8 @@ const ProductOverview = (props) => {
           ></img>
         </div>
         <div className="ms-2 font-size-small">
-          <div>3d airplane model + animations + ratio</div>
-          <div className="bolded-label">50$</div>
+          <div>{props.name}</div>
+          <div className="bolded-label">{props.price}</div>
         </div>
       </div>
     </div>
