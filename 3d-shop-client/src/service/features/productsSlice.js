@@ -8,6 +8,7 @@ const initialState = {
   products: [],
   status: "idle",
   error: null,
+  selectedProduct: null,
 };
 
 export const productsSlice = createSlice({
@@ -28,7 +29,27 @@ export const productsSlice = createSlice({
       .addCase(fetchProducts.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message;
-      });
+      })
+      .addCase(
+        fetchProductById.pending,
+        (state, action) => {
+          state.status = "loading";
+        }
+      )
+      .addCase(
+        fetchProductById.fulfilled,
+        (state, action) => {
+          state.status = "succeeded";
+          state.selectedProduct = action.payload;
+        }
+      )
+      .addCase(
+        fetchProductById.rejected,
+        (state, action) => {
+          state.status = "failed";
+          state.error = action.error.message;
+        }
+      );
   },
 });
 
@@ -36,10 +57,8 @@ export default productsSlice.reducer;
 
 export const selectAllProducts = (state) => state.products;
 
-export const selectProductById = (state, productId) =>
-  state.products.products.find(
-    (product) => (product.id == productId)
-  );
+export const getSelectedProduct = (state) =>
+  state.products.selectedProduct;
 
 export const fetchProducts = createAsyncThunk(
   "products/getProducts",
@@ -59,4 +78,4 @@ export const fetchProductById = createAsyncThunk(
     );
     return response.data;
   }
-)
+);
