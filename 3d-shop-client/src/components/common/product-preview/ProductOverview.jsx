@@ -1,4 +1,6 @@
-const ProductOverview = (props) => {
+import { Link } from "react-router-dom";
+
+const ProductOverview = (product) => {
   return (
     <div>
       <div className="card max-width-350">
@@ -9,9 +11,20 @@ const ProductOverview = (props) => {
             alt="Thumbnail not availbale"
           ></img>
         </div>
-        <div className="ms-2 font-size-small">
-          <div>{props.name}</div>
-          <div className="bolded-label">{props.price}</div>
+        <div className="row">
+          <div className="col-6">
+            <div className="ms-2">
+              <Link
+                to={`/products/${product.id}`}
+                className="link-dark"
+              >
+                <div>{product.name}</div>
+              </Link>
+              <div className="bolded-label">
+                ${product.price}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

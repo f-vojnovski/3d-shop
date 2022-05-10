@@ -1,6 +1,6 @@
 import "./App.css";
 import Header from "./components/common/header/Header";
-import ModelView from "./components/pages/model-page/ModelView";
+import SingleProductView from "./components/pages/model-page/SingleProductView";
 import ModelsListPage from "./components/pages/models-list-page/ModelsListPage";
 import RegisterPage from "./components/pages/register-page/RegisterPage";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -31,7 +31,7 @@ const App = () => {
               </Fragment>
             }
           />
-          <Route path="/model" element={<ModelView />} />
+          <Route exact path="products/:productId" element={<SingleProductView/>}/>
         </Routes>
       </div>
     </Router>

@@ -37,8 +37,8 @@ export default productsSlice.reducer;
 export const selectAllProducts = (state) => state.products;
 
 export const selectProductById = (state, productId) =>
-  state.products.find(
-    (product) => (product.id = productId)
+  state.products.products.find(
+    (product) => (product.id == productId)
   );
 
 export const fetchProducts = createAsyncThunk(
@@ -50,3 +50,13 @@ export const fetchProducts = createAsyncThunk(
     return response.data;
   }
 );
+
+export const fetchProductById = createAsyncThunk(
+  "products/getById",
+  async (productId) => {
+    const response = await client.get(
+      `http://127.0.0.1:8000/api/products/${productId}`
+    );
+    return response.data;
+  }
+)

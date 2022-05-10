@@ -1,7 +1,22 @@
+import { useSelector } from "react-redux";
+import { selectProductById } from "../../../service/features/productsSlice";
 import ModelDisplayer from "../../common/model-displayer/ModelDisplayer";
-import styles from "./ModelView.module.css";
+import styles from "./SingleProductView.module.css";
+import { useParams } from "react-router-dom";
 
-const ModelView = () => {
+const SingleProductView = ({match}) => {  
+  const params = useParams();
+
+  const productId = params.productId;
+
+  const product = useSelector((state) => selectProductById(state, productId))
+
+  if (!product) {
+    return <div>
+      Couldn't find product.
+    </div>
+  }
+
   return (
     <div className={styles.view_container}>
       <div className={styles.title}>
@@ -23,4 +38,4 @@ const ModelView = () => {
   );
 };
 
-export default ModelView;
+export default SingleProductView;

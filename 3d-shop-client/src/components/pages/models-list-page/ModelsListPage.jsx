@@ -17,8 +17,6 @@ const ModelsListPage = () => {
     (state) => state.products.error
   );
 
-  console.log(products);
-
   let content;
 
   useEffect(() => {
@@ -28,15 +26,18 @@ const ModelsListPage = () => {
   }, [productsStatus, dispatch]);
 
   if (productsStatus === "succeeded") {
-    const renderedProducts = products.products.map((product, i) => (
-      <div className="col-sm-6 col-md-3 mb-2" key={i}>
-        <ProductOverview
-          name={product.name}
-          description={product.description}
-          price={product.price}
-        ></ProductOverview>
-      </div>
-    ));
+    const renderedProducts = products.products.map(
+      (product) => (
+        <div className="col-sm-6 col-md-3 mb-2" key={product.id}>
+          <ProductOverview
+            id={product.id}
+            name={product.name}
+            description={product.description}
+            price={product.price}
+          ></ProductOverview>
+        </div>
+      )
+    );
 
     content = <div className="row">{renderedProducts}</div>;
   }

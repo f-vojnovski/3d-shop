@@ -23,7 +23,8 @@ code {
 
 .bolded-label {
   font-weight: 500;
-  color: greenyellow;
+  color: black;
+  font-size: 1.2rem;
 }
 
 .max-width-350 {
@@ -32,8 +33,4 @@ code {
 
 .max-width-1600 {
   max-width: 1600px;
-}
-
-.font-size-small {
-  font-size: 0.8rem;
 }

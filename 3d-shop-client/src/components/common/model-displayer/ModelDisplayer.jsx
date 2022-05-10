@@ -1,4 +1,3 @@
-import styles from "./ModelDisplayer.module.css";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 
