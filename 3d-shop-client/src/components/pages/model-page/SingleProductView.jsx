@@ -1,42 +1,38 @@
-import {
-  fetchProductById,
-  getSelectedProduct,
-  selectProductById,
-} from "../../../service/features/productsSlice";
 import ModelDisplayer from "../../common/model-displayer/ModelDisplayer";
 import styles from "./SingleProductView.module.css";
 import { useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useEffect } from "react";
+import {
+  selectProduct,
+  fetchProductById,
+} from "../../../service/features/productSlice";
 
-const SingleProductView = ({ match }) => {
+const SingleProductView = () => {
   const params = useParams();
-
   const productId = params.productId;
 
   const dispatch = useDispatch();
-  const product = useSelector(getSelectedProduct);
+  const product = useSelector(selectProduct);
 
-  const productsStatus = useSelector(
-    (state) => state.products.status
+  const productStatus = useSelector(
+    (state) => state.product.status
   );
 
-  const error = useSelector(
-    (state) => state.products.error
-  );
+  const error = useSelector((state) => state.product.error);
 
   let content;
 
   useEffect(() => {
-    if (productsStatus === "idle") {
+    if (productStatus === "idle") {
       dispatch(fetchProductById(productId));
     }
-  }, [productsStatus, dispatch]);
+  }, [productStatus, dispatch]);
 
-  if (productsStatus === "succeeded") {
+  if (productStatus === "succeeded") {
     content = (
       <div>
-        <div className={styles.title}>{product.name}</div>
+        <div className={styles.title}>{product.product.name}</div>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
             <div
