@@ -27,7 +27,7 @@ const SingleProductView = () => {
     if (productStatus === "idle") {
       dispatch(fetchProductById(productId));
     }
-  }, [productStatus, dispatch]);
+  }, [productStatus, dispatch, productId]);
 
   if (productStatus === "succeeded") {
     content = (
