@@ -37,9 +37,8 @@ class ProductController extends BaseController
         $tdmodelname = uniqid().'.'.$tdmodel->getClientOriginalExtension();
 
         $path = Storage::putFileAs(
-            'obj_files', $tdmodel, $tdmodelname
+            'public/obj_files', $tdmodel, $tdmodelname
         );
-
 
         $newProduct = [
             'name' => $request->input('name'),
@@ -60,6 +59,25 @@ class ProductController extends BaseController
     public function show($id)
     {
         return Product::find($id);
+    }
+
+    /**
+     * Download a 3d model if one is found in database
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function getProductModelUrl($id)
+    {
+        $product = Product::find($id);
+
+        $headers = [
+            'Content-Type' => 'application/pdf',
+        ];
+
+        $fileUrl = Storage::url('obj_files/'.$product['obj_file_path']);
+
+        return asset($fileUrl);
     }
 
     /**

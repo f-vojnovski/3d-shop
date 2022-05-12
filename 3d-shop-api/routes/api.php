@@ -22,6 +22,7 @@ use App\Http\Controllers\AuthController;
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/products/search/{name}', [ProductController::class, 'search']);
+Route::get('/products/getProductModelUrl/{id}', [ProductController::class, 'getProductModelUrl']);
 
 // Auth
 Route::post('/auth/register', [AuthController::class, 'register']);
