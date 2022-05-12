@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use http\Env\Response;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -65,7 +66,7 @@ class ProductController extends BaseController
      * Download a 3d model if one is found in database
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getProductModelUrl($id)
     {
@@ -77,7 +78,10 @@ class ProductController extends BaseController
 
         $fileUrl = Storage::url('obj_files/'.$product['obj_file_path']);
 
-        return asset($fileUrl);
+        return response()->json([
+            'product' => $product,
+            'fileUrl' => $fileUrl
+        ]);
     }
 
     /**
