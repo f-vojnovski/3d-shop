@@ -57,7 +57,6 @@ export const productSlice = createSlice({
               ? "succeeded"
               : "loading";
             state.productUrl = action.payload;
-            console.log(state.productUrl)
           }
         }
       )

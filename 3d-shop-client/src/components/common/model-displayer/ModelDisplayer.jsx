@@ -1,33 +1,31 @@
 import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
-import { Suspense } from "react";
+import { API_URL } from "../../../consts";
+import { Fragment } from "react";
 
-const ModelDisplayer = () => {
-  const fileUrl =
-    "http://127.0.0.1:8000/storage/obj_files/627cd53ad8585.obj";
-
+const ModelDisplayer = (props) => {
+  const fileUrl = `${API_URL}${props.fileUrl}`;
+  console.log(fileUrl);
   const obj = useLoader(OBJLoader, fileUrl);
 
-  return (
+  let content = (
     <Canvas>
       <ambientLight intensity={0.1} />
       <directionalLight
-        color="red"
+        color="yellow"
         position={[3, 0, 3]}
         intensity={0.2}
       />
-      <directionalLight
-        color="blue"
-        position={[-3, -3, -3]}
-      />
+      <directionalLight color="blue" position={[0, 0, 0]} />
       <mesh>
-          <primitive object={obj}></primitive>
+        <primitive object={obj}></primitive>
       </mesh>
       <OrbitControls></OrbitControls>
     </Canvas>
   );
+
+  return <Fragment>{content}</Fragment>;
 };
 
 export default ModelDisplayer;

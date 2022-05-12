@@ -76,7 +76,7 @@ class ProductController extends BaseController
             'Content-Type' => 'application/pdf',
         ];
 
-        $fileUrl = Storage::url('obj_files/'.$product['obj_file_path']);
+        $fileUrl = Storage::url($product['obj_file_path']);
 
         return response()->json([
             'fileUrl' => $fileUrl

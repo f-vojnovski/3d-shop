@@ -48,7 +48,7 @@ const SingleProductView = () => {
               className={styles.model_container_dummy}
             ></div>
             <div className={styles.model}>
-              <ModelDisplayer></ModelDisplayer>
+              <ModelDisplayer fileUrl={product.productUrl.fileUrl}></ModelDisplayer>
             </div>
           </div>
           <div
