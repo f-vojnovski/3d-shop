@@ -11,30 +11,37 @@ import {
   Routes,
 } from "react-router-dom";
 import { Fragment } from "react";
+import { Suspense } from "react";
 
 const App = () => {
   return (
-    <Router>
-      <div className="App">
-        <Header></Header>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/register"
-            element={<RegisterPage />}
-          />
-          <Route
-            path="/products"
-            element={
-              <Fragment>
-                <ModelsListPage />
-              </Fragment>
-            }
-          />
-          <Route exact path="products/:productId" element={<SingleProductView/>}/>
-        </Routes>
-      </div>
-    </Router>
+    <Suspense fallback={<div>Loading</div>}>
+      <Router>
+        <div className="App">
+          <Header></Header>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/register"
+              element={<RegisterPage />}
+            />
+            <Route
+              path="/products"
+              element={
+                <Fragment>
+                  <ModelsListPage />
+                </Fragment>
+              }
+            />
+            <Route
+              exact
+              path="products/:productId"
+              element={<SingleProductView />}
+            />
+          </Routes>
+        </div>
+      </Router>
+    </Suspense>
   );
 };
 

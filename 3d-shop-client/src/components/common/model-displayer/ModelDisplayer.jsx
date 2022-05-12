@@ -1,35 +1,14 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import * as THREE from 'three'
+import * as THREE from "three";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
+import { Suspense } from "react";
 
 const ModelDisplayer = () => {
-  let fileUrl =
-    "http://127.0.0.1:8000/storage/obj_files/627ca2ce77c65.obj";
+  const fileUrl =
+    "http://127.0.0.1:8000/storage/obj_files/627cd53ad8585.obj";
 
-  const loader = new THREE.FileLoader();
-
-  loader.load(
-    // resource URL
-    fileUrl,
-
-    // onLoad callback
-    function (data) {
-      // output the text to the console
-      console.log(data);
-    },
-
-    // onProgress callback
-    function (xhr) {
-      console.log(
-        (xhr.loaded / xhr.total) * 100 + "% loaded"
-      );
-    },
-
-    // onError callback
-    function (err) {
-      console.error("An error happened");
-    }
-  );
+  const obj = useLoader(OBJLoader, fileUrl);
 
   return (
     <Canvas>
@@ -44,8 +23,7 @@ const ModelDisplayer = () => {
         position={[-3, -3, -3]}
       />
       <mesh>
-        <boxGeometry />
-        <meshStandardMaterial color="hotpink" />
+          <primitive object={obj}></primitive>
       </mesh>
       <OrbitControls></OrbitControls>
     </Canvas>
