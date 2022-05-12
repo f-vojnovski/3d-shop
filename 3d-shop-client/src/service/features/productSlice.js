@@ -6,6 +6,9 @@ import { client } from "../api/client";
 
 const initialState = {
   product: null,
+  productUrl: null,
+  productLoaded: false,
+  urlLoaded: false,
   status: "idle",
   error: null,
 };
@@ -25,14 +28,44 @@ export const productSlice = createSlice({
       .addCase(
         fetchProductById.fulfilled,
         (state, action) => {
-          state.status = "succeeded";
-          state.product = action.payload;
+          if (state.status !== "error") {
+            state.productLoaded = true;
+            state.status = state.urlLoaded
+              ? "succeeded"
+              : "loading";
+            state.product = action.payload;
+          }
         }
       )
       .addCase(
         fetchProductById.rejected,
         (state, action) => {
           state.status = "failed";
+          state.productLoaded = "false";
+          state.error = action.error.message;
+        }
+      )
+      .addCase(fetchProductUrl.pending, (state, action) => {
+        state.status = "loading";
+      })
+      .addCase(
+        fetchProductUrl.fulfilled,
+        (state, action) => {
+          if (state.status !== "error") {
+            state.urlLoaded = true;
+            state.status = state.productLoaded
+              ? "succeeded"
+              : "loading";
+            state.productUrl = action.payload;
+            console.log(state.productUrl)
+          }
+        }
+      )
+      .addCase(
+        fetchProductUrl.rejected,
+        (state, action) => {
+          state.status = "failed";
+          state.urlLoaded = false;
           state.error = action.error.message;
         }
       );
@@ -48,6 +81,16 @@ export const fetchProductById = createAsyncThunk(
   async (productId) => {
     const response = await client.get(
       `http://127.0.0.1:8000/api/products/${productId}`
+    );
+    return response.data;
+  }
+);
+
+export const fetchProductUrl = createAsyncThunk(
+  "product/getUrlById",
+  async (productId) => {
+    const response = await client.get(
+      `http://127.0.0.1:8000/api/products/getProductModelUrl/${productId}`
     );
     return response.data;
   }

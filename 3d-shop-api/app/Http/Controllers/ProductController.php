@@ -79,7 +79,6 @@ class ProductController extends BaseController
         $fileUrl = Storage::url('obj_files/'.$product['obj_file_path']);
 
         return response()->json([
-            'product' => $product,
             'fileUrl' => $fileUrl
         ]);
     }

@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import {
   selectProduct,
   fetchProductById,
+  fetchProductUrl,
 } from "../../../service/features/productSlice";
 
 const SingleProductView = () => {
@@ -29,10 +30,18 @@ const SingleProductView = () => {
     }
   }, [productStatus, dispatch, productId]);
 
+  useEffect(() => {
+    if (productStatus === "idle") {
+      dispatch(fetchProductUrl(productId));
+    }
+  }, [productStatus, dispatch, productId]);
+
   if (productStatus === "succeeded") {
     content = (
       <div>
-        <div className={styles.title}>{product.product.name}</div>
+        <div className={styles.title}>
+          {product.product.name}
+        </div>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
             <div
