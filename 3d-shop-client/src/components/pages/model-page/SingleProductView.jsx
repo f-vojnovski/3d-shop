@@ -8,6 +8,8 @@ import {
   fetchProductById,
   fetchProductUrl,
 } from "../../../service/features/productSlice";
+import { ErrorBoundary } from "react-error-boundary";
+import ModelLoaderErrorFallback from "./ModelLoaderErrorFallback";
 
 const SingleProductView = () => {
   const params = useParams();
@@ -48,7 +50,13 @@ const SingleProductView = () => {
               className={styles.model_container_dummy}
             ></div>
             <div className={styles.model}>
-              <ModelDisplayer fileUrl={product.productUrl.fileUrl}></ModelDisplayer>
+              <ErrorBoundary
+                FallbackComponent={ModelLoaderErrorFallback}
+              >
+                <ModelDisplayer
+                  fileUrl={product.productUrl.fileUrl}
+                ></ModelDisplayer>
+              </ErrorBoundary>
             </div>
           </div>
           <div
