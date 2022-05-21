@@ -6,7 +6,6 @@ import { Fragment } from "react";
 
 const ModelDisplayer = (props) => {
   const fileUrl = `${API_URL}${props.fileUrl}`;
-  console.log(fileUrl);
   const obj = useLoader(OBJLoader, fileUrl);
 
   let content = (

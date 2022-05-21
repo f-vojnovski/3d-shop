@@ -10,6 +10,7 @@ import {
 } from "../../../service/features/productSlice";
 import { ErrorBoundary } from "react-error-boundary";
 import ModelLoaderErrorFallback from "./ModelLoaderErrorFallback";
+import { resetProduct } from "../../../service/features/productSlice";
 
 const SingleProductView = () => {
   const params = useParams();
@@ -25,6 +26,17 @@ const SingleProductView = () => {
   const error = useSelector((state) => state.product.error);
 
   let content;
+
+  useEffect(() => {
+    if (
+      product.product &&
+      product.product.id != productId
+    ) {
+      console.log("RESET!");
+      console.log(productId);
+      dispatch(resetProduct());
+    }
+  }, []);
 
   useEffect(() => {
     if (productStatus === "idle") {
