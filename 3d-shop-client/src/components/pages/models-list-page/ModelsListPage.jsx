@@ -5,6 +5,7 @@ import {
   selectAllProducts,
 } from "../../../service/features/productsSlice";
 import { useEffect } from "react";
+import LoadingSpinner from "../../common/spinner/LoadingSpinner";
 
 const ModelsListPage = () => {
   const dispatch = useDispatch();
@@ -25,10 +26,21 @@ const ModelsListPage = () => {
     }
   }, [productsStatus, dispatch]);
 
+  if (productsStatus === "loading") {
+    content = (
+      <div className="d-flex justify-content-center align-items-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   if (productsStatus === "succeeded") {
     const renderedProducts = products.products.map(
       (product) => (
-        <div className="col-sm-6 col-md-3 mb-2" key={product.id}>
+        <div
+          className="col-sm-6 col-md-3 mb-2"
+          key={product.id}
+        >
           <ProductOverview
             id={product.id}
             name={product.name}

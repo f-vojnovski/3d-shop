@@ -11,6 +11,8 @@ import {
 import { ErrorBoundary } from "react-error-boundary";
 import ModelLoaderErrorFallback from "./ModelLoaderErrorFallback";
 import { resetProduct } from "../../../service/features/productSlice";
+import { Spinner } from "react-bootstrap";
+import LoadingSpinner from "../../common/spinner/LoadingSpinner";
 
 const SingleProductView = () => {
   const params = useParams();
@@ -32,8 +34,6 @@ const SingleProductView = () => {
       product.product &&
       product.product.id != productId
     ) {
-      console.log("RESET!");
-      console.log(productId);
       dispatch(resetProduct());
     }
   }, []);
@@ -49,6 +49,14 @@ const SingleProductView = () => {
       dispatch(fetchProductUrl(productId));
     }
   }, [productStatus, dispatch, productId]);
+
+  if (productStatus === "loading") {
+    content = (
+      <div className="d-flex justify-content-center align-items-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (productStatus === "succeeded") {
     content = (
