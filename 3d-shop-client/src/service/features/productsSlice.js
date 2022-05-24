@@ -8,6 +8,7 @@ const initialState = {
   products: [],
   status: "idle",
   error: null,
+  currentPage: 1,
 };
 
 export const productsSlice = createSlice({
@@ -42,6 +43,7 @@ export const fetchProducts = createAsyncThunk(
     const response = await client.get(
       "http://127.0.0.1:8000/api/products/"
     );
-    return response.data;
+    console.log(response);
+    return response.data.data;
   }
 );

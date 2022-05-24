@@ -17,7 +17,7 @@ class ProductController extends BaseController
      */
     public function index()
     {
-        return Product::all();
+        return Product::orderBy("id")->simplePaginate(15);
     }
 
     /**
