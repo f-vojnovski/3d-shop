@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 
 const ProductOverview = (product) => {
   return (
@@ -14,15 +14,10 @@ const ProductOverview = (product) => {
         <div className="row">
           <div className="col-6">
             <div className="ms-2">
-              <Link
-                to={`/products/${product.id}`}
-                className="link-dark"
-              >
+              <Link to={`/products/${product.id}`} className="link-dark">
                 <div>{product.name}</div>
               </Link>
-              <div className="bolded-label">
-                ${product.price}
-              </div>
+              <div className="bolded-label">${product.price}</div>
             </div>
           </div>
         </div>

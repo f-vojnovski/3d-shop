@@ -1,5 +1,5 @@
-import styles from "./RegisterPage.module.css";
-import { Button, input } from "react-bootstrap";
+import styles from './RegisterPage.module.css';
+import { Button, input } from 'react-bootstrap';
 
 const RegisterPage = () => {
   return (
@@ -12,9 +12,7 @@ const RegisterPage = () => {
         </div>
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Email address
-            </label>
+            <label>Email address</label>
             <input
               type="email"
               className="form-control"
@@ -25,38 +23,22 @@ const RegisterPage = () => {
 
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Name
-            </label>
-            <input
-              type=""
-              className="form-control"
-              placeholder="John Doe"
-            />
+            <label>Name</label>
+            <input type="" className="form-control" placeholder="John Doe" />
           </div>
         </div>
 
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-            />
+            <label>Password</label>
+            <input type="password" className="form-control" />
           </div>
         </div>
 
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Confirm password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-            />
+            <label>Confirm password</label>
+            <input type="password" className="form-control" />
           </div>
         </div>
 

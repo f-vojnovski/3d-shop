@@ -1,4 +1,4 @@
-import { Button, input } from "react-bootstrap";
+import { Button, input } from 'react-bootstrap';
 
 const LoginPage = () => {
   return (
@@ -12,24 +12,15 @@ const LoginPage = () => {
 
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Username
-            </label>
-            <input
-              className="form-control"
-            />
+            <label>Username</label>
+            <input className="form-control" />
           </div>
         </div>
 
         <div className="row mt-1">
           <div className="col">
-            <label>
-              Password
-            </label>
-            <input
-              type="password"
-              className="form-control"
-            />
+            <label>Password</label>
+            <input type="password" className="form-control" />
           </div>
         </div>
 
