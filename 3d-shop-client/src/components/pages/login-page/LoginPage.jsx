@@ -1,21 +1,43 @@
 import { Button, input } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectToken, selectUser } from '../../../service/features/authSlice';
+import {
+  getSanctumCookie,
+  selectToken,
+  selectUser,
+} from '../../../service/features/authSlice';
 import { useEffect } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
+import axios from 'axios';
 
 const LoginPage = () => {
+  axios.defaults.withCredentials = true;
+
+  const http = axios.create({
+    baseURL: 'http://localhost:8000',
+    withCredentials: true,
+  });
+
+  useEffect(() => {
+    authenticate();
+  }, []);
+
+  async function authenticate() {
+    if (authStatus === 'idle') {
+      http.get('/sanctum/csrf-cookie').then((res) => {
+        let body = {
+          name: 'peder',
+          password: '123456'
+        }
+        dispatch(postLoginData(body));
+      })    
+    }
+  }
+
   const dispatch = useDispatch();
 
   const user = useSelector(selectUser);
   const token = useSelector(selectToken);
   const authStatus = useSelector((state) => state.auth.status);
-  
-  useEffect(() => {
-    if (authStatus === 'idle') {
-      dispatch(postLoginData('peder', '123456'))
-    }
-  }, []);
 
   return (
     <div>

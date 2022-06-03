@@ -1,12 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { API_URL } from '../../consts';
+import { postRequest } from '../api/axiosClient';
 import { client } from '../api/client';
 
 const initialState = {
   token: null,
   user: null,
   status: 'idle',
-  error: null
+  error: null,
 };
 
 export const authSlice = createSlice({
@@ -40,13 +42,17 @@ export const selectAuthStatus = (state) => state.status;
 
 export const postLoginData = createAsyncThunk(
   'auth/postLoginData',
-  async (name, password) => {
-    let body = {
-      name: name,
-      password: password,
-    };
+  async (body) => {
+    console.log(body)
 
-    const response = await client.post(`${API_URL}/api/auth/login`, body);
+    const response = await postRequest('api/auth/login', body);
     return response.data;
   }
 );
+
+export const getSanctumCookie = createAsyncThunk('auth/getSanctumCookie', async () => {
+  const response = await client.get(`${API_URL}/sanctum/csrf-cookie`, {
+    withCredentials: true,
+  });
+  return response.data;
+});
