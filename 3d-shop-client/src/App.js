@@ -8,6 +8,7 @@ import LoginPage from './components/pages/login-page/LoginPage';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Fragment } from 'react';
 import { Suspense } from 'react';
+import CookiesConsentWrapper from './components/common/cookies-popup/CookiesConsentWrapper';
 
 const App = () => {
   return (
@@ -29,6 +30,7 @@ const App = () => {
             <Route exact path="products/:productId" element={<SingleProductView />} />
           </Routes>
         </div>
+        <CookiesConsentWrapper />
       </Router>
     </Suspense>
   );
