@@ -40,19 +40,12 @@ export const selectToken = (state) => state.token;
 
 export const selectAuthStatus = (state) => state.status;
 
-export const postLoginData = createAsyncThunk(
-  'auth/postLoginData',
-  async (body) => {
-    console.log(body)
-
-    const response = await postRequest('api/auth/login', body);
-    return response.data;
-  }
-);
+export const postLoginData = createAsyncThunk('auth/postLoginData', async (body) => {
+  const response = await postRequest('api/auth/login', body);
+  return response.data;
+});
 
 export const getSanctumCookie = createAsyncThunk('auth/getSanctumCookie', async () => {
-  const response = await client.get(`${API_URL}/sanctum/csrf-cookie`, {
-    withCredentials: true,
-  });
+  const response = await client.get(`${API_URL}/sanctum/csrf-cookie`);
   return response.data;
 });

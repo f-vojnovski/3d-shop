@@ -29,8 +29,8 @@ const App = () => {
             />
             <Route exact path="products/:productId" element={<SingleProductView />} />
           </Routes>
-        </div>
         <CookiesConsentWrapper />
+        </div>
       </Router>
     </Suspense>
   );
