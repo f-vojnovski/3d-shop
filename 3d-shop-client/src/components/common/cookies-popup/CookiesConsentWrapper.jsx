@@ -1,17 +1,18 @@
 import CookieConsent from 'react-cookie-consent';
+import { CONSENT_COOKIE_NAME } from '../../../consts';
 
 const CookiesConsentWrapper = () => {
   return (
     <CookieConsent
       location="bottom"
       buttonText="Accept cookies"
-      cookieName="userConsentToUsingCookies"
+      cookieName={CONSENT_COOKIE_NAME}
       buttonClasses="btn btn-primary"
       overlay="true"
       expires={150}
       onAccept={(acceptedByScrolling) => {
         if (!acceptedByScrolling) {
-          alert('Accept was triggered by user scrolling');
+          alert('User consented to using cookies');
         }
       }}
     >
