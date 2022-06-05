@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { API_URL } from '../../consts';
 import { getRequest, postRequest } from '../api/axiosClient';
 import checkIfUserConsentedToCookies from '../cookies/cookiesConsentChecker';
+import cookies from '../cookies/cookiesWrapper';
 
 const initialState = {
   token: null,
@@ -12,7 +14,9 @@ const initialState = {
 export const authSlice = createSlice({
   name: 'auth',
   initialState: initialState,
-  reducers: {},
+  reducers: {
+
+  },
   extraReducers(builder) {
     builder
       .addCase(postLoginData.pending, (state, action) => {
@@ -32,10 +36,6 @@ export const authSlice = createSlice({
 
 export default authSlice.reducer;
 
-export const selectUser = (state) => state.user;
-
-export const selectToken = (state) => state.token;
-
 export const selectAuthStatus = (state) => state.status;
 
 export const postLoginData = createAsyncThunk('auth/postLoginData', async (body) => {
@@ -43,15 +43,10 @@ export const postLoginData = createAsyncThunk('auth/postLoginData', async (body)
     return;
   }
 
-  const response = await postRequest('api/auth/login', body);
-  return response.data;
-});
-
-export const getSanctumCookie = createAsyncThunk('auth/getSanctumCookie', async () => {
-  if (!checkIfUserConsentedToCookies()) {
-    return;
+  if (!cookies.get('XSRF-TOKEN')) {
+    await getRequest(`sanctum/csrf-cookie`);
   }
 
-  const response = await getRequest(`/sanctum/csrf-cookie`);
+  const response = await postRequest('api/auth/login', body);
   return response.data;
 });

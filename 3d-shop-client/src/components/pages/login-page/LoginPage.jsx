@@ -1,45 +1,31 @@
 import { Button, input } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  getSanctumCookie,
-  selectToken,
-  selectUser,
-} from '../../../service/features/authSlice';
-import { useEffect } from 'react';
+import { selectToken, selectUser } from '../../../service/features/authSlice';
+import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
-import axios from 'axios';
+import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 
 const LoginPage = () => {
-  axios.defaults.withCredentials = true;
+  const auth = useSelector((state) => state.auth);
+  const authStatus = useSelector((state) => state.auth.status);
+  const error = useSelector((state) => state.auth.error);
 
-  const http = axios.create({
-    baseURL: 'http://localhost:8000',
-    withCredentials: true,
-  });
-
-  useEffect(() => {
-    authenticate();
-  }, []);
-
-  async function authenticate() {
-    if (authStatus === 'idle') {
-      http.get('/sanctum/csrf-cookie').then((res) => {
-        let body = {
-          name: 'peder',
-          password: '123456'
-        }
-        dispatch(postLoginData(body));
-      })    
-    }
-  }
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const dispatch = useDispatch();
 
-  const user = useSelector(selectUser);
-  const token = useSelector(selectToken);
-  const authStatus = useSelector((state) => state.auth.status);
+  let onLoginClicked = () => {
+    let body = {
+      name: username,
+      password: password,
+    };
+    dispatch(postLoginData(body));
+  };
 
-  return (
+  let content;
+
+  let defaultState = (
     <div>
       <div className="container-fluid my-auto form_max_width">
         <div className="row mt-1">
@@ -51,25 +37,74 @@ const LoginPage = () => {
         <div className="row mt-1">
           <div className="col">
             <label>Username</label>
-            <input className="form-control" />
+            <input
+              className="form-control"
+              value={username}
+              onInput={(e) => setUsername(e.target.value)}
+            />
           </div>
         </div>
 
         <div className="row mt-1">
           <div className="col">
             <label>Password</label>
-            <input type="password" className="form-control" />
+            <input
+              type="password"
+              className="form-control"
+              value={password}
+              onInput={(e) => setPassword(e.target.value)}
+            />
           </div>
         </div>
 
         <div className="row mt-3">
           <div className="col">
-            <Button>Login</Button>
+            <Button
+              onClick={() => {
+                onLoginClicked();
+              }}
+            >
+              Login
+            </Button>
           </div>
         </div>
+
+        {error && (
+          <div className="row mt-3">
+            <div className="col">
+              <div className="alert alert-danger" role="alert">
+                {error}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+
+  if (authStatus === 'loading') {
+    content = (
+      <div>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (authStatus === 'succeeded') {
+    content = (
+      <div className="row">
+        <div className="col">
+          <h4>You are already logged in!</h4>
+        </div>
+      </div>
+    );
+  }
+
+  if (!content) {
+    content = defaultState;
+  }
+
+  return <div>{content}</div>;
 };
 
 export default LoginPage;
