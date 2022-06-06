@@ -6,12 +6,19 @@ const initialState = {
   status: 'idle',
   error: null,
   currentPage: 1,
+  perPage: null,
+  total: null,
+  pageCount: null,
 };
 
 export const productsSlice = createSlice({
   name: 'products',
   initialState,
-  reducers: {},
+  reducers: {
+    clearProductsStatus(state, action) {
+      state.status = 'idle';
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(fetchProducts.pending, (state, action) => {
@@ -19,7 +26,11 @@ export const productsSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.products = state.products.concat(action.payload);
+        state.products = action.payload.data;
+        state.currentPage = action.payload.current_page;
+        state.perPage = action.payload.per_page;
+        state.total = action.payload.total;
+        state.pageCount = Math.ceil(state.total / state.perPage);
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.status = 'failed';
@@ -32,7 +43,14 @@ export default productsSlice.reducer;
 
 export const selectAllProducts = (state) => state.products;
 
-export const fetchProducts = createAsyncThunk('products/getProducts', async () => {
-  const response = await client.get('http://127.0.0.1:8000/api/products/');
-  return response.data.data;
-});
+export const { clearProductsStatus } = productsSlice.actions;
+
+export const fetchProducts = createAsyncThunk(
+  'products/getProducts',
+  async (pageNumber) => {
+    const response = await client.get(
+      `http://127.0.0.1:8000/api/products?page=${pageNumber}`
+    );
+    return response.data;
+  }
+);

@@ -6,8 +6,18 @@ import {
 } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import ReactPaginate from 'react-paginate';
+import { useNavigate, useParams } from 'react-router-dom';
+import { clearProductsStatus } from '../../../service/features/productsSlice';
 
 const ModelsListPage = () => {
+  const params = useParams();
+  let pageNumber = params.pageNumber;
+
+  if (pageNumber == null) {
+    pageNumber = 1;
+  }
+
   const dispatch = useDispatch();
   const products = useSelector(selectAllProducts);
 
@@ -17,10 +27,24 @@ const ModelsListPage = () => {
   let content;
 
   useEffect(() => {
+    console.log(`page num ${parseInt(pageNumber) + 1}`);
+    console.log(`reducer page num ${parseInt(products.currentPage)}`);
+
     if (productsStatus === 'idle') {
-      dispatch(fetchProducts());
+      dispatch(fetchProducts(pageNumber));
     }
-  }, [productsStatus, dispatch]);
+  }, [productsStatus, dispatch, pageNumber]);
+
+  useEffect(() => {
+    dispatch(clearProductsStatus());
+  }, [pageNumber]);
+
+  let navigate = useNavigate();
+
+  const handlePageClick = (event) => {
+    let requestedPage = event.selected;
+    navigate(`../products/${requestedPage}`);
+  };
 
   if (productsStatus === 'loading') {
     content = (
@@ -42,7 +66,36 @@ const ModelsListPage = () => {
       </div>
     ));
 
-    content = <div className="row">{renderedProducts}</div>;
+    content = (
+      <>
+        <div className="row">{renderedProducts}</div>
+        <div className="row mt-3 mb-3">
+          <div className="col d-flex justify-content-center">
+            <ReactPaginate
+              breakLabel="..."
+              nextLabel="next >"
+              initialPage={parseInt(pageNumber) - 1}
+              disableInitialCallback={true}
+              onPageChange={handlePageClick}
+              pageRangeDisplayed={5}
+              pageCount={products.pageCount}
+              previousLabel="< previous"
+              renderOnZeroPageCount={null}
+              breakClassName={'page-item'}
+              breakLinkClassName={'page-link'}
+              containerClassName={'pagination'}
+              pageClassName={'page-item'}
+              pageLinkClassName={'page-link'}
+              previousClassName={'page-item'}
+              previousLinkClassName={'page-link'}
+              nextClassName={'page-item'}
+              nextLinkClassName={'page-link'}
+              activeClassName={'active'}
+            />
+          </div>
+        </div>
+      </>
+    );
   }
 
   return <div className="container-fluid max-width-1600">{content}</div>;

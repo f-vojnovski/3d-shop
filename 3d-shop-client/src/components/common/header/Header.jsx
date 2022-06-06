@@ -10,7 +10,6 @@ const Header = () => {
   if (auth.user == null) {
     content = <HeaderContentUnauthenticated />;
   } else {
-    console.log(auth.user)
     content = <HeaderContentAuthenticated />;
   }
 

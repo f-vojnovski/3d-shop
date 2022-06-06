@@ -55,7 +55,7 @@ const SingleProductView = () => {
 
   if (productStatus === 'succeeded') {
     content = (
-      <div>
+      <div className={styles.view_container}>
         <div className={styles.title}>{product.product.name}</div>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
@@ -72,7 +72,7 @@ const SingleProductView = () => {
     );
   }
 
-  return <div className={styles.view_container}>{content}</div>;
+  return <div>{content}</div>;
 };
 
 export default SingleProductView;

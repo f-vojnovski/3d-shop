@@ -14,7 +14,7 @@ const ProductOverview = (product) => {
         <div className="row">
           <div className="col-6">
             <div className="ms-2">
-              <Link to={`/products/${product.id}`} className="link-dark">
+              <Link to={`/product/${product.id}`} className="link-dark">
                 <div>{product.name}</div>
               </Link>
               <div className="bolded-label">${product.price}</div>
