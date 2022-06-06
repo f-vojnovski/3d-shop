@@ -34,6 +34,5 @@ export const selectAllProducts = (state) => state.products;
 
 export const fetchProducts = createAsyncThunk('products/getProducts', async () => {
   const response = await client.get('http://127.0.0.1:8000/api/products/');
-  console.log(response);
   return response.data.data;
 });

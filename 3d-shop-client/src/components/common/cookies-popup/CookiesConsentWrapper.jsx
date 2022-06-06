@@ -10,11 +10,6 @@ const CookiesConsentWrapper = () => {
       buttonClasses="btn btn-primary"
       overlay="true"
       expires={150}
-      onAccept={(acceptedByScrolling) => {
-        if (!acceptedByScrolling) {
-          alert('User consented to using cookies');
-        }
-      }}
     >
       This website uses cookies to enhance the user experience.
     </CookieConsent>

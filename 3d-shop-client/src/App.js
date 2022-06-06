@@ -9,6 +9,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { Fragment } from 'react';
 import { Suspense } from 'react';
 import CookiesConsentWrapper from './components/common/cookies-popup/CookiesConsentWrapper';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   return (
@@ -29,7 +31,8 @@ const App = () => {
             />
             <Route exact path="products/:productId" element={<SingleProductView />} />
           </Routes>
-        <CookiesConsentWrapper />
+          <CookiesConsentWrapper />
+          <ToastContainer closeButton={true} position="bottom-right" />
         </div>
       </Router>
     </Suspense>
