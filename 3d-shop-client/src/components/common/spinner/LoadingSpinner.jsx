@@ -2,7 +2,7 @@ const LoadingSpinner = () => {
   return (
     <div className="centered-item">
       <div
-        className="spinner-border spinner-dimensions"
+        className="spinner-border"
         role="status"
         style={{ width: '4rem', height: '4rem' }}
       >
