@@ -18,7 +18,6 @@ const LoginPage = () => {
 
   const dispatch = useDispatch();
 
-
   useEffect(() => {
     if (authStatus === 'succeeded') {
       toast.success('You are logged in!');
