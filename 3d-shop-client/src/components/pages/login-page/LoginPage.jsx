@@ -1,9 +1,12 @@
 import { Button, input } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectToken, selectUser } from '../../../service/features/authSlice';
+import { logoutUser, selectToken, selectUser } from '../../../service/features/authSlice';
 import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import { toast, Zoom } from 'react-toastify';
+import { getRequest } from '../../../service/api/axiosClient';
+import axios from 'axios';
 
 const LoginPage = () => {
   const auth = useSelector((state) => state.auth);
@@ -15,6 +18,13 @@ const LoginPage = () => {
 
   const dispatch = useDispatch();
 
+
+  useEffect(() => {
+    if (authStatus === 'succeeded') {
+      toast.success('You are logged in!');
+    }
+  }, [authStatus]);
+
   let onLoginClicked = () => {
     let body = {
       name: username,
@@ -22,6 +32,10 @@ const LoginPage = () => {
     };
     dispatch(postLoginData(body));
   };
+
+  let onLogoutClicked = () => {
+    dispatch(logoutUser(auth.token));
+  }
 
   let content;
 
@@ -95,6 +109,9 @@ const LoginPage = () => {
       <div className="row">
         <div className="col">
           <h4>You are already logged in!</h4>
+          <button onClick={() => {onLogoutClicked()}}>
+            Logout
+          </button>
         </div>
       </div>
     );
