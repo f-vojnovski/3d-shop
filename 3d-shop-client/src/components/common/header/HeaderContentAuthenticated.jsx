@@ -1,10 +1,22 @@
-import { useSelector } from 'react-redux';
-import styles from './Header.module.css';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { Menu, MenuItem, MenuButton } from '@szhsin/react-menu';
+import '@szhsin/react-menu/dist/index.css';
+import { logoutUser } from '../../../service/features/authSlice';
 const HeaderContentAuthenticated = () => {
   const auth = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
 
-  return <div className={`${styles.navigation} me-2`}>{auth.user.name}</div>;
+  const onLogoutClick = () => {
+    dispatch(logoutUser(auth.token));
+  };
+
+  return (
+    <div>
+      <Menu className="me-2" menuButton={<MenuButton>{auth.user.name}</MenuButton>}>
+        <MenuItem onClick={() => onLogoutClick()}>Logout</MenuItem>
+      </Menu>
+    </div>
+  );
 };
 
 export default HeaderContentAuthenticated;

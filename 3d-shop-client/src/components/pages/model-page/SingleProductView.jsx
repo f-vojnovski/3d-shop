@@ -56,7 +56,11 @@ const SingleProductView = () => {
   if (productStatus === 'succeeded') {
     content = (
       <div className={styles.view_container}>
-        <div className={styles.title}>{product.product.name}</div>
+        <div className={styles.title}>
+          <span>{product.product.name}</span>
+          <span> - </span>
+          <span>${product.product.price}</span>
+        </div>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
             <div className={styles.model_container_dummy}></div>

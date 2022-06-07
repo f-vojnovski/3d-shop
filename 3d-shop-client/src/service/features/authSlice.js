@@ -39,9 +39,9 @@ export const authSlice = createSlice({
         state.status = 'loading';
       })
       .addCase(logoutUser.fulfilled, (state, action) => {
+        state.status = 'idle';
         state.token = null;
         state.user = null;
-        state.status = 'idle';
         state.error = null;
       })
       .addCase(logoutUser.rejected, (state, action) => {
