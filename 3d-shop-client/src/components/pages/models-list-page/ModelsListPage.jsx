@@ -27,7 +27,7 @@ const ModelsListPage = () => {
   let content;
 
   useEffect(() => {
-    console.log(`page num ${parseInt(pageNumber) + 1}`);
+    console.log(`page num ${parseInt(pageNumber)}`);
     console.log(`reducer page num ${parseInt(products.currentPage)}`);
 
     if (productsStatus === 'idle') {
@@ -42,7 +42,7 @@ const ModelsListPage = () => {
   let navigate = useNavigate();
 
   const handlePageClick = (event) => {
-    let requestedPage = event.selected;
+    let requestedPage = event.selected+1;
     navigate(`../products/${requestedPage}`);
   };
 
@@ -74,7 +74,7 @@ const ModelsListPage = () => {
             <ReactPaginate
               breakLabel="..."
               nextLabel="next >"
-              initialPage={parseInt(pageNumber) - 1}
+              initialPage={parseInt(pageNumber)-1}
               disableInitialCallback={true}
               onPageChange={handlePageClick}
               pageRangeDisplayed={5}
