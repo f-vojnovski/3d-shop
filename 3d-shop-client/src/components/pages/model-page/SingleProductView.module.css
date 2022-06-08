@@ -7,7 +7,6 @@
 }
 
 .title {
-  background: var(--clr-5);
   font-size: larger;
   padding-left: 5px;
   text-align: left;
@@ -40,6 +39,5 @@
 
 .model_info_container {
   position: relative;
-  max-width: 40%;
-  background-color: yellow;
+  width: 40%;
 }

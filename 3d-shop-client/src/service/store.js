@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import productsReducer from './features/productsSlice';
 import productReducer from './features/productSlice';
 import authReducer from './features/authSlice';
+import cartReducer from './features/cartSlice';
 import {
   persistStore,
   persistReducer,
@@ -19,13 +20,14 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  whitelist: ['auth']
+  whitelist: ['auth', 'cart'],
 };
 
 const reducers = combineReducers({
   products: productsReducer,
   product: productReducer,
   auth: authReducer,
+  cart: cartReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, reducers);
@@ -42,4 +44,4 @@ const store = configureStore({
 
 let persistor = persistStore(store);
 
-export {store, persistor};
+export { store, persistor };

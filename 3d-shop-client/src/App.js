@@ -7,7 +7,6 @@ import CookiesConsentWrapper from './components/common/cookies-popup/CookiesCons
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import RoutesWrapper from './routes/RouterWrapper';
-import ShoppingCart from './components/common/shopping-cart/ShoppingCart';
 
 const App = () => {
   return (
@@ -17,8 +16,7 @@ const App = () => {
           <Header></Header>
           <RoutesWrapper />
           <CookiesConsentWrapper />
-          <ShoppingCart />
-          <ToastContainer closeButton={true} position="bottom-right" />
+          <ToastContainer closeButton={true} position="bottom-center" />
         </div>
       </Router>
     </Suspense>

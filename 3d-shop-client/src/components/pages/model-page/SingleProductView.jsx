@@ -11,8 +11,8 @@ import {
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import { resetProduct } from '../../../service/features/productSlice';
-import { Spinner } from 'react-bootstrap';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import AddToCartButton from './AddToCardButton/AddToCartButton';
 
 const SingleProductView = () => {
   const params = useParams();
@@ -25,7 +25,9 @@ const SingleProductView = () => {
 
   const error = useSelector((state) => state.product.error);
 
-  let content;
+  const shoppingCart = useSelector((state) => state.cart);
+
+  let content = '';
 
   useEffect(() => {
     if (product.product && product.product.id != productId) {
@@ -53,14 +55,23 @@ const SingleProductView = () => {
     );
   }
 
+  if (productStatus === 'error') {
+    content = (
+      <div className="d-flex justify-content-center align-items-center">
+        <div className="row mt-3">
+          <div className="col">
+            <div className="alert alert-danger" role="alert">
+              Error while loading product!
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (productStatus === 'succeeded') {
     content = (
       <div className={styles.view_container}>
-        <div className={styles.title}>
-          <span>{product.product.name}</span>
-          <span> - </span>
-          <span>${product.product.price}</span>
-        </div>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
             <div className={styles.model_container_dummy}></div>
@@ -70,7 +81,27 @@ const SingleProductView = () => {
               </ErrorBoundary>
             </div>
           </div>
-          <div className={styles.model_info_container}></div>
+          <div className={styles.model_info_container}>
+            <div className="container w-100 h-100">
+              <div className="row mb-2 large-font">
+                <div className="col">
+                  <span className="bolded-label">{product.product.name}</span>
+                  <span> - </span>
+                  <span>${product.product.price}</span>
+                </div>
+              </div>
+              <div className="row mb-2">
+                <div className="col">
+                  <span>{product.product.description}</span>
+                </div>
+              </div>
+              <div className="d-flex row mt-auto">
+                <div className="col d-flex align-self-end">
+                  <AddToCartButton product={product.product} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

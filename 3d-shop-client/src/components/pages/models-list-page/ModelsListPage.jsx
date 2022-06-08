@@ -27,9 +27,6 @@ const ModelsListPage = () => {
   let content;
 
   useEffect(() => {
-    console.log(`page num ${parseInt(pageNumber)}`);
-    console.log(`reducer page num ${parseInt(products.currentPage)}`);
-
     if (productsStatus === 'idle') {
       dispatch(fetchProducts(pageNumber));
     }
