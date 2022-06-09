@@ -1,5 +1,4 @@
-import styles from './RegisterPage.module.css';
-import { Button, input } from 'react-bootstrap';
+import { Button } from 'react-bootstrap';
 
 const RegisterPage = () => {
   return (

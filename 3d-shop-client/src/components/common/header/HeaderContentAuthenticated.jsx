@@ -4,6 +4,7 @@ import '@szhsin/react-menu/dist/index.css';
 import { logoutUser } from '../../../service/features/authSlice';
 import ShoppingCart from '../shopping-cart/ShoppingCart';
 import '@szhsin/react-menu/dist/transitions/slide.css';
+import { BsPersonCircle } from 'react-icons/bs';
 
 const HeaderContentAuthenticated = () => {
   const auth = useSelector((state) => state.auth);
@@ -19,7 +20,12 @@ const HeaderContentAuthenticated = () => {
         offsetY={3}
         align="end"
         className="me-2 d-inline"
-        menuButton={<MenuButton>{auth.user.name}</MenuButton>}
+        menuButton={
+          <MenuButton>
+            <BsPersonCircle className="me-2" />
+            {auth.user.name}
+          </MenuButton>
+        }
         transition
       >
         <MenuItem onClick={() => onLogoutClick()}>Logout</MenuItem>

@@ -82,7 +82,7 @@ const SingleProductView = () => {
             </div>
           </div>
           <div className={styles.model_info_container}>
-            <div className="container w-100 h-100">
+            <div className="container-fluid w-100 h-100">
               <div className="row mb-2 large-font">
                 <div className="col">
                   <span className="bolded-label">{product.product.name}</span>
@@ -95,7 +95,7 @@ const SingleProductView = () => {
                   <span>{product.product.description}</span>
                 </div>
               </div>
-              <div className="d-flex row mt-auto">
+              <div className="d-flex row mt-auto mb-0">
                 <div className="col d-flex align-self-end">
                   <AddToCartButton product={product.product} />
                 </div>

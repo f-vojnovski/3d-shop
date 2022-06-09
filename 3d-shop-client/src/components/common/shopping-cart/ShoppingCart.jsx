@@ -1,21 +1,29 @@
 import { Menu, MenuButton, MenuDivider, MenuItem } from '@szhsin/react-menu';
 import { FaShoppingCart } from 'react-icons/fa';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import '@szhsin/react-menu/dist/transitions/slide.css';
+import { MdOutlineClear } from 'react-icons/md';
+import { IoBagCheckOutline } from 'react-icons/io5';
+import { clearCart } from '../../../service/features/cartSlice';
+import styles from './ShoppingCart.module.css';
 
 const ShoppingCart = () => {
-  const onCheckoutClick = () => {};
-
   const cartItems = useSelector((state) => state.cart.products);
   const totalPrice = useSelector((state) => state.cart.total);
 
-  console.log(cartItems);
+  const dispatch = useDispatch();
+
+  const onCheckoutClick = () => {};
+  const onClearCartClick = () => {
+    dispatch(clearCart());
+  };
 
   const renderedProducts = cartItems.map((product, i) => (
     <div className="row p-1" key={i}>
-      <div className="col">
+      <div className="col text-truncate">
         <span>
-          <span className="bolded-label">${product.price}</span> - {product.name}
+          <span className="bolded-label">${product.price}</span> -{' '}
+          {product.name}
         </span>
       </div>
     </div>
@@ -26,7 +34,7 @@ const ShoppingCart = () => {
       <Menu
         align="end"
         offsetY={3}
-        className="d-inline"
+        menuClassName={styles.cart_menu}
         menuButton={
           <MenuButton>
             <FaShoppingCart className="large-font" />
@@ -40,7 +48,11 @@ const ShoppingCart = () => {
           </div>
         </div>
         <MenuDivider />
-        <MenuItem className="p-1 m-0" onClick={() => onCheckoutClick()}>
+        <MenuItem
+          className="p-1 m-0 text-success bolded-label"
+          onClick={() => onCheckoutClick()}
+        >
+          <IoBagCheckOutline className="pe-1" />
           Checkout
         </MenuItem>
         <MenuDivider />
@@ -50,6 +62,10 @@ const ShoppingCart = () => {
           </div>
         </div>
         {renderedProducts}
+        <MenuDivider />
+        <MenuItem className="p-1 m-0 text-danger" onClick={() => onClearCartClick()}>
+          <MdOutlineClear className="pe-1" /> Clear cart
+        </MenuItem>
       </Menu>
     </span>
   );

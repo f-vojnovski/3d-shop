@@ -32,10 +32,6 @@ code {
   max-width: 1600px;
 }
 
-.min-width-500 {
-  min-width: 500px !important;
-}
-
 .centered-item {
   position: absolute;
   top: 50%;

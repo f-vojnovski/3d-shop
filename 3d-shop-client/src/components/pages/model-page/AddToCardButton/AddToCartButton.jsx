@@ -1,5 +1,5 @@
 import { MdAddShoppingCart } from 'react-icons/md';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { addToCart } from '../../../../service/features/cartSlice';
 
@@ -8,9 +8,16 @@ const AddToCartButton = (props) => {
 
   const dispatch = useDispatch();
 
+  const totalPrice = useSelector((state) => state.cart.total);
+  const lastAddToCartSuccessful = useSelector((state) => state.cart.lastActionSucceeded);
+
   const onAddToCartClick = () => {
-    toast.success('Item added to cart');
     dispatch(addToCart(product));
+    if (lastAddToCartSuccessful) {
+      toast.success(`Item added to cart. Your current total is $${totalPrice}`);
+    } else {
+      toast.info(`This item is already in your shopping cart.`);
+    }
   };
 
   return (
