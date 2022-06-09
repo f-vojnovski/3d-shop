@@ -6,14 +6,18 @@ import { MdOutlineClear } from 'react-icons/md';
 import { IoBagCheckOutline } from 'react-icons/io5';
 import { clearCart } from '../../../service/features/cartSlice';
 import styles from './ShoppingCart.module.css';
+import { useNavigate } from 'react-router-dom';
 
 const ShoppingCart = () => {
   const cartItems = useSelector((state) => state.cart.products);
   const totalPrice = useSelector((state) => state.cart.total);
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const onCheckoutClick = () => {};
+  const onCheckoutClick = () => {
+    navigate(`../checkout`);
+  };
   const onClearCartClick = () => {
     dispatch(clearCart());
   };
