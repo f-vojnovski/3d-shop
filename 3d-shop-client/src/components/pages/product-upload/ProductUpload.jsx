@@ -1,40 +1,39 @@
 import { useState } from 'react';
 import { Button } from 'react-bootstrap';
-import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
-import { ErrorBoundary } from 'react-error-boundary';
-import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
-import { Suspense } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { uploadProduct } from '../../../service/features/productUploadSlice';
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
   const [productDescription, setProductDescription] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productFile, setProductFile] = useState('');
 
+  const dispatch = useDispatch();
+
+  const token = useSelector((state) => state.auth.token);
+
   const onUploadClicked = () => {
-    console.log('product upload');
-  };
+    const formData = new FormData();
 
-  let productView;
-
-  const handleModelAttachment = async(e) => {
-    let file = e.target.files[0];
-    let objectUrl = URL.createObjectURL(file);
-    let blob = await fetch(objectUrl).then(r => r.blob());
-    console.log(blob);
-  };
-
-  if (!productFile) {
-    productView = (
-      <div className="bg-primary text-light">File preview will appear here</div>
-    );
-  } else {
     console.log(productFile);
-    productView = (
-      <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-        <ModelDisplayer fileUrl={productFile} isLocalFile="true"></ModelDisplayer>
-      </ErrorBoundary>
-    );
-  }
+
+    formData.append('model', productFile);
+    formData.append('name', productName);
+    formData.append('price', productPrice);
+    formData.append('description', productDescription);
+
+    let obj = {
+      body: formData,
+      token: token,
+    };
+
+    dispatch(uploadProduct(obj));
+  };
+
+  const handleModelAttachment = (e) => {
+    var file = e.target.files[0];
+    setProductFile(file);
+  };
 
   return (
     <div className="container-fluid my-auto form_max_width">
@@ -93,14 +92,9 @@ const ProductUploadPage = () => {
             <input
               className="form-control"
               type="file"
-              value={productFile}
-              onInput={(e) => handleModelAttachment(e)}
+              onChange={(e) => handleModelAttachment(e)}
             />
           </div>
-        </div>
-
-        <div className="row mt-1">
-          <div className="col">{productView}</div>
         </div>
 
         <div className="row mt-3">

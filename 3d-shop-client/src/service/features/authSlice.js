@@ -1,12 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { API_URL } from '../../consts';
-import {
-  getRequest,
-  postRequest,
-  postRequestWithToken,
-  setAxiosBearerToken,
-  setBearerToken,
-} from '../api/axiosClient';
+import { getRequest, postRequest, postRequestWithToken } from '../api/axiosClient';
 import checkIfUserConsentedToCookies from '../cookies/cookiesConsentChecker';
 import cookies from '../cookies/cookiesWrapper';
 
