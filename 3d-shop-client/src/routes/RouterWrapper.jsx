@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, useRoutes } from 'react-router-dom';
 import CheckoutPage from '../components/pages/checkout/CheckoutPage';
 import LoginPage from '../components/pages/login/LoginPage';
+import ProductUploadPage from '../components/pages/product-upload/ProductUpload';
 import SingleProductView from '../components/pages/product-view/SingleProductView';
 import ModelsListPage from '../components/pages/products-list/ModelsListPage';
 import RegisterPage from '../components/pages/register/RegisterPage';
@@ -14,6 +15,7 @@ const RoutesWrapper = () =>
     { path: '/products/:pageNumber', element: <ModelsListPage /> },
     { path: '/product/:productId', element: <SingleProductView /> },
     { path: '/checkout', element: <CheckoutPage /> },
+    { path: '/upload', element: <ProductUploadPage /> },
   ]);
 
 export default RoutesWrapper;

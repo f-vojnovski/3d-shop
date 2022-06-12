@@ -5,7 +5,12 @@ import { API_URL } from '../../../consts';
 import { Fragment } from 'react';
 
 const ModelDisplayer = (props) => {
-  const fileUrl = `${API_URL}${props.fileUrl}`;
+  let fileUrl;
+  if (!props.isLocalFile) {
+    fileUrl = `${API_URL}${props.fileUrl}`;
+  } else {
+    fileUrl = props.fileUrl;
+  }
   const obj = useLoader(OBJLoader, fileUrl);
 
   let content = (
