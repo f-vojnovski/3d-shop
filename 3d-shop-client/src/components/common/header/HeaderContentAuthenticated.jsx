@@ -5,6 +5,8 @@ import { logoutUser } from '../../../service/features/authSlice';
 import ShoppingCart from '../shopping-cart/ShoppingCart';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import { BsPersonCircle } from 'react-icons/bs';
+import { Link } from 'react-router-dom';
+import { MdLogout, MdOutlineAddCircle } from 'react-icons/md';
 
 const HeaderContentAuthenticated = () => {
   const auth = useSelector((state) => state.auth);
@@ -20,6 +22,7 @@ const HeaderContentAuthenticated = () => {
         offsetY={3}
         align="end"
         className="me-2 d-inline"
+        menuClassName="p-1"
         menuButton={
           <MenuButton>
             <BsPersonCircle className="me-2" />
@@ -28,7 +31,15 @@ const HeaderContentAuthenticated = () => {
         }
         transition
       >
-        <MenuItem onClick={() => onLogoutClick()}>Logout</MenuItem>
+        <MenuItem className="p-1">
+          <Link className="text-link" to="/upload">
+            <MdOutlineAddCircle /> Upload product
+          </Link>
+        </MenuItem>
+        <MenuItem className="p-1" onClick={() => onLogoutClick()}>
+          {' '}
+          <MdLogout /> Logout
+        </MenuItem>
       </Menu>
       <ShoppingCart />
     </div>
