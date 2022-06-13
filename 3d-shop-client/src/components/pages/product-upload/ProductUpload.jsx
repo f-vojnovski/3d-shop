@@ -15,8 +15,6 @@ const ProductUploadPage = () => {
   const onUploadClicked = () => {
     const formData = new FormData();
 
-    console.log(productFile);
-
     formData.append('model', productFile);
     formData.append('name', productName);
     formData.append('price', productPrice);

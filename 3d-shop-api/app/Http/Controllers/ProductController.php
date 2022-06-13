@@ -6,6 +6,7 @@ use http\Env\Response;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends BaseController
@@ -45,7 +46,8 @@ class ProductController extends BaseController
             'name' => $request->input('name'),
             'price' => $request->input('price'),
             'description'=> $request->input('description'),
-            'obj_file_path' => $path
+            'obj_file_path' => $path,
+            'user_id' => Auth::user()->getAuthIdentifier()
         ];
 
         return Product::create($newProduct);
@@ -71,10 +73,6 @@ class ProductController extends BaseController
     public function getProductModelUrl($id)
     {
         $product = Product::find($id);
-
-        $headers = [
-            'Content-Type' => 'application/pdf',
-        ];
 
         $fileUrl = Storage::url($product['obj_file_path']);
 
