@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Button } from 'react-bootstrap';
+import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadProduct } from '../../../service/features/productUploadSlice';
+import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
+import {fileToDataUri} from '../../../service/util/fileToDataUri'
+import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
+
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
   const [productDescription, setProductDescription] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [productFile, setProductFile] = useState('');
+  const [modelUri, setModelUri] = useState('');
 
   const dispatch = useDispatch();
 
@@ -31,7 +37,23 @@ const ProductUploadPage = () => {
   const handleModelAttachment = (e) => {
     var file = e.target.files[0];
     setProductFile(file);
+
+    fileToDataUri(file).then((uri) => {
+      setModelUri(uri);
+    });
   };
+
+  let productPreview;
+
+  if (!modelUri) {
+    productPreview = <></>;
+  } else {
+    productPreview = (
+      <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
+        <ModelDisplayer fileUrl={modelUri} isLocalFile={true} />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <div className="container-fluid my-auto form_max_width">
@@ -93,6 +115,10 @@ const ProductUploadPage = () => {
               onChange={(e) => handleModelAttachment(e)}
             />
           </div>
+        </div>
+
+        <div className="row mt-1">
+          <div className="col">{productPreview}</div>
         </div>
 
         <div className="row mt-3">
