@@ -38,7 +38,10 @@ export const authSlice = createSlice({
         state.error = null;
       })
       .addCase(logoutUser.rejected, (state, action) => {
-        state.status = 'failed';
+        state.status = 'idle';
+        state.token = null;
+        state.user = null;
+        state.error = null;
         state.error = action.error.message;
       });
   },

@@ -116,4 +116,24 @@ class ProductController extends BaseController
         return Product::where('name', 'like', '%'.$name.'%')->get();
     }
 
+    /**
+     * Get products for current user
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function getCurrentUserProducts() {
+        $userId = Auth::user()->getAuthIdentifier();
+        return Product::orderBy("id")->where('user_id', $userId)->paginate(16);
+    }
+
+    /**
+     *
+     *
+     * @param  int  $userId
+     * @return \Illuminate\Http\Response
+     */
+    public function getProductsForUser($userId) {
+        return Product::orderBy("id")->where('user_id', $userId)->paginate(16);
+    }
 }
