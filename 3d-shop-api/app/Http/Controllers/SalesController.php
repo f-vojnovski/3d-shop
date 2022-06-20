@@ -7,6 +7,7 @@ use App\Models\Sale;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class SalesController extends BaseController
 {
@@ -23,6 +24,8 @@ class SalesController extends BaseController
             return;
         }
 
+        DB::beginTransaction();
+
         $sales = [];
         foreach ($request->input('products') as $item) {
             $product = Product::find($item['id']);
@@ -34,9 +37,23 @@ class SalesController extends BaseController
                 'seller_id' => $product['user_id']
             ];
 
+            $existingSale = Sale::where('buyer_id', $newSale['buyer_id'])
+                ->where('product_id', $newSale['product_id'])
+                ->where('seller_id', $newSale['seller_id'])
+                ->first();
+
+            if ($existingSale != null) {
+                // todo: return proper error
+                DB::rollBack();
+                return;
+            }
+
             $saleDb = Sale::create($newSale);
             array_push($sales, $saleDb);
         }
+
+        DB::commit();
+
         return response()->json($sales);
     }
 }
