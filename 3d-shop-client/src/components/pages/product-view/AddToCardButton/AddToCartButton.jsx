@@ -9,12 +9,12 @@ const AddToCartButton = (props) => {
   const dispatch = useDispatch();
 
   const totalPrice = useSelector((state) => state.cart.total);
-  const lastAddToCartSuccessful = useSelector((state) => state.cart.lastActionSucceeded);
+  const productsInCart = useSelector((state) => state.cart.products)
 
   const onAddToCartClick = () => {
-    dispatch(addToCart(product));
-    if (lastAddToCartSuccessful) {
-      toast.success(`Item added to cart. Your current total is $${totalPrice}`);
+    if (!productsInCart.some(e => e.id == product.id)) {
+      dispatch(addToCart(product));
+      toast.success(`Item added to cart.`);
     } else {
       toast.info(`This item is already in your shopping cart.`);
     }

@@ -4,7 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
-
+use App\Http\Controllers\SalesController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -32,10 +32,12 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{id}', [ProductsController::class, 'update']);
+    Route::put('/products/{id}', [ProductsController::class, 'update'])
+        ->where('id', '[0-9+]');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/sales/buy', [SalesController::class, 'makeSale']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

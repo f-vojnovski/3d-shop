@@ -3,7 +3,6 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   products: [],
   total: 0,
-  lastActionSucceeded: false,
 };
 
 export const cartSlice = createSlice({
@@ -14,7 +13,6 @@ export const cartSlice = createSlice({
       if (state.products.find((x) => x.id == action.payload.id)) {
         return {
           ...state,
-          lastActionSucceeded: false,
         };
       }
 
@@ -22,7 +20,6 @@ export const cartSlice = createSlice({
         ...state,
         products: [...state.products, action.payload],
         total: parseFloat(state.total) + parseFloat(action.payload.price),
-        lastActionSucceeded: true,
       };
     },
     clearCart: (state, action) => {
