@@ -35,6 +35,7 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::put('/products/{id}', [ProductsController::class, 'update'])
         ->where('id', '[0-9+]');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
+    Route::get('/owned-products', [ProductController::class, 'getPurchasedProductsForUser']);
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 

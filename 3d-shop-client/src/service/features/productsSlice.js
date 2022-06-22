@@ -37,10 +37,10 @@ export const productsSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message;
       })
-      .addCase(fetchProductsForCurrentUser.pending, (state, action) => {
+      .addCase(fetchUploadedProductsForCurrentUser.pending, (state, action) => {
         state.status = 'loading';
       })
-      .addCase(fetchProductsForCurrentUser.fulfilled, (state, action) => {
+      .addCase(fetchUploadedProductsForCurrentUser.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.products = action.payload.data;
         state.currentPage = action.payload.current_page;
@@ -48,7 +48,22 @@ export const productsSlice = createSlice({
         state.total = action.payload.total;
         state.pageCount = Math.ceil(state.total / state.perPage);
       })
-      .addCase(fetchProductsForCurrentUser.rejected, (state, action) => {
+      .addCase(fetchUploadedProductsForCurrentUser.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message;
+      })
+      .addCase(fetchPurchasedProductsForCurrentUser.pending, (state, action) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchPurchasedProductsForCurrentUser.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.products = action.payload.data;
+        state.currentPage = action.payload.current_page;
+        state.perPage = action.payload.per_page;
+        state.total = action.payload.total;
+        state.pageCount = Math.ceil(state.total / state.perPage);
+      })
+      .addCase(fetchPurchasedProductsForCurrentUser.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.error.message;
       });
@@ -71,14 +86,28 @@ export const fetchProducts = createAsyncThunk(
   }
 );
 
-export const fetchProductsForCurrentUser = createAsyncThunk(
-  'products/getProductsForCurrentUser',
+export const fetchUploadedProductsForCurrentUser = createAsyncThunk(
+  'products/getUploadedProductsForCurrentUser',
   async (pageNumber, { getState }) => {
     const state = getState();
     const token = state.auth.token;
 
     const response = await getRequestWithToken(
       `api/current-user-products?page=${pageNumber}`,
+      token
+    );
+    return response.data;
+  }
+);
+
+export const fetchPurchasedProductsForCurrentUser = createAsyncThunk(
+  'products/getPurchasedProductsForCurrentUser',
+  async (pageNumber, { getState }) => {
+    const state = getState();
+    const token = state.auth.token;
+
+    const response = await getRequestWithToken(
+      `api/owned-products?page=${pageNumber}`,
       token
     );
     return response.data;

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends BaseController
 {
@@ -135,5 +136,18 @@ class ProductController extends BaseController
      */
     public function getProductsForUser($userId) {
         return Product::orderBy("id")->where('user_id', $userId)->paginate(16);
+    }
+
+    public function getPurchasedProductsForUser() {
+        $userId = Auth::user()->getAuthIdentifier();
+        return DB::table('products')
+            ->join('sales', 'sales.product_id', '=', 'products.id')
+            ->where('sales.buyer_id', $userId)
+            ->select('products.id as id',
+                'products.name as name',
+                'products.description as description',
+                'products.obj_file_path as obj_file_path',
+                'products.user_id as user_id')
+            ->paginate(16);
     }
 }

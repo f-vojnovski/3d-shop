@@ -7,7 +7,7 @@ import '@szhsin/react-menu/dist/transitions/slide.css';
 import { BsPersonCircle } from 'react-icons/bs';
 import { Link } from 'react-router-dom';
 import { MdLogout, MdOutlineAddCircle } from 'react-icons/md';
-import { BsFillGridFill } from 'react-icons/bs';
+import { BsFillGridFill, BsCollection } from 'react-icons/bs';
 import { GrMoney } from 'react-icons/gr';
 
 const HeaderContentAuthenticated = () => {
@@ -40,7 +40,12 @@ const HeaderContentAuthenticated = () => {
         </MenuItem>
         <MenuItem className="p-1">
           <Link className="text-link" to="/my-products">
-            <BsFillGridFill /> My products
+            <BsFillGridFill /> My uploads
+          </Link>
+        </MenuItem>
+        <MenuItem className="p-1">
+          <Link className="text-link" to="/purchases">
+            <BsCollection /> My purchases
           </Link>
         </MenuItem>
         <MenuItem className="p-1">

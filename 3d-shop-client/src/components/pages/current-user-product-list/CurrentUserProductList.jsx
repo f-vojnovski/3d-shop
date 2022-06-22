@@ -1,12 +1,12 @@
 import { useDispatch } from 'react-redux';
-import { fetchProductsForCurrentUser } from '../../../service/features/productsSlice';
+import { fetchUploadedProductsForCurrentUser } from '../../../service/features/productsSlice';
 import ProductListingGrid from '../../common/products-listing/ProductListingGrid';
 
 const CurrentUserProductList = () => {
   const dispatch = useDispatch();
 
   const fetchFunction = (pageNumber) => {
-    dispatch(fetchProductsForCurrentUser(pageNumber));
+    dispatch(fetchUploadedProductsForCurrentUser(pageNumber));
   };
   return (
     <>
