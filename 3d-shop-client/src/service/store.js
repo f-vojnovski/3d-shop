@@ -4,6 +4,7 @@ import productReducer from './features/productSlice';
 import authReducer from './features/authSlice';
 import cartReducer from './features/cartSlice';
 import productUpload from './features/productUploadSlice';
+import salesReducer from './features/salesSlice';
 import {
   persistStore,
   persistReducer,
@@ -30,6 +31,7 @@ const reducers = combineReducers({
   productUpload: productUpload,
   auth: authReducer,
   cart: cartReducer,
+  sales: salesReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, reducers);

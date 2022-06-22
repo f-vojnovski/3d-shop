@@ -8,6 +8,7 @@ import { BsPersonCircle } from 'react-icons/bs';
 import { Link } from 'react-router-dom';
 import { MdLogout, MdOutlineAddCircle } from 'react-icons/md';
 import { BsFillGridFill } from 'react-icons/bs';
+import { GrMoney } from 'react-icons/gr';
 
 const HeaderContentAuthenticated = () => {
   const auth = useSelector((state) => state.auth);
@@ -37,14 +38,19 @@ const HeaderContentAuthenticated = () => {
             <MdOutlineAddCircle /> Upload product
           </Link>
         </MenuItem>
-        <MenuItem className="p-1" onClick={() => onLogoutClick()}>
-          {' '}
-          <MdLogout /> Logout
-        </MenuItem>
         <MenuItem className="p-1">
           <Link className="text-link" to="/my-products">
             <BsFillGridFill /> My products
           </Link>
+        </MenuItem>
+        <MenuItem className="p-1">
+          <Link className="text-link" to="/my-sales">
+            <GrMoney /> My sales
+          </Link>
+        </MenuItem>
+        <MenuItem className="p-1" onClick={() => onLogoutClick()}>
+          {' '}
+          <MdLogout /> Logout
         </MenuItem>
       </Menu>
       <ShoppingCart />

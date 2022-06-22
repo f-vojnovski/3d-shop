@@ -37,7 +37,9 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
     Route::post('/sales/buy', [SalesController::class, 'makeSale']);
+    Route::get('/sales/', [SalesController::class, 'getSalesForAuthenticatedUser']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

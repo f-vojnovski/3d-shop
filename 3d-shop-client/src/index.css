@@ -52,3 +52,11 @@ code {
 .text-link:hover {
   color: inherit;
 }
+
+.table-container {
+  border: 1px solid black;
+}
+
+table {
+  margin-bottom: 0;
+}

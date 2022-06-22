@@ -7,6 +7,7 @@ import ProductUploadPage from '../components/pages/product-upload/ProductUpload'
 import SingleProductView from '../components/pages/product-view/SingleProductView';
 import ModelsListPage from '../components/pages/products-list/ModelsListPage';
 import RegisterPage from '../components/pages/register/RegisterPage';
+import SalesListing from '../components/pages/sales-list/SalesListing';
 
 const RoutesWrapper = () =>
   useRoutes([
@@ -17,8 +18,9 @@ const RoutesWrapper = () =>
     { path: '/product/:productId', element: <SingleProductView /> },
     { path: '/checkout', element: <CheckoutPage /> },
     { path: '/upload', element: <ProductUploadPage /> },
-    { path: 'my-products', element: <CurrentUserProductList /> },
-    { path: 'my-products/:pageNumber', element: <CurrentUserProductList /> },
+    { path: '/my-products', element: <CurrentUserProductList /> },
+    { path: '/my-products/:pageNumber', element: <CurrentUserProductList /> },
+    { path: '/my-sales', element: <SalesListing /> },
   ]);
 
 export default RoutesWrapper;
