@@ -1,6 +1,6 @@
 import ProductOverview from '../../common/product-preview/ProductOverview';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts, selectAllProducts } from '../../../service/features/productsSlice';
+import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import ReactPaginate from 'react-paginate';

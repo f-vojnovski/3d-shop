@@ -25,6 +25,12 @@ export function getRequest(URL) {
   return axiosClient.get(`/${URL}`).then((response) => response);
 }
 
+export function getRequestWithToken(URL, token) {
+  return axiosClient
+    .get(`${URL}`, { headers: { Authorization: `Bearer ${token}` } })
+    .then((response) => response);
+}
+
 export function postRequest(URL, payload) {
   return axiosClient.post(`/${URL}`, payload).then((response) => response);
 }

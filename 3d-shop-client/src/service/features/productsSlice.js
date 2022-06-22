@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { getRequestWithToken } from '../api/axiosClient';
 import { client } from '../api/client';
 
 const initialState = {
@@ -35,6 +36,21 @@ export const productsSlice = createSlice({
       .addCase(fetchProducts.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.error.message;
+      })
+      .addCase(fetchProductsForCurrentUser.pending, (state, action) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchProductsForCurrentUser.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.products = action.payload.data;
+        state.currentPage = action.payload.current_page;
+        state.perPage = action.payload.per_page;
+        state.total = action.payload.total;
+        state.pageCount = Math.ceil(state.total / state.perPage);
+      })
+      .addCase(fetchProductsForCurrentUser.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message;
       });
   },
 });
@@ -50,6 +66,20 @@ export const fetchProducts = createAsyncThunk(
   async (pageNumber) => {
     const response = await client.get(
       `http://127.0.0.1:8000/api/products?page=${pageNumber}`
+    );
+    return response.data;
+  }
+);
+
+export const fetchProductsForCurrentUser = createAsyncThunk(
+  'products/getProductsForCurrentUser',
+  async (pageNumber, { getState }) => {
+    const state = getState();
+    const token = state.auth.token;
+
+    const response = await getRequestWithToken(
+      `api/current-user-products?page=${pageNumber}`,
+      token
     );
     return response.data;
   }
