@@ -19,27 +19,25 @@ class SalesController extends BaseController
 
         $buyerId = Auth::user()->getAuthIdentifier();
 
-        if ($buyerId == $request['seller_id']) {
-            // todo: return proper error
-            return;
-        }
-
         DB::beginTransaction();
 
         $sales = [];
         foreach ($request->input('products') as $item) {
             $product = Product::find($item['id']);
 
+            // check if user buying product from themselves
+            //        if ($buyerId == $request['seller_id']) {
+            //            return;
+            //        }
+
             $newSale = [
                 'buyer_id' => $buyerId,
                 'product_id' => $product['id'],
                 'price' => $product['price'],
-                'seller_id' => $product['user_id']
             ];
 
             $existingSale = Sale::where('buyer_id', $newSale['buyer_id'])
                 ->where('product_id', $newSale['product_id'])
-                ->where('seller_id', $newSale['seller_id'])
                 ->first();
 
             if ($existingSale != null) {

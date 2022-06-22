@@ -15,7 +15,6 @@ class CreateSalesTable extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('seller_id')->default(0)->constrained()->references('id')->on('users');
             $table->foreignId('buyer_id')->default(0)->constrained()->references('id')->on('users');
             $table->foreignId('product_id')->default(0)->constrained()->references('id')->on('products');
             $table->decimal('price')->nullable();
