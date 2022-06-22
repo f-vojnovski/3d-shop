@@ -8,6 +8,7 @@ import SingleProductView from '../components/pages/product-view/SingleProductVie
 import ModelsListPage from '../components/pages/products-list/ModelsListPage';
 import RegisterPage from '../components/pages/register/RegisterPage';
 import SalesListing from '../components/pages/sales-list/SalesListing';
+import LandingPage from '../components/pages/landing/LandingPage';
 
 const RoutesWrapper = () =>
   useRoutes([
@@ -21,6 +22,7 @@ const RoutesWrapper = () =>
     { path: '/my-products', element: <CurrentUserProductList /> },
     { path: '/my-products/:pageNumber', element: <CurrentUserProductList /> },
     { path: '/my-sales', element: <SalesListing /> },
+    { path: '/', element: <LandingPage /> },
   ]);
 
 export default RoutesWrapper;
