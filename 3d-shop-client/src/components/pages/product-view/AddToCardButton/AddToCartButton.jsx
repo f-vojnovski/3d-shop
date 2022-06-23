@@ -9,16 +9,40 @@ const AddToCartButton = (props) => {
   const dispatch = useDispatch();
 
   const totalPrice = useSelector((state) => state.cart.total);
-  const productsInCart = useSelector((state) => state.cart.products)
+  const productsInCart = useSelector((state) => state.cart.products);
 
   const onAddToCartClick = () => {
-    if (!productsInCart.some(e => e.id == product.id)) {
+    if (!productsInCart.some((e) => e.id == product.id)) {
       dispatch(addToCart(product));
       toast.success(`Item added to cart.`);
     } else {
       toast.info(`This item is already in your shopping cart.`);
     }
   };
+
+  if (product.product_status === 'owner') {
+    return (
+      <button className="btn btn-primary text-nowrap w-100" disabled={true}>
+        You are the owner of this product
+      </button>
+    );
+  }
+
+  if (product.product_status === 'purchased') {
+    return (
+      <button className="btn btn-primary text-nowrap w-100" disabled={true}>
+        You have purchased this product
+      </button>
+    );
+  }
+
+  if (productsInCart.find((x) => x.id === product.id)) {
+    return (
+      <button className="btn btn-primary text-nowrap w-100" disabled={true}>
+        Product is in cart
+      </button>
+    );
+  }
 
   return (
     <button
