@@ -39,17 +39,27 @@ class ProductController extends BaseController
         $tdmodel = $request->file('model');
         $tdmodelname = uniqid().'.'.$tdmodel->getClientOriginalExtension();
 
-        $path = Storage::putFileAs(
+        $tdmodelPath = Storage::putFileAs(
             'public/obj_files', $tdmodel, $tdmodelname
         );
 
-        $tdUrl = Storage::url($path);
+        $tdUrl = Storage::url($tdmodelPath);
+
+        $thumbnail = $request->file('thumbnail');
+        $thumbnailName = uniqid().'.'.$thumbnail->getClientOriginalExtension();
+
+        $thumbnailPath = Storage::putFileAs(
+            'public/thumbnails', $thumbnail, $thumbnailName
+        );
+
+        $thumbnailUrl = Storage::url($thumbnailPath);
 
         $newProduct = [
             'name' => $request->input('name'),
             'price' => $request->input('price'),
             'description'=> $request->input('description'),
             'obj_file_path' => $tdUrl,
+            'thumbnail_path' => $thumbnailUrl,
             'user_id' => Auth::user()->getAuthIdentifier()
         ];
 

@@ -27,8 +27,10 @@ export const productUploadSlcie = createSlice({
 
 export default productUploadSlcie.reducer;
 
-export const uploadProduct = createAsyncThunk('product/upload', async (obj) => {
-  console.log(obj.body);
-  const response = await postRequestWithToken('api/products', obj.body, obj.token);
+export const uploadProduct = createAsyncThunk('product/upload', async (body, {getState}) => {
+  const state = getState();
+  const token = state.auth.token;
+
+  const response = await postRequestWithToken('api/products', body, token);
   return response.data;
 });

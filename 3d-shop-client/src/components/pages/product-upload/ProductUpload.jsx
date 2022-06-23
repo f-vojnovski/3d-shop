@@ -4,7 +4,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
 import { uploadProduct } from '../../../service/features/productUploadSlice';
 import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
-import {fileToDataUri} from '../../../service/util/fileToDataUri'
+import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
 
 const ProductUploadPage = () => {
@@ -14,24 +14,23 @@ const ProductUploadPage = () => {
   const [productFile, setProductFile] = useState('');
   const [modelUri, setModelUri] = useState('');
 
-  const dispatch = useDispatch();
+  const [productThumbnail, setProductThumbnail] = useState('');
+  const [thumbnailUri, setThumbnailUri] = useState('');
 
-  const token = useSelector((state) => state.auth.token);
+  const dispatch = useDispatch();
 
   const onUploadClicked = () => {
     const formData = new FormData();
 
     formData.append('model', productFile);
+    formData.append('thumbnail', productThumbnail);
     formData.append('name', productName);
     formData.append('price', productPrice);
     formData.append('description', productDescription);
 
-    let obj = {
-      body: formData,
-      token: token,
-    };
+    let body=formData;
 
-    dispatch(uploadProduct(obj));
+    dispatch(uploadProduct(body));
   };
 
   const handleModelAttachment = (e) => {
@@ -40,6 +39,15 @@ const ProductUploadPage = () => {
 
     fileToDataUri(file).then((uri) => {
       setModelUri(uri);
+    });
+  };
+
+  const handleThumbnailAttachment = (e) => {
+    var file = e.target.files[0];
+    setProductThumbnail(file);
+
+    fileToDataUri(file).then((uri) => {
+      setThumbnailUri(uri);
     });
   };
 
@@ -117,8 +125,24 @@ const ProductUploadPage = () => {
           </div>
         </div>
 
+        <div className="row mt-1 mb-3">
+          <div className="col">
+            <label htmlFor="formFile" className="form-label">
+              Thumbnail (image file)
+            </label>
+            <input
+              className="form-control"
+              type="file"
+              onChange={(e) => handleThumbnailAttachment(e)}
+            />
+          </div>
+        </div>
+
         <div className="row mt-1">
           <div className="col">{productPreview}</div>
+          <div className="col">
+            <img className="product-thumbnail" src={thumbnailUri}></img>
+          </div>
         </div>
 
         <div className="row mt-3">

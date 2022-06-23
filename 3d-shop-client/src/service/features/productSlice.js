@@ -24,7 +24,6 @@ export const productSlice = createSlice({
         if (state.status !== 'error') {
           state.status = 'succeeded';
           state.product = action.payload;
-          console.log(action.payload)
         }
       })
       .addCase(fetchProductById.rejected, (state, action) => {

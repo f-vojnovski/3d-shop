@@ -51,6 +51,6 @@ export function deleteRequest(URL) {
 
 export function setAxiosBearerToken(token) {
   localStorage.setItem('token', token);
-  console.log(localStorage.getItem('token'));
+  // console.log(localStorage.getItem('token'));
   axiosClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }

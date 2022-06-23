@@ -60,3 +60,9 @@ code {
 .table {
   margin-bottom: 0 !important;
 }
+
+.product-thumbnail {
+  width: 300px !important;
+  height: 300px !important;
+  background-image:url('https://placeholder.pics/svg/300/E8E8E8/000000/X');
+}
