@@ -5,7 +5,7 @@ const LandingPage = () => {
     <div className="container-fluid">
       <div className="row mt-3">
         <div className="col">
-          <h1>Easily buy and sell your 3d models!</h1>
+          <h1>Trading with 3d models made easier than ever!</h1>
         </div>
       </div>
 
