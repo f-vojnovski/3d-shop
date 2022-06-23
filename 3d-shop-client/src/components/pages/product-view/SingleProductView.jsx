@@ -3,11 +3,7 @@ import styles from './SingleProductView.module.css';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect } from 'react';
-import {
-  selectProduct,
-  fetchProductById,
-  fetchProductUrl,
-} from '../../../service/features/productSlice';
+import { fetchProductById } from '../../../service/features/productSlice';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import { resetProduct } from '../../../service/features/productSlice';
@@ -19,18 +15,15 @@ const SingleProductView = () => {
   const productId = params.productId;
 
   const dispatch = useDispatch();
-  const product = useSelector(selectProduct);
-
+  const product = useSelector((state) => state.product.product);
   const productStatus = useSelector((state) => state.product.status);
 
   const error = useSelector((state) => state.product.error);
 
-  const shoppingCart = useSelector((state) => state.cart);
-
   let content = '';
 
   useEffect(() => {
-    if (product.product && product.product.id != productId) {
+    if (product && product.id != productId) {
       dispatch(resetProduct());
     }
   }, []);
@@ -38,12 +31,6 @@ const SingleProductView = () => {
   useEffect(() => {
     if (productStatus === 'idle') {
       dispatch(fetchProductById(productId));
-    }
-  }, [productStatus, dispatch, productId]);
-
-  useEffect(() => {
-    if (productStatus === 'idle') {
-      dispatch(fetchProductUrl(productId));
     }
   }, [productStatus, dispatch, productId]);
 
@@ -77,7 +64,7 @@ const SingleProductView = () => {
             <div className={styles.model_container_dummy}></div>
             <div className={styles.model}>
               <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-                <ModelDisplayer fileUrl={product.productUrl.fileUrl}></ModelDisplayer>
+                <ModelDisplayer fileUrl={product.obj_file_path}></ModelDisplayer>
               </ErrorBoundary>
             </div>
           </div>
@@ -85,19 +72,19 @@ const SingleProductView = () => {
             <div className="container-fluid w-100 h-100">
               <div className="row mb-2 large-font">
                 <div className="col">
-                  <span className="bolded-label">{product.product.name}</span>
+                  <span className="bolded-label">{product.name}</span>
                   <span> - </span>
-                  <span>${product.product.price}</span>
+                  <span>${product.price}</span>
                 </div>
               </div>
               <div className="row mb-2">
                 <div className="col">
-                  <span>{product.product.description}</span>
+                  <span>{product.description}</span>
                 </div>
               </div>
               <div className="d-flex row mt-auto mb-0">
                 <div className="col d-flex align-self-end">
-                  <AddToCartButton product={product.product} />
+                  <AddToCartButton product={product} />
                 </div>
               </div>
             </div>

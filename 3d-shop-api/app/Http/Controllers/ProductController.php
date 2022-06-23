@@ -43,11 +43,13 @@ class ProductController extends BaseController
             'public/obj_files', $tdmodel, $tdmodelname
         );
 
+        $tdUrl = Storage::url($path);
+
         $newProduct = [
             'name' => $request->input('name'),
             'price' => $request->input('price'),
             'description'=> $request->input('description'),
-            'obj_file_path' => $path,
+            'obj_file_path' => $tdUrl,
             'user_id' => Auth::user()->getAuthIdentifier()
         ];
 
@@ -63,23 +65,6 @@ class ProductController extends BaseController
     public function show($id)
     {
         return Product::find($id);
-    }
-
-    /**
-     * Download a 3d model if one is found in database
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getProductModelUrl($id)
-    {
-        $product = Product::find($id);
-
-        $fileUrl = Storage::url($product['obj_file_path']);
-
-        return response()->json([
-            'fileUrl' => $fileUrl
-        ]);
     }
 
     /**
