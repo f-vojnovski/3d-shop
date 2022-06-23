@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { client } from '../api/client';
+import { getRequest, getRequestWithToken } from '../api/axiosClient';
 
 const initialState = {
   product: null,
@@ -38,7 +38,15 @@ export default productSlice.reducer;
 
 export const { resetProduct } = productSlice.actions;
 
-export const fetchProductById = createAsyncThunk('product/getById', async (productId) => {
-  const response = await client.get(`http://127.0.0.1:8000/api/products/${productId}`);
+export const fetchProductById = createAsyncThunk('product/getById', async (productId, {getState}) => {
+  const state = getState();
+  const token = state.auth.token;
+
+  let response;
+  if (token) {
+    response = await getRequestWithToken(`/api/products-authenticated/${productId}`, token);
+  } else {
+    response = await getRequest(`/api/products/${productId}`);
+  }
   return response.data;
 });

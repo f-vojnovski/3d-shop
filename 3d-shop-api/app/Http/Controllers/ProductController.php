@@ -30,7 +30,7 @@ class ProductController extends BaseController
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|max:255',
             'price' => 'required',
             'model' => 'required|file'
@@ -70,11 +70,35 @@ class ProductController extends BaseController
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
-        return Product::find($id);
+        $product = Product::find($id);
+
+        if (!Auth::check()) {
+            return response()->json($product);
+        }
+
+        $userId = Auth::user()->getAuthIdentifier();
+        $productStatus = 'not-purchased';
+
+        if ($product['user_id'] == $userId) {
+            $productStatus = 'owner';
+        }
+        else {
+            $sale = DB::table('sales')
+                ->where('product_id', $product['id'])
+                ->where('buyer_id', $userId)
+                ->first();
+            if ($sale) {
+                $productStatus = 'purchased';
+            }
+        }
+
+        $product->product_status = $productStatus;
+
+        return response()->json($product);
     }
 
     /**
