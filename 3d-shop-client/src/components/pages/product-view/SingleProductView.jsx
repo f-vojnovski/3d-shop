@@ -9,6 +9,8 @@ import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import { resetProduct } from '../../../service/features/productSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
+import DownloadButton from '../../common/download-button/DownloadButton';
+import { API_URL } from '../../../consts';
 
 const SingleProductView = () => {
   const params = useParams();
@@ -17,7 +19,6 @@ const SingleProductView = () => {
   const dispatch = useDispatch();
   const product = useSelector((state) => state.product.product);
   const productStatus = useSelector((state) => state.product.status);
-
   const error = useSelector((state) => state.product.error);
 
   let content = '';
@@ -56,6 +57,20 @@ const SingleProductView = () => {
     );
   }
 
+  let downloadButton = null;
+
+  if (
+    product &&
+    (product.product_status === 'owner' || product.product_status === 'purchased')
+  ) {
+    downloadButton = (
+      <DownloadButton
+        link={`${API_URL}${product.obj_file_path}`}
+        text="Download"
+      ></DownloadButton>
+    );
+  }
+
   if (productStatus === 'succeeded') {
     content = (
       <div className={styles.view_container}>
@@ -87,6 +102,11 @@ const SingleProductView = () => {
                   <AddToCartButton product={product} />
                 </div>
               </div>
+              {downloadButton && (
+                <div className="d-flex row mt-auto mb-0">
+                  <div className="col d-flex align-self-end">{downloadButton}</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
