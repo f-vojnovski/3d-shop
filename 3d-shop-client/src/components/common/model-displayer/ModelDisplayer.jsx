@@ -10,7 +10,6 @@ const ModelDisplayer = (props) => {
     fileUrl = `${API_URL}${props.fileUrl}`;
   } else {
     fileUrl = props.fileUrl;
-    console.log(fileUrl);
   }
   const obj = useLoader(OBJLoader, fileUrl);
 

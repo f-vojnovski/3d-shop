@@ -2,10 +2,15 @@ import { useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
-import { uploadProduct } from '../../../service/features/productUploadSlice';
+import {
+  clearUploadState,
+  uploadProduct,
+} from '../../../service/features/productUploadSlice';
 import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
@@ -18,6 +23,11 @@ const ProductUploadPage = () => {
   const [thumbnailUri, setThumbnailUri] = useState('');
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const uploadedProduct = useSelector((state) => state.productUpload.uploadedProduct);
+  const status = useSelector((state) => state.productUpload.status);
+  const error = useSelector((state) => state.productUpload.error);
 
   const onUploadClicked = () => {
     const formData = new FormData();
@@ -28,7 +38,7 @@ const ProductUploadPage = () => {
     formData.append('price', productPrice);
     formData.append('description', productDescription);
 
-    let body=formData;
+    let body = formData;
 
     dispatch(uploadProduct(body));
   };
@@ -61,6 +71,12 @@ const ProductUploadPage = () => {
         <ModelDisplayer fileUrl={modelUri} isLocalFile={true} />
       </ErrorBoundary>
     );
+  }
+
+  if (status === 'succeeded') {
+    dispatch(clearUploadState());
+    toast.success('Your new product has been uploaded!');
+    navigate(`/product/${uploadedProduct.id}`);
   }
 
   return (

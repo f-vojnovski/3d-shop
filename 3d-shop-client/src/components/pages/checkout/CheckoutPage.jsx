@@ -1,4 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { checkoutCart, clearCart } from '../../../service/features/cartSlice';
 import ProductOverview from '../../common/product-preview/ProductOverview';
@@ -10,6 +11,8 @@ const CheckoutPage = () => {
 
   const dispatch = useDispatch();
 
+  const navigate = useNavigate();
+
   const onCheckoutButtonClick = () => {
     dispatch(checkoutCart());
   };
@@ -17,6 +20,7 @@ const CheckoutPage = () => {
   if (cartStatus === 'succeeded') {
     toast.success('Checkout successfull, enjoy using your newly acquired products!');
     dispatch(clearCart());
+    navigate('/purchases');
   }
 
   if (cartStatus === 'error') {

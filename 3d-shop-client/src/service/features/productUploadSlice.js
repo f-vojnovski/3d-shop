@@ -4,12 +4,17 @@ import { postRequestWithToken } from '../api/axiosClient';
 const initialState = {
   status: 'idle',
   error: null,
+  uploadedProduct: null,
 };
 
 export const productUploadSlcie = createSlice({
   name: 'productUpload',
   initialState: initialState,
-  reducers: {},
+  reducers: {
+    clearUploadState: (state, action) => {
+      return initialState;
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(uploadProduct.pending, (state, action) => {
@@ -20,6 +25,7 @@ export const productUploadSlcie = createSlice({
         state.error = action.error.message;
       })
       .addCase(uploadProduct.fulfilled, (state, action) => {
+        state.uploadedProduct = action.payload;
         state.status = 'succeeded';
       });
   },
@@ -27,10 +33,15 @@ export const productUploadSlcie = createSlice({
 
 export default productUploadSlcie.reducer;
 
-export const uploadProduct = createAsyncThunk('product/upload', async (body, {getState}) => {
-  const state = getState();
-  const token = state.auth.token;
+export const { clearUploadState } = productUploadSlcie.actions;
 
-  const response = await postRequestWithToken('api/products', body, token);
-  return response.data;
-});
+export const uploadProduct = createAsyncThunk(
+  'product/upload',
+  async (body, { getState }) => {
+    const state = getState();
+    const token = state.auth.token;
+
+    const response = await postRequestWithToken('api/products', body, token);
+    return response.data;
+  }
+);
