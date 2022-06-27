@@ -38,7 +38,7 @@ export default productSlice.reducer;
 
 export const { resetProduct } = productSlice.actions;
 
-export const fetchProductById = createAsyncThunk('/api/product/getById', async (productId, {getState}) => {
+export const fetchProductById = createAsyncThunk('/product/getById', async (productId, {getState}) => {
   const state = getState();
   const token = state.auth.token;
 
