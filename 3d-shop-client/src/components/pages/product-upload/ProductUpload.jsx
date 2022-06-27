@@ -37,8 +37,12 @@ const ProductUploadPage = () => {
   const onUploadClicked = () => {
     const formData = new FormData();
 
-    formData.append('gltfModel', gltfProductFile);
-    formData.append('objModel', objProductFile);
+    if (gltfProductFile) {
+      formData.append('gltfModel', gltfProductFile);
+    }
+    if (objProductFile) {
+      formData.append('objModel', objProductFile);
+    }
     formData.append('thumbnail', productThumbnail);
     formData.append('name', productName);
     formData.append('price', productPrice);

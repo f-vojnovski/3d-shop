@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getRequestWithToken } from '../api/axiosClient';
+import { getRequest, getRequestWithToken } from '../api/axiosClient';
 import { client } from '../api/client';
 
 const initialState = {
@@ -79,9 +79,7 @@ export const { clearProductsStatus } = productsSlice.actions;
 export const fetchProducts = createAsyncThunk(
   'products/getProducts',
   async (pageNumber) => {
-    const response = await client.get(
-      `http://127.0.0.1:8000/api/products?page=${pageNumber}`
-    );
+    const response = await getRequest(`api/products?page=${pageNumber}`);
     return response.data;
   }
 );

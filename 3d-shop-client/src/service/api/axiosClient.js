@@ -22,7 +22,7 @@ axiosClient.defaults.withCredentials = true;
 // });
 
 export function getRequest(URL) {
-  return axiosClient.get(`/${URL}`).then((response) => response);
+  return axiosClient.get(`${URL}`).then((response) => response);
 }
 
 export function getRequestWithToken(URL, token) {
