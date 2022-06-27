@@ -1,3 +1,10 @@
+## 3d shop application
+
+This is a project made for my studies which demonstrates a 3d shop application.
+
+If you are interested in how this application works, check out the docs, where the whole process of building this application and updating it is described in details.
+
+
 ## Running the application locally
 
 ### Client
