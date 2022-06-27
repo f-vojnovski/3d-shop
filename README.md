@@ -1,4 +1,4 @@
-## Running the application
+## Running the application locally
 
 ### Client
 
@@ -12,6 +12,14 @@ Run `composer install` in the 3d-shop-api directory
 Create a **.env** file in the 3d-shop-api direcotry
 
 Copy everything from the example env to your newly created .env file
+
+Add 
+
+`SESSION_DOMAIN=localhost`
+
+`SANCTUM_STATEFUL_DOMAINS=localhost`
+
+to your .env file
 
 #### These steps show how to connect to an sqlite database:
 
