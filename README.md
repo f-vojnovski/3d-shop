@@ -1,4 +1,11 @@
-## Running the application
+## 3d shop application
+
+This is a project made for my studies which demonstrates a 3d shop application.
+
+If you are interested in how this application works, check out the docs, where the whole process of building this application and updating it is described in details.
+
+
+## Running the application locally
 
 ### Client
 
@@ -13,13 +20,24 @@ Create a **.env** file in the 3d-shop-api direcotry
 
 Copy everything from the example env to your newly created .env file
 
+Add 
+
+`SESSION_DOMAIN=localhost`
+
+`SANCTUM_STATEFUL_DOMAINS=localhost`
+
+to your .env file
+
 #### These steps show how to connect to an sqlite database:
+Add
 
 `DB_CONNECTION=sqlite`
 
 `DB_HOST=127.0.0.1`
 
 `DB_PORT=3306`
+
+to your .env file
 
 Create a **database.sqlite** file in the 3d-shop-api/database directory
 
