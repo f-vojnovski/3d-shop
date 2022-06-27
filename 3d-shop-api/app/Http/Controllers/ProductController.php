@@ -33,17 +33,36 @@ class ProductController extends BaseController
         $request->validate([
             'name' => 'required|max:255',
             'price' => 'required',
-            'model' => 'required|file'
+            'objModel' => 'file',
+            'gltfModel' => 'file',
+            'thumbnail' => 'file|required',
         ]);
 
-        $tdmodel = $request->file('model');
-        $tdmodelname = uniqid().'.'.$tdmodel->getClientOriginalExtension();
+        $objModel = $request->file('objModel');
+        $objUrl = null;
 
-        $tdmodelPath = Storage::putFileAs(
-            'public/obj_files', $tdmodel, $tdmodelname
-        );
+        if ($objModel != null) {
+            $objModelName = uniqid() . '.' . $objModel->getClientOriginalExtension();
 
-        $tdUrl = Storage::url($tdmodelPath);
+            $objModelPath = Storage::putFileAs(
+                'public/obj_files', $objModel, $objModelName
+            );
+
+            $objUrl = Storage::url($objModelPath);
+        }
+
+        $gltfModel = $request->file('gltfModel');
+        $gltfUrl = null;
+
+        if ($gltfModel != null) {
+            $gltfModelName = uniqid() . '.' . $gltfModel->getClientOriginalExtension();
+
+            $gltfModelPath = Storage::putFileAs(
+                'public/gltf_files', $gltfModel, $gltfModelName
+            );
+
+            $gltfUrl = Storage::url($gltfModelPath);
+        }
 
         $thumbnail = $request->file('thumbnail');
         $thumbnailName = uniqid().'.'.$thumbnail->getClientOriginalExtension();
@@ -58,7 +77,8 @@ class ProductController extends BaseController
             'name' => $request->input('name'),
             'price' => $request->input('price'),
             'description'=> $request->input('description'),
-            'obj_file_path' => $tdUrl,
+            'obj_file_path' => $objUrl,
+            'gltf_file_path' => $gltfUrl,
             'thumbnail_path' => $thumbnailUrl,
             'user_id' => Auth::user()->getAuthIdentifier()
         ];

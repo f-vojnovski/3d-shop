@@ -6,18 +6,23 @@ import {
   clearUploadState,
   uploadProduct,
 } from '../../../service/features/productUploadSlice';
-import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
+import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
   const [productDescription, setProductDescription] = useState('');
   const [productPrice, setProductPrice] = useState('');
-  const [productFile, setProductFile] = useState('');
-  const [modelUri, setModelUri] = useState('');
+
+  const [gltfProductFile, setGltfProductFile] = useState('');
+  const [gltfModelUri, setGltfModelUri] = useState('');
+
+  const [objProductFile, setObjProductFile] = useState('');
+  const [objModelUri, setObjModelUri] = useState('');
 
   const [productThumbnail, setProductThumbnail] = useState('');
   const [thumbnailUri, setThumbnailUri] = useState('');
@@ -32,7 +37,8 @@ const ProductUploadPage = () => {
   const onUploadClicked = () => {
     const formData = new FormData();
 
-    formData.append('model', productFile);
+    formData.append('gltfModel', gltfProductFile);
+    formData.append('objModel', objProductFile);
     formData.append('thumbnail', productThumbnail);
     formData.append('name', productName);
     formData.append('price', productPrice);
@@ -43,12 +49,21 @@ const ProductUploadPage = () => {
     dispatch(uploadProduct(body));
   };
 
-  const handleModelAttachment = (e) => {
+  const handleGltfModelAttachment = (e) => {
     var file = e.target.files[0];
-    setProductFile(file);
+    setGltfProductFile(file);
 
     fileToDataUri(file).then((uri) => {
-      setModelUri(uri);
+      setGltfModelUri(uri);
+    });
+  };
+
+  const handleObjModelAttachment = (e) => {
+    var file = e.target.files[0];
+    setObjProductFile(file);
+
+    fileToDataUri(file).then((uri) => {
+      setObjModelUri(uri);
     });
   };
 
@@ -61,15 +76,31 @@ const ProductUploadPage = () => {
     });
   };
 
-  let productPreview;
+  let gltfProductPreview;
 
-  if (!modelUri) {
-    productPreview = <></>;
+  if (!gltfModelUri) {
+    gltfProductPreview = <></>;
   } else {
-    productPreview = (
-      <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-        <ModelDisplayer fileUrl={modelUri} isLocalFile={true} />
-      </ErrorBoundary>
+    gltfProductPreview = (
+      <div className="square">
+        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
+          <GltfModelDisplayer fileUrl={gltfModelUri} isLocalFile={true} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
+  let objProductPreview;
+
+  if (!objModelUri) {
+    objProductPreview = <></>;
+  } else {
+    objProductPreview = (
+      <div className="square">
+        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
+          <ObjModelDisplayer fileUrl={objModelUri} isLocalFile={true} />
+        </ErrorBoundary>
+      </div>
     );
   }
 
@@ -128,15 +159,34 @@ const ProductUploadPage = () => {
           </div>
         </div>
 
+        <div className="row mt-4 mb-2">
+          <div className="col">
+            <h5>Upload your model in at least one of the specified formats!</h5>
+          </div>
+        </div>
+
         <div className="row mt-1 mb-3">
           <div className="col">
             <label htmlFor="formFile" className="form-label">
-              Your model (3d file)
+              Your model (.gltf file)
             </label>
             <input
               className="form-control"
               type="file"
-              onChange={(e) => handleModelAttachment(e)}
+              onChange={(e) => handleGltfModelAttachment(e)}
+            />
+          </div>
+        </div>
+
+        <div className="row mt-1 mb-3">
+          <div className="col">
+            <label htmlFor="formFile" className="form-label">
+              Your model (.obj file)
+            </label>
+            <input
+              className="form-control"
+              type="file"
+              onChange={(e) => handleObjModelAttachment(e)}
             />
           </div>
         </div>
@@ -155,13 +205,39 @@ const ProductUploadPage = () => {
         </div>
 
         <div className="row mt-1">
-          <div className="col">{productPreview}</div>
           <div className="col">
+            <p>GLTF:</p>
+          </div>
+        </div>
+
+        <div className="row mt-1">
+          <div className="col d-flex justify-content-center">{gltfProductPreview}</div>
+        </div>
+
+        <div className="row mt-1">
+          <div className="col">
+            <p>Obj:</p>
+          </div>
+        </div>
+
+        <div className="row mt-1">
+          <div className="col d-flex justify-content-center">{objProductPreview}</div>
+        </div>
+
+        <div className="row mt-1">
+          <div className="col d-flex justify-content-center">
             <img className="product-thumbnail" src={thumbnailUri}></img>
           </div>
         </div>
 
-        <div className="row mt-3">
+        <div className="row mt-1">
+          <div className="col">
+            Please make sure that the product previews <strong>work</strong> before
+            uploading your model.
+          </div>
+        </div>
+
+        <div className="row mt-3 mb-5">
           <div className="col">
             <Button
               className="w-100"

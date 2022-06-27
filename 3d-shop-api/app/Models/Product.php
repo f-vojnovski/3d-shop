@@ -13,6 +13,7 @@ class Product extends Model
         'description',
         'price',
         'obj_file_path',
+        'gltf_file_path',
         'thumbnail_path',
         'user_id'
     ];

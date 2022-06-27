@@ -1,4 +1,3 @@
-import ModelDisplayer from '../../common/model-displayer/ModelDisplayer';
 import styles from './SingleProductView.module.css';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -11,6 +10,9 @@ import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
 import { API_URL } from '../../../consts';
+import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
+import { useState } from 'react';
+import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 
 const SingleProductView = () => {
   const params = useParams();
@@ -20,6 +22,8 @@ const SingleProductView = () => {
   const product = useSelector((state) => state.product.product);
   const productStatus = useSelector((state) => state.product.status);
   const error = useSelector((state) => state.product.error);
+
+  const [selectedFileType, setSelectedFileType] = useState('obj');
 
   let content = '';
 
@@ -32,6 +36,14 @@ const SingleProductView = () => {
   useEffect(() => {
     if (productStatus === 'idle') {
       dispatch(fetchProductById(productId));
+    }
+  }, [productStatus, dispatch, productId]);
+
+  useEffect(() => {
+    if (productStatus === 'succeeded') {
+      if (!product.obj_file_path) {
+        setSelectedFileType('gltf');
+      }
     }
   }, [productStatus, dispatch, productId]);
 
@@ -72,16 +84,43 @@ const SingleProductView = () => {
   }
 
   if (productStatus === 'succeeded') {
+    let objComponent = <></>;
+
+    if (product.obj_file_path) {
+      objComponent = (
+        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
+          <ObjModelDisplayer fileUrl={product.obj_file_path}></ObjModelDisplayer>
+        </ErrorBoundary>
+      );
+    }
+
+    let gltfComponent = <></>;
+
+    if (product.gltf_file_path) {
+      gltfComponent = (
+        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
+          <GltfModelDisplayer fileUrl={product.gltf_file_path}></GltfModelDisplayer>
+        </ErrorBoundary>
+      );
+    }
+
+    const handleFiletypeSelectionChange = (event) => {
+      setSelectedFileType(event.target.value);
+    };
+
+    let componentToDisplay;
+    if (selectedFileType === 'obj') {
+      componentToDisplay = <>{objComponent}</>;
+    } else {
+      componentToDisplay = <>{gltfComponent}</>;
+    }
+
     content = (
       <div className={styles.view_container}>
         <div className={styles.model_details_container}>
           <div className={styles.model_container}>
             <div className={styles.model_container_dummy}></div>
-            <div className={styles.model}>
-              <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-                <ModelDisplayer fileUrl={product.obj_file_path}></ModelDisplayer>
-              </ErrorBoundary>
-            </div>
+            <div className={styles.model}>{componentToDisplay}</div>
           </div>
           <div className={styles.model_info_container}>
             <div className="container-fluid w-100 h-100">
@@ -100,6 +139,22 @@ const SingleProductView = () => {
               <div className="d-flex row mt-auto mb-0">
                 <div className="col d-flex align-self-end">
                   <AddToCartButton product={product} />
+                </div>
+              </div>
+              <div className="row mt-2">
+                <div className="col">
+                  <select
+                    className="form-select"
+                    value={selectedFileType.value}
+                    onChange={(e) => handleFiletypeSelectionChange(e)}
+                  >
+                    <option disabled={product.obj_file_path == null} value="obj">
+                      .obj
+                    </option>
+                    <option disabled={product.gltf_file_path == null} value="gltf">
+                      .gltf
+                    </option>
+                  </select>
                 </div>
               </div>
               {downloadButton && (

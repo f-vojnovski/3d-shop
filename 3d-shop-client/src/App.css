@@ -45,3 +45,9 @@
 .form_max_width {
   max-width: 800px !important;
 }
+
+.square {
+  width: 400px;
+  height: 400px;
+  border: 1px solid black;
+}
