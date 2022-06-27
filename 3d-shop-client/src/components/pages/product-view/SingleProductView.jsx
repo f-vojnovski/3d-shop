@@ -69,19 +69,8 @@ const SingleProductView = () => {
     );
   }
 
-  let downloadButton = null;
-
-  if (
-    product &&
-    (product.product_status === 'owner' || product.product_status === 'purchased')
-  ) {
-    downloadButton = (
-      <DownloadButton
-        link={`${API_URL}${product.obj_file_path}`}
-        text="Download"
-      ></DownloadButton>
-    );
-  }
+  let objDownloadButton = <></>;
+  let gltfDownloadButton = <></>;
 
   if (productStatus === 'succeeded') {
     let objComponent = <></>;
@@ -113,6 +102,30 @@ const SingleProductView = () => {
       componentToDisplay = <>{objComponent}</>;
     } else {
       componentToDisplay = <>{gltfComponent}</>;
+    }
+
+    if (product.product_status === 'owner' || product.product_status === 'purchased') {
+      if (product.obj_file_path) {
+        objDownloadButton = (
+          <>
+            <DownloadButton
+              link={`${API_URL}${product.obj_file_path}`}
+              text="Download .obj"
+            />
+          </>
+        );
+      }
+
+      if (product.gltf_file_path) {
+        gltfDownloadButton = (
+          <>
+            <DownloadButton
+              link={`${API_URL}${product.gltf_file_path}`}
+              text="Download .gltf"
+            />
+          </>
+        );
+      }
     }
 
     content = (
@@ -157,9 +170,15 @@ const SingleProductView = () => {
                   </select>
                 </div>
               </div>
-              {downloadButton && (
+              {objDownloadButton && (
                 <div className="d-flex row mt-auto mb-0">
-                  <div className="col d-flex align-self-end">{downloadButton}</div>
+                  <div className="col d-flex align-self-end">{objDownloadButton}</div>
+                </div>
+              )}
+
+              {gltfDownloadButton && (
+                <div className="d-flex row mt-auto mb-0">
+                  <div className="col d-flex align-self-end">{gltfDownloadButton}</div>
                 </div>
               )}
             </div>

@@ -64,6 +64,10 @@ class ProductController extends BaseController
             $gltfUrl = Storage::url($gltfModelPath);
         }
 
+        if ($gltfModel == null && $objModel == null) {
+            abort(403, 'Must provide model!');
+        }
+
         $thumbnail = $request->file('thumbnail');
         $thumbnailName = uniqid().'.'.$thumbnail->getClientOriginalExtension();
 
@@ -139,7 +143,7 @@ class ProductController extends BaseController
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\positive-int
      */
     public function destroy($id)
     {
