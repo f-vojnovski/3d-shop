@@ -135,6 +135,9 @@ class ProductController extends BaseController
     public function update(Request $request, $id)
     {
         $product = Product::find($id);
+        if ($product['id'] != Auth::user()->getAuthIdentifier()) {
+            abort(419, 'You are not the owner of this product!');
+        }
         $product->update($request->all());
         return $product;
     }

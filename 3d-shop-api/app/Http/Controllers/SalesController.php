@@ -41,9 +41,8 @@ class SalesController extends BaseController
                 ->first();
 
             if ($existingSale != null) {
-                // todo: return proper error
                 DB::rollBack();
-                return;
+                abort(500, 'Something went wrong when purchasing products.');
             }
 
             $saleDb = Sale::create($newSale);
