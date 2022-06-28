@@ -194,6 +194,7 @@ class ProductController extends BaseController
                 'products.price as price',
                 'products.description as description',
                 'products.obj_file_path as obj_file_path',
+                'products.thumbnail_path as thumbnail_path',
                 'products.user_id as user_id')
             ->paginate(16);
     }
