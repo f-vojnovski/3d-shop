@@ -1,9 +1,10 @@
 import axios from 'axios';
-import localStorage from 'redux-persist/es/storage';
 
 const axiosClient = axios.create();
 
-axiosClient.defaults.baseURL = 'http://localhost:8000';
+// Root-relative. Callers pass paths both with and without a leading slash, and
+// axios normalises either against this base into an absolute path.
+axiosClient.defaults.baseURL = '/';
 
 // Default timeout for requests in miliseconds
 axiosClient.defaults.timeout = 15000;
@@ -47,10 +48,4 @@ export function patchRequest(URL, payload) {
 
 export function deleteRequest(URL) {
   return axiosClient.delete(`/${URL}`).then((response) => response);
-}
-
-export function setAxiosBearerToken(token) {
-  localStorage.setItem('token', token);
-  // console.log(localStorage.getItem('token'));
-  axiosClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }

@@ -57,27 +57,39 @@ const ProductUploadPage = () => {
     var file = e.target.files[0];
     setGltfProductFile(file);
 
-    fileToDataUri(file).then((uri) => {
-      setGltfModelUri(uri);
-    });
+    fileToDataUri(file)
+      .then((uri) => {
+        setGltfModelUri(uri);
+      })
+      .catch(() => {
+        toast.error('Could not read the .gltf model. Please pick the file again.');
+      });
   };
 
   const handleObjModelAttachment = (e) => {
     var file = e.target.files[0];
     setObjProductFile(file);
 
-    fileToDataUri(file).then((uri) => {
-      setObjModelUri(uri);
-    });
+    fileToDataUri(file)
+      .then((uri) => {
+        setObjModelUri(uri);
+      })
+      .catch(() => {
+        toast.error('Could not read the .obj model. Please pick the file again.');
+      });
   };
 
   const handleThumbnailAttachment = (e) => {
     var file = e.target.files[0];
     setProductThumbnail(file);
 
-    fileToDataUri(file).then((uri) => {
-      setThumbnailUri(uri);
-    });
+    fileToDataUri(file)
+      .then((uri) => {
+        setThumbnailUri(uri);
+      })
+      .catch(() => {
+        toast.error('Could not read the thumbnail. Please pick the file again.');
+      });
   };
 
   let gltfProductPreview;

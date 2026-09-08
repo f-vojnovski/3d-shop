@@ -158,7 +158,7 @@ const SingleProductView = () => {
                 <div className="col">
                   <select
                     className="form-select"
-                    value={selectedFileType.value}
+                    value={selectedFileType}
                     onChange={(e) => handleFiletypeSelectionChange(e)}
                   >
                     <option disabled={product.obj_file_path == null} value="obj">

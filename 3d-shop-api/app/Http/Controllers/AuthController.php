@@ -14,7 +14,7 @@ class AuthController extends BaseController
         $fields = $request->validate([
             'name' => 'required|string|unique:users,name',
             'email' => 'required|string|unique:users,email|email',
-            'password' => 'required|string|confirmed'
+            'password' => 'required|string|min:8|confirmed'
         ]);
 
         $user = User::create([
@@ -60,11 +60,13 @@ class AuthController extends BaseController
             'token' => $token
         ];
 
-        return response($response, 201);
+        return response($response, 200);
     }
 
     public function logout(Request $request) {
-        auth()->user()->tokens()->delete();
+        // Revoke only the token this request authenticated with, so signing out
+        // in one browser does not sign the user out everywhere else.
+        $request->user()->currentAccessToken()->delete();
 
         return [
             'message' => 'Logged out'

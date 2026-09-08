@@ -2,7 +2,13 @@
 
 Marketplace for buying and selling 3D models. Sellers upload `.obj` or `.gltf` files with a thumbnail and a price; buyers rotate the model in the browser before buying, then download the files they own.
 
-![Product page with a WebGL preview of the model, a format selector and an add to cart button](docs/screenshots/model-preview.png)
+![Product page showing a tracked vehicle rendered in WebGL, with a format selector and an add to cart button](docs/screenshots/model-preview.png)
+
+The viewer measures each model and frames it against the camera, so an asset authored at any scale arrives centred and filling the canvas, and orbit controls let a buyer inspect it from any angle.
+
+Sellers get the same renderer while filling in the form. A picked file is read in the browser and previewed before anything is sent, so what the seller checks is what buyers will see.
+
+![Upload form with name, description and price filled in, above file pickers for the model and thumbnail](docs/screenshots/upload.png)
 
 Laravel 8 API with Sanctum token auth over SQLite, React 17 client with Redux Toolkit, three.js through React Three Fiber and drei, Bootstrap 5 for layout.
 
@@ -48,9 +54,9 @@ npm install
 npm start
 ```
 
-Runs on port 3000 and expects the API on port 8000, set in `src/consts.js` and `src/service/api/axiosClient.js`.
+Runs on port 3000 and proxies `/api`, `/storage` and `/sanctum` through to the API on port 8000, set by `"proxy"` in `package.json`. That keeps the whole app on one origin, which the 3D previews depend on: the three.js loaders fetch model files over XHR, and those files are served straight off disk by `php artisan serve` without passing through Laravel's middleware, so cross-origin requests for them would carry no `Access-Control-Allow-Origin` header.
 
-The three.js loaders fetch model files over XHR, so those files need CORS headers. `php artisan serve` returns anything under `public/`, the `public/storage` symlink included, without passing it through Laravel's middleware, so `/storage` has to send `Access-Control-Allow-Origin` for previews to load across origins.
+The catalogue starts empty. Uploaded models and the SQLite file are both gitignored, so a fresh clone has no accounts and no products; register through the UI and upload a model to populate it.
 
 ## API
 

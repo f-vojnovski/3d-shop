@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import authSlice, { postRegisterData } from '../../../service/features/authSlice';
+import { postRegisterData } from '../../../service/features/authSlice';
 import { toast } from 'react-toastify';
 import { useEffect } from 'react';
 
@@ -51,7 +51,7 @@ const RegisterPage = () => {
       <div className="container-fluid my-auto form_max_width">
         <div className="row mt-1">
           <div className="col">
-            <h1>Registertration Form</h1>
+            <h1>Registration Form</h1>
           </div>
         </div>
         <div className="row mt-1">

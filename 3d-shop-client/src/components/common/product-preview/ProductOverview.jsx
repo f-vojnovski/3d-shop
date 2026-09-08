@@ -11,7 +11,7 @@ const ProductOverview = (product) => {
           <img
             src={thumbnailPath}
             className="product-thumbnail"
-            alt="Thumbnail not availbale"
+            alt={`${product.name} thumbnail`}
           ></img>
         </div>
         <div className="row">

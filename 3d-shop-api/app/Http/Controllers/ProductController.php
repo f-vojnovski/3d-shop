@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use http\Env\Response;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use App\Models\Product;
@@ -32,10 +31,11 @@ class ProductController extends BaseController
     {
         $request->validate([
             'name' => 'required|max:255',
-            'price' => 'required',
-            'objModel' => 'file',
-            'gltfModel' => 'file',
-            'thumbnail' => 'file|required',
+            'description' => 'nullable|max:1000',
+            'price' => 'required|numeric|min:0|max:999999.99',
+            'objModel' => 'nullable|file|max:51200',
+            'gltfModel' => 'nullable|file|max:51200',
+            'thumbnail' => 'required|file|image|max:5120',
         ]);
 
         $objModel = $request->file('objModel');
@@ -98,7 +98,7 @@ class ProductController extends BaseController
      */
     public function show($id)
     {
-        $product = Product::find($id);
+        $product = Product::findOrFail($id);
 
         if (!Auth::check()) {
             return response()->json($product);
@@ -134,11 +134,20 @@ class ProductController extends BaseController
      */
     public function update(Request $request, $id)
     {
-        $product = Product::find($id);
-        if ($product['id'] != Auth::user()->getAuthIdentifier()) {
-            abort(419, 'You are not the owner of this product!');
+        $product = Product::findOrFail($id);
+
+        if ($product->user_id != Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
         }
-        $product->update($request->all());
+
+        $fields = $request->validate([
+            'name' => 'sometimes|required|max:255',
+            'description' => 'sometimes|nullable|max:1000',
+            'price' => 'sometimes|required|numeric|min:0|max:999999.99',
+        ]);
+
+        $product->update($fields);
+
         return $product;
     }
 
@@ -194,6 +203,7 @@ class ProductController extends BaseController
                 'products.price as price',
                 'products.description as description',
                 'products.obj_file_path as obj_file_path',
+                'products.gltf_file_path as gltf_file_path',
                 'products.thumbnail_path as thumbnail_path',
                 'products.user_id as user_id')
             ->paginate(16);

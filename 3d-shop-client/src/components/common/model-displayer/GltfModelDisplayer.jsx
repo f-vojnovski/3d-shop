@@ -1,9 +1,9 @@
-import { Canvas, useLoader } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useGLTF } from '@react-three/drei/core';
 import { API_URL } from '../../../consts';
 import { Fragment } from 'react';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import useFitToView from './useFitToView';
 
 const GltfModelDisplayer = (props) => {
   let fileUrl;
@@ -12,17 +12,23 @@ const GltfModelDisplayer = (props) => {
   } else {
     fileUrl = props.fileUrl;
   }
-  
+
   const gltf = useGLTF(fileUrl);
+  const { scale, center } = useFitToView(gltf.scene);
 
   let content = (
     <Canvas>
-      <ambientLight intensity={0.1} />
-      <directionalLight color="yellow" position={[3, 0, 3]} intensity={0.2} />
-      <directionalLight color="white" position={[0, 0, 0]} />
-      <>
-        <primitive object={gltf.scene} scale={0.4} />
-      </>
+      {/* Neutral lighting: a coloured key light would misrepresent the asset,
+          but flat lighting hides the form of an untextured model, so this keeps
+          low ambient and a strong angled key to give the geometry shading. */}
+      <ambientLight intensity={0.3} />
+      <directionalLight color="white" position={[4, 5, 3]} intensity={1.1} />
+      <directionalLight color="white" position={[-4, -2, -4]} intensity={0.35} />
+      <group scale={scale}>
+        <group position={center}>
+          <primitive object={gltf.scene} />
+        </group>
+      </group>
       <OrbitControls></OrbitControls>
     </Canvas>
   );

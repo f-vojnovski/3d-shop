@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getRequest, getRequestWithToken } from '../api/axiosClient';
-import { client } from '../api/client';
 
 const initialState = {
   products: [],

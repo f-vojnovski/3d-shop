@@ -7,7 +7,7 @@ const initialState = {
   uploadedProduct: null,
 };
 
-export const productUploadSlcie = createSlice({
+export const productUploadSlice = createSlice({
   name: 'productUpload',
   initialState: initialState,
   reducers: {
@@ -31,9 +31,9 @@ export const productUploadSlcie = createSlice({
   },
 });
 
-export default productUploadSlcie.reducer;
+export default productUploadSlice.reducer;
 
-export const { clearUploadState } = productUploadSlcie.actions;
+export const { clearUploadState } = productUploadSlice.actions;
 
 export const uploadProduct = createAsyncThunk(
   'product/upload',

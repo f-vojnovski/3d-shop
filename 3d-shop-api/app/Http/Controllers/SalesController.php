@@ -25,10 +25,11 @@ class SalesController extends BaseController
         foreach ($request->input('products') as $item) {
             $product = Product::find($item['id']);
 
-            // check if user buying product from themselves
-            //        if ($buyerId == $request['seller_id']) {
-            //            return;
-            //        }
+            // A seller cannot buy from themselves.
+            if ($product->user_id == $buyerId) {
+                DB::rollBack();
+                abort(409, "You already own product {$product->id}.");
+            }
 
             $newSale = [
                 'buyer_id' => $buyerId,
@@ -42,7 +43,7 @@ class SalesController extends BaseController
 
             if ($existingSale != null) {
                 DB::rollBack();
-                abort(500, 'Something went wrong when purchasing products.');
+                abort(409, "You have already purchased product {$product->id}.");
             }
 
             $saleDb = Sale::create($newSale);
@@ -60,13 +61,14 @@ class SalesController extends BaseController
         $sales = DB::table('sales')
             ->join('products', 'sales.product_id', '=', 'products.id')
             ->join('users', 'sales.buyer_id', '=', 'users.id')
-            ->where('user_id', $userId)
+            ->where('products.user_id', $userId)
             ->select('sales.id as id',
                 'sales.buyer_id as buyer_id',
                 'users.name as buyer_name',
                 'products.id as product_id',
                 'products.name as product_name',
                 'sales.price as price')
+            ->orderByDesc('sales.id')
             ->get();
 
         return $sales;

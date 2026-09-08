@@ -1,10 +1,6 @@
-import { Link } from 'react-router-dom';
-
 const DownloadButton = (props) => {
-  console.log(props);
-
   return (
-    <a href={props.link} target="_blank" download>
+    <a href={props.link} target="_blank" rel="noopener noreferrer" download>
       {props.text}
     </a>
   );
