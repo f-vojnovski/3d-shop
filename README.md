@@ -83,9 +83,24 @@ All routes are in [3d-shop-api/routes/api.php](3d-shop-api/routes/api.php). List
 
 ## Database
 
-SQLite, relational, queried through Eloquent. Three tables matter: `users`, `products` and `sales`. A product holds a public path per geometry file, a thumbnail path and the seller's `user_id`. A sale holds `buyer_id`, `product_id` and the price paid, so repricing a product leaves past revenue intact; the seller of a sale is reached through `product_id`. The rest are the Laravel and Sanctum defaults for tokens, password resets, failed jobs and migration state.
+SQLite, relational, queried through Eloquent. Three tables matter: `users`, `products` and `sales`. A product holds a public path per geometry file, a thumbnail path and the seller's `user_id`. A sale holds `buyer_id`, `product_id` and the price paid; the seller of a sale is reached through `product_id`. The rest are the Laravel and Sanctum defaults for tokens, password resets, failed jobs and migration state.
 
 No query is SQLite specific, so moving to MySQL or PostgreSQL is a `DB_CONNECTION` change plus a data migration.
+
+## Design decisions
+
+The choices that shaped the project, and what they were weighed against. [docs/documentation.pdf](docs/documentation.pdf) has the full reasoning for each.
+
+| Decision | Why |
+| --- | --- |
+| React on the client | Few frameworks make rendering 3D geometry in the browser convenient, and React Three Fiber gives easy access to three.js. The 3D requirement picked the framework, not the other way round. |
+| A relational database | A document store was the alternative, on the reasoning that a model can ship in several formats with a varying number of resources. Relational won because the commercial half of the domain is relational and it is the smoother fit with Eloquent. |
+| Store file paths in the database | The lighter option was a naming convention such as `{id}.obj` and no stored paths. Paths were chosen against the question the convention cannot answer: what happens when one product needs several files of the same type. |
+| Sanctum for authentication | Token auth that is light and fits Laravel closely, chosen on the basis that this project has no need for OAuth2. |
+| Redux for state | To keep application state owned and updated somewhere separate from the components that render it. |
+| Bootstrap for layout | Picked for the grid system rather than the look of its components: the responsive layout survives even if every component is restyled from scratch. |
+| A sale stores its own price | Copying the price onto the sale means a seller can reprice a product later without rewriting what past sales earned. |
+| Listing endpoints split by intent | `current-user-products` and `products-by-user` return near-identical data, kept apart so a change like letting sellers unlist a product touches one endpoint rather than branching inside a shared one. |
 
 ## Client structure
 
@@ -105,6 +120,6 @@ Components dispatch thunks and the slices own every call to the API. `redux-pers
 
 ## Docs
 
-[docs/documentation.pdf](docs/documentation.pdf) covers the technology choices, the database design, every endpoint, the Redux store slice by slice and a walkthrough of the application flow.
+[docs/documentation.pdf](docs/documentation.pdf) is written as a record of how the project was built rather than a reference manual, so it carries the alternatives that were considered and rejected at each step. Beyond the decisions above it covers every endpoint in detail, the Redux store slice by slice, each common component, a walkthrough of the whole application flow, and the sources it was built from.
 
 GPL-3.0, see [LICENSE](LICENSE).
