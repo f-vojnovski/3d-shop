@@ -22,8 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Laravel 8 defined this in RouteServiceProvider, which no longer exists;
-        // throttleApi() in bootstrap/app.php needs a limiter of this name.
+        // throttleApi() in bootstrap/app.php resolves a limiter by this name.
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });

@@ -13,7 +13,6 @@ export default defineConfig({
       '/sanctum': 'http://localhost:8000',
     },
   },
-  // CRA wrote to build/, which .gitignore already covers.
   build: {
     outDir: 'build',
   },

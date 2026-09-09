@@ -4,31 +4,25 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateSalesTable extends Migration
+return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+    public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('buyer_id')->default(0)->constrained()->references('id')->on('users');
-            $table->foreignId('product_id')->default(0)->constrained()->references('id')->on('products');
-            $table->decimal('price')->nullable();
+            $table->foreignId('buyer_id')->constrained('users');
+            $table->foreignId('product_id')->constrained('products');
+            // Copied at purchase time so repricing cannot rewrite past sales.
+            $table->decimal('price', 8, 2);
             $table->timestamps();
+
+            $table->unique(['buyer_id', 'product_id'], 'sales_buyer_product_unique');
+            $table->index('product_id');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('sales');
     }
-}
+};

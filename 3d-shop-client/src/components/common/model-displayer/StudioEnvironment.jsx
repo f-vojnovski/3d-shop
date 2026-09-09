@@ -3,10 +3,8 @@ import { useThree } from '@react-three/fiber';
 import { PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// PBR materials need image-based lighting to read correctly; without it glTF
-// assets render near-black under physically correct lights (three r155+).
-// RoomEnvironment is generated in code rather than fetched, so this stays
-// offline-safe and reproducible, which the attested render pipeline relies on.
+// glTF renders near-black without IBL under r155+ physical lighting.
+// RoomEnvironment is generated in code, so no network fetch and reproducible.
 const StudioEnvironment = ({ intensity = 1 }) => {
   const { gl, scene } = useThree();
 

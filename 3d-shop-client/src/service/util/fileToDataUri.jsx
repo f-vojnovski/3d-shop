@@ -1,6 +1,5 @@
-// Both failure events must reject: without them a FileReader error (usually the
-// file moved since it was picked) leaves the promise unsettled and the picker
-// silently does nothing.
+// Both failure events must reject, or a FileReader error leaves the promise
+// unsettled and the picker silently does nothing.
 export const fileToDataUri = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();

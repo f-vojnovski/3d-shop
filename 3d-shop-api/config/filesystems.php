@@ -41,7 +41,8 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Host-less: client and API share one origin via the dev proxy.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

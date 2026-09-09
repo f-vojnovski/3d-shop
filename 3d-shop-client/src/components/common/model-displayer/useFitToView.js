@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { Box3, Vector3 } from 'three';
 
-// Uploaded models are authored at any scale (samples here range 0.4 to 5 units),
-// so measure and refit rather than trusting the file. The default camera at z=5
-// with 75 degree fov sees ~7.7 units of height; 4.5 fills two thirds, leaving
-// room to orbit without clipping.
+// Models arrive at any scale, so measure and refit. The default camera (z=5,
+// 75deg fov) sees ~7.7 units of height; 4.5 fills two thirds, leaving orbit room.
 const TARGET_SIZE = 4.5;
 
 export default function useFitToView(object) {

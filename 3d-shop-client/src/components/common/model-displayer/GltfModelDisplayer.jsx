@@ -18,8 +18,7 @@ const GltfModelDisplayer = (props) => {
 
   let content = (
     <Canvas>
-      {/* glTF carries real materials, so light it with IBL plus a soft key rather
-          than the flat ambient the untextured .obj path needs. */}
+      {/* Real materials: IBL plus a soft key, not the .obj path's flat ambient. */}
       <StudioEnvironment />
       <directionalLight color="white" position={[4, 5, 3]} intensity={0.6} />
       <directionalLight color="white" position={[-4, -2, -4]} intensity={0.2} />

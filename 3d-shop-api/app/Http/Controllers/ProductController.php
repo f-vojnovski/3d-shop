@@ -44,11 +44,11 @@ class ProductController extends BaseController
         if ($objModel != null) {
             $objModelName = uniqid() . '.' . $objModel->getClientOriginalExtension();
 
-            $objModelPath = Storage::putFileAs(
-                'public/obj_files', $objModel, $objModelName
+            $objModelPath = Storage::disk('public')->putFileAs(
+                'obj_files', $objModel, $objModelName
             );
 
-            $objUrl = Storage::url($objModelPath);
+            $objUrl = Storage::disk('public')->url($objModelPath);
         }
 
         $gltfModel = $request->file('gltfModel');
@@ -57,11 +57,11 @@ class ProductController extends BaseController
         if ($gltfModel != null) {
             $gltfModelName = uniqid() . '.' . $gltfModel->getClientOriginalExtension();
 
-            $gltfModelPath = Storage::putFileAs(
-                'public/gltf_files', $gltfModel, $gltfModelName
+            $gltfModelPath = Storage::disk('public')->putFileAs(
+                'gltf_files', $gltfModel, $gltfModelName
             );
 
-            $gltfUrl = Storage::url($gltfModelPath);
+            $gltfUrl = Storage::disk('public')->url($gltfModelPath);
         }
 
         if ($gltfModel == null && $objModel == null) {
@@ -71,11 +71,12 @@ class ProductController extends BaseController
         $thumbnail = $request->file('thumbnail');
         $thumbnailName = uniqid().'.'.$thumbnail->getClientOriginalExtension();
 
-        $thumbnailPath = Storage::putFileAs(
-            'public/thumbnails', $thumbnail, $thumbnailName
+        // Disk named explicitly: the default local disk root is app/private.
+        $thumbnailPath = Storage::disk('public')->putFileAs(
+            'thumbnails', $thumbnail, $thumbnailName
         );
 
-        $thumbnailUrl = Storage::url($thumbnailPath);
+        $thumbnailUrl = Storage::disk('public')->url($thumbnailPath);
 
         $newProduct = [
             'name' => $request->input('name'),
