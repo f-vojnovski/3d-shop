@@ -5,8 +5,8 @@ import { useEffect } from 'react';
 import { fetchProductById } from '../../../service/features/productSlice';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
-import { resetProduct } from '../../../service/features/productSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import LoadError from '../../common/load-error/LoadError';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
 import { API_URL } from '../../../consts';
@@ -23,29 +23,24 @@ const SingleProductView = () => {
   const productStatus = useSelector((state) => state.product.status);
   const error = useSelector((state) => state.product.error);
 
-  const [selectedFileType, setSelectedFileType] = useState('obj');
+  const [chosenFileType, setChosenFileType] = useState(null);
 
   let content = '';
 
   useEffect(() => {
-    if (product && product.id != productId) {
-      dispatch(resetProduct());
-    }
-  }, []);
+    dispatch(fetchProductById(productId));
+  }, [dispatch, productId]);
 
-  useEffect(() => {
-    if (productStatus === 'idle') {
-      dispatch(fetchProductById(productId));
-    }
-  }, [productStatus, dispatch, productId]);
-
-  useEffect(() => {
-    if (productStatus === 'succeeded') {
-      if (!product.obj_file_path) {
-        setSelectedFileType('gltf');
-      }
-    }
-  }, [productStatus, dispatch, productId]);
+  // Derived rather than stored: a manual choice only stands while that format
+  // exists on the product being shown, so it cannot survive navigation.
+  const selectedFileType =
+    chosenFileType === 'obj' && product?.obj_file_path
+      ? 'obj'
+      : chosenFileType === 'gltf' && product?.gltf_file_path
+        ? 'gltf'
+        : product?.obj_file_path
+          ? 'obj'
+          : 'gltf';
 
   if (productStatus === 'loading') {
     content = (
@@ -55,18 +50,8 @@ const SingleProductView = () => {
     );
   }
 
-  if (productStatus === 'error') {
-    content = (
-      <div className="d-flex justify-content-center align-items-center">
-        <div className="row mt-3">
-          <div className="col">
-            <div className="alert alert-danger" role="alert">
-              Error while loading product!
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  if (productStatus === 'failed') {
+    content = <LoadError message={error} fallback="Could not load this product." />;
   }
 
   let objDownloadButton = <></>;
@@ -94,7 +79,7 @@ const SingleProductView = () => {
     }
 
     const handleFiletypeSelectionChange = (event) => {
-      setSelectedFileType(event.target.value);
+      setChosenFileType(event.target.value);
     };
 
     let componentToDisplay;

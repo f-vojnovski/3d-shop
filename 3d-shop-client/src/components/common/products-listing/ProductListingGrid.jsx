@@ -3,11 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import LoadError from '../../common/load-error/LoadError';
 import ReactPaginate from 'react-paginate';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearProductsStatus } from '../../../service/features/productsSlice';
 
 const ProductListingGrid = (props) => {
+  const { fetchFunction } = props;
   const params = useParams();
   let pageNumber = params.pageNumber;
 
@@ -25,13 +27,13 @@ const ProductListingGrid = (props) => {
 
   useEffect(() => {
     if (productsStatus === 'idle') {
-      props.fetchFunction(pageNumber);
+      fetchFunction(pageNumber);
     }
-  }, [productsStatus, dispatch, pageNumber]);
+  }, [productsStatus, fetchFunction, pageNumber]);
 
   useEffect(() => {
     dispatch(clearProductsStatus());
-  }, [pageNumber]);
+  }, [dispatch, pageNumber]);
 
   let navigate = useNavigate();
 
@@ -46,6 +48,10 @@ const ProductListingGrid = (props) => {
         <LoadingSpinner />
       </div>
     );
+  }
+
+  if (productsStatus === 'failed') {
+    content = <LoadError message={error} fallback="Could not load products." />;
   }
 
   if (productsStatus === 'succeeded') {

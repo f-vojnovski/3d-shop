@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -8,6 +9,7 @@ const CheckoutPage = () => {
   const products = useSelector((state) => state.cart.products);
   const total = useSelector((state) => state.cart.total);
   const cartStatus = useSelector((state) => state.cart.status);
+  const error = useSelector((state) => state.cart.error);
 
   const dispatch = useDispatch();
 
@@ -17,15 +19,19 @@ const CheckoutPage = () => {
     dispatch(checkoutCart());
   };
 
-  if (cartStatus === 'succeeded') {
-    toast.success('Checkout successfull, enjoy using your newly acquired products!');
-    dispatch(clearCart());
-    navigate('/purchases');
-  }
+  useEffect(() => {
+    if (cartStatus === 'succeeded') {
+      toast.success('Checkout successful, enjoy using your newly acquired products!');
+      dispatch(clearCart());
+      navigate('/purchases');
+    }
+  }, [cartStatus, dispatch, navigate]);
 
-  if (cartStatus === 'error') {
-    toast.error('There was an error when buying products');
-  }
+  useEffect(() => {
+    if (cartStatus === 'failed') {
+      toast.error(error || 'There was a problem completing your purchase.');
+    }
+  }, [cartStatus, error]);
 
   const renderedProducts = products.map((product) => (
     <div className="row d-flex justify-content-center" key={product.id}>

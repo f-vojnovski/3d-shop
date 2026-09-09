@@ -21,10 +21,8 @@ export const productSlice = createSlice({
         state.status = 'loading';
       })
       .addCase(fetchProductById.fulfilled, (state, action) => {
-        if (state.status !== 'error') {
-          state.status = 'succeeded';
-          state.product = action.payload;
-        }
+        state.status = 'succeeded';
+        state.product = action.payload;
       })
       .addCase(fetchProductById.rejected, (state, action) => {
         state.status = 'failed';

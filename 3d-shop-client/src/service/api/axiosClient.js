@@ -11,16 +11,33 @@ axiosClient.defaults.timeout = 15000;
 
 axiosClient.defaults.withCredentials = true;
 
-// Commented code for intercepting requests, if needed in futre
-// axiosClient.interceptors.request.use((request) => {
-//   console.log('Starting Request', JSON.stringify(request, null, 2));
-//   return request;
-// });
+// Framework-generated text that names internals; never shown to a user.
+const INTERNAL_MESSAGE = /^No query results for model/;
 
-// axiosClient.interceptors.response.use((response) => {
-//   console.log('Response:', JSON.stringify(response, null, 2));
-//   return response;
-// });
+// Rewrites error.message into something displayable, because that is what the
+// slices store and the components render. An empty string means "no useful
+// server message", which lets the calling component supply the context.
+function displayableMessage(error) {
+  const data = error.response?.data;
+
+  if (data?.errors) {
+    return Object.values(data.errors).flat().join(' ');
+  }
+
+  if (data?.message && !INTERNAL_MESSAGE.test(data.message)) {
+    return data.message;
+  }
+
+  return '';
+}
+
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    error.message = displayableMessage(error);
+    return Promise.reject(error);
+  }
+);
 
 export function getRequest(URL) {
   return axiosClient.get(`${URL}`).then((response) => response);

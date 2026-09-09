@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,6 +33,20 @@ const ProductUploadPage = () => {
   const uploadedProduct = useSelector((state) => state.productUpload.uploadedProduct);
   const status = useSelector((state) => state.productUpload.status);
   const error = useSelector((state) => state.productUpload.error);
+
+  useEffect(() => {
+    if (status === 'succeeded' && uploadedProduct) {
+      dispatch(clearUploadState());
+      toast.success('Your new product has been uploaded!');
+      navigate(`/product/${uploadedProduct.id}`);
+    }
+  }, [status, uploadedProduct, dispatch, navigate]);
+
+  useEffect(() => {
+    if (status === 'failed') {
+      toast.error(error || 'Upload failed. Please check the files and try again.');
+    }
+  }, [status, error]);
 
   const onUploadClicked = () => {
     const formData = new FormData();
@@ -120,11 +134,6 @@ const ProductUploadPage = () => {
     );
   }
 
-  if (status === 'succeeded') {
-    dispatch(clearUploadState());
-    toast.success('Your new product has been uploaded!');
-    navigate(`/product/${uploadedProduct.id}`);
-  }
 
   return (
     <div className="container-fluid my-auto form_max_width">

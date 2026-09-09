@@ -65,7 +65,7 @@ export const selectAuthStatus = (state) => state.status;
 
 export const postLoginData = createAsyncThunk('auth/postLoginData', async (body) => {
   if (!checkIfUserConsentedToCookies()) {
-    return;
+    throw new Error('Please accept cookies before signing in.');
   }
 
   if (!cookies.get('XSRF-TOKEN')) {

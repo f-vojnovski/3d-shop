@@ -22,7 +22,13 @@ const LoginPage = () => {
       toast.success('You are logged in!');
       navigate('/');
     }
-  }, [authStatus]);
+  }, [authStatus, navigate]);
+
+  useEffect(() => {
+    if (authStatus === 'failed') {
+      toast.error(error || 'Could not sign you in.');
+    }
+  }, [authStatus, error]);
 
   let onLoginClicked = () => {
     let body = {

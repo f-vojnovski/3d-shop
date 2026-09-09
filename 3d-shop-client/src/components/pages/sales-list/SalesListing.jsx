@@ -2,11 +2,13 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSales } from '../../../service/features/salesSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import LoadError from '../../common/load-error/LoadError';
 import { Link } from 'react-router-dom';
 
 const SalesListing = () => {
   const sales = useSelector((state) => state.sales.sales);
   const salesStatus = useSelector((state) => state.sales.status);
+  const error = useSelector((state) => state.sales.error);
 
   const dispatch = useDispatch();
 
@@ -26,15 +28,15 @@ const SalesListing = () => {
     );
   }
 
-  if (salesStatus === 'error') {
-    content = <h5>Error while fetching sales!</h5>;
+  if (salesStatus === 'failed') {
+    content = <LoadError message={error} fallback="Could not load your sales." />;
   }
 
-  if (sales.length === 0 && salesStatus === 'succeeded') {
+  if (salesStatus === 'succeeded' && sales.length === 0) {
     content = <h5>For now, you have not made any sales.</h5>;
   }
 
-  if (salesStatus === 'succeeded') {
+  if (salesStatus === 'succeeded' && sales.length > 0) {
     let mappedSales = sales.map((sale) => (
       <tr key={sale.id}>
         <td>{sale.id}</td>

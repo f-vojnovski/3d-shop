@@ -20,20 +20,23 @@ const RegisterPage = () => {
   const authStatus = useSelector((state) => state.auth.status);
   const error = useSelector((state) => state.auth.error);
 
-  useEffect(
-    () => {
-      if (user) {
-        navigate('/');
-      }
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+      return;
+    }
 
-      if (authStatus === 'succeeded') {
-        toast.success('You are now logged in!');
-        navigate('/');
-      }
-    },
-    user,
-    authStatus
-  );
+    if (authStatus === 'succeeded') {
+      toast.success('You are now logged in!');
+      navigate('/');
+    }
+  }, [user, authStatus, navigate]);
+
+  useEffect(() => {
+    if (authStatus === 'failed') {
+      toast.error(error || 'Could not create your account.');
+    }
+  }, [authStatus, error]);
 
   const onRegisterButtonClick = () => {
     const body = {
