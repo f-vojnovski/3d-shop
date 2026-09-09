@@ -20,7 +20,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     public int $tries = 2;
     public int $timeout = 600;
 
-    /** Two renders of one product would share a staging directory. */
+    /** Two renders of one product would share a scratch directory. */
     public int $uniqueFor = 1800;
 
     public function __construct(public int $productId) {}
@@ -55,13 +55,18 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $models = Storage::disk($source->disk);
-        $scan = MeshPrescan::of($models->path($source->path));
+        // Recorded at upload, so rejecting costs no transfer from object storage.
+        $scan = new MeshPrescan(
+            bytes: (int) $source->bytes,
+            triangles: (int) ($source->meta['triangles'] ?? 0),
+            format: (string) ($source->meta['sniffed_format'] ?? 'unknown'),
+        );
 
-        $log->info('Prescan complete.', [
+        $log->info('Admission check.', [
             'format' => $scan->format,
             'bytes' => $scan->bytes,
             'triangles' => $scan->triangles,
+            'disk' => $source->disk,
         ]);
 
         if ($rejection = $scan->rejection()) {
@@ -72,40 +77,47 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         $product->update(['preview_status' => 'rendering', 'preview_error' => null]);
 
-        $staging = "render/{$product->id}";
-        Storage::disk('models')->deleteDirectory($staging);
+        $scratch = storage_path('app/private/render-scratch/'.$product->id);
+        $this->removeDirectory($scratch);
+        @mkdir($scratch, 0775, true);
 
-        $startedAt = microtime(true);
-        $result = $runner->run(
-            $this->renderRequest($product, $source, $scan),
-            $models->path($source->path),
-            $staging
-        );
-        $seconds = round(microtime(true) - $startedAt, 2);
+        try {
+            $modelPath = $this->fetchModel($source, $scratch, $log);
 
-        if (($result['status'] ?? 'failed') !== 'ok') {
-            // Staging is kept on failure: result.json is the only diagnostic.
-            $log->error('Render failed.', [
+            $startedAt = microtime(true);
+            $result = $runner->run(
+                $this->renderRequest($product, $source, $scan),
+                $modelPath,
+                $scratch
+            );
+            $seconds = round(microtime(true) - $startedAt, 2);
+
+            if (($result['status'] ?? 'failed') !== 'ok') {
+                $log->error('Render failed.', [
+                    'seconds' => $seconds,
+                    'scratch' => $scratch,
+                    'result' => $result,
+                ]);
+                $this->reject($product, $log, $result['reason'] ?? 'Rendering failed.');
+
+                return;
+            }
+
+            $this->storeImages($product, $scratch, $result);
+
+            $log->info('Render complete.', [
                 'seconds' => $seconds,
-                'staging' => $staging,
-                'result' => $result,
+                'renderer_seconds' => $result['seconds'] ?? null,
+                'images' => count($result['images']),
+                'blank' => $result['blank'] ?? [],
+                'triangles' => $result['triangles'] ?? null,
             ]);
-            $this->reject($product, $log, $result['reason'] ?? 'Rendering failed.');
 
-            return;
+            $this->removeDirectory($scratch);
+        } catch (Throwable $exception) {
+            $log->error('Render threw.', ['message' => $exception->getMessage()]);
+            $this->reject($product, $log, 'Rendering failed unexpectedly.');
         }
-
-        $this->storeImages($product, $staging, $result);
-
-        $log->info('Render complete.', [
-            'seconds' => $seconds,
-            'renderer_seconds' => $result['seconds'] ?? null,
-            'images' => count($result['images']),
-            'blank' => $result['blank'] ?? [],
-            'triangles' => $result['triangles'] ?? null,
-        ]);
-
-        Storage::disk('models')->deleteDirectory($staging);
     }
 
     public function failed(?Throwable $exception): void
@@ -121,17 +133,41 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         ]);
     }
 
-    private function storeImages(Product $product, string $staging, array $result): void
+    /**
+     * Streams the model out of storage onto local scratch. This is the whole
+     * reason a worker needs no shared filesystem: it pulls what it needs.
+     */
+    private function fetchModel(ProductFile $source, string $scratch, $log): string
     {
-        $models = Storage::disk('models');
-        $public = Storage::disk('public');
+        $target = $scratch.DIRECTORY_SEPARATOR.'model';
+        $startedAt = microtime(true);
 
+        $read = Storage::disk($source->disk)->readStream($source->path);
+        $write = fopen($target, 'wb');
+        stream_copy_to_stream($read, $write);
+        fclose($write);
+        fclose($read);
+
+        $log->debug('Model fetched to scratch.', [
+            'bytes' => filesize($target),
+            'seconds' => round(microtime(true) - $startedAt, 2),
+        ]);
+
+        return $target;
+    }
+
+    private function storeImages(Product $product, string $scratch, array $result): void
+    {
+        $public = Storage::disk('public');
         $product->previewImages()->delete();
+
         $sourceChecksum = $product->files
             ->firstWhere('kind', ProductFile::KIND_DELIVERABLE)?->checksum;
 
         foreach ($result['images'] as $image) {
-            $bytes = $models->get("{$staging}/out/{$image['file']}");
+            $bytes = (string) file_get_contents(
+                $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$image['file']
+            );
             $path = 'preview_images/'.uniqid().'.png';
             $public->put($path, $bytes);
 
@@ -145,6 +181,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 'checksum' => hash('sha256', $bytes),
                 'meta' => [
                     'camera' => $product->preview_angles[$image['index']] ?? null,
+                    'coverage' => $image['coverage'] ?? null,
                     'renderer' => $result['renderer'] ?? null,
                     'source_checksum' => $sourceChecksum,
                 ],
@@ -157,8 +194,11 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             'preview_status' => 'ready',
             'preview_error' => $blank === []
                 ? null
-                : sprintf('%d of %d angles rendered blank and were discarded.',
-                    count($blank), count($blank) + count($result['images'])),
+                : sprintf(
+                    '%d of %d angles rendered blank and were discarded.',
+                    count($blank),
+                    count($blank) + count($result['images'])
+                ),
         ]);
     }
 
@@ -166,6 +206,24 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     {
         $log->warning('Render rejected.', ['reason' => $reason]);
         $product->update(['preview_status' => 'failed', 'preview_error' => $reason]);
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        foreach (scandir($directory) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $directory.DIRECTORY_SEPARATOR.$entry;
+            is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
+        }
+
+        @rmdir($directory);
     }
 
     private function renderRequest(Product $product, ProductFile $source, MeshPrescan $scan): array

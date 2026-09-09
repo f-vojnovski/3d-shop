@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 class RenderRunner
@@ -17,18 +16,17 @@ class RenderRunner
     ) {}
 
     /**
-     * Runs the render container over one job and returns its result document.
-     * The model is mounted read-only rather than copied, so a large file costs
-     * nothing to hand over.
+     * Runs the render container over one job. Both paths are on the worker's own
+     * scratch disk, so the container keeps --network=none and the worker is the
+     * only thing that talks to object storage.
      */
-    public function run(array $request, string $modelAbsolutePath, string $stagingRelative): array
+    public function run(array $request, string $modelPath, string $scratchDir): array
     {
-        $disk = Storage::disk('models');
-        $disk->put("{$stagingRelative}/job.json", json_encode($request, JSON_PRETTY_PRINT));
-        $disk->makeDirectory("{$stagingRelative}/out");
+        $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
+        $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
 
-        $jobFile = $disk->path("{$stagingRelative}/job.json");
-        $outDir = $disk->path("{$stagingRelative}/out");
+        @mkdir($outDir, 0775, true);
+        file_put_contents($jobFile, json_encode($request, JSON_PRETTY_PRINT));
 
         $process = new Process([
             'docker', 'run', '--rm',
@@ -36,7 +34,7 @@ class RenderRunner
             "--memory={$this->memory}", "--cpus={$this->cpus}",
             '--pids-limit=256', '--tmpfs', '/tmp:rw,size=512m',
             '-e', "RENDER_TIMEOUT={$this->timeoutSeconds}",
-            '-v', $this->hostPath($modelAbsolutePath).':/in/model:ro',
+            '-v', $this->hostPath($modelPath).':/in/model:ro',
             '-v', $this->hostPath($jobFile).':/in/job.json:ro',
             '-v', $this->hostPath($outDir).':/out',
             self::IMAGE,
@@ -50,9 +48,9 @@ class RenderRunner
             'stderr' => substr(trim($process->getErrorOutput()), -600) ?: null,
         ]);
 
-        $resultPath = "{$stagingRelative}/out/result.json";
+        $resultFile = $outDir.DIRECTORY_SEPARATOR.'result.json';
 
-        if (! $disk->exists($resultPath)) {
+        if (! is_file($resultFile)) {
             return [
                 'status' => 'failed',
                 'reason' => 'The renderer produced no result.',
@@ -61,16 +59,13 @@ class RenderRunner
             ];
         }
 
-        return json_decode($disk->get($resultPath), true) ?? [
+        return json_decode((string) file_get_contents($resultFile), true) ?? [
             'status' => 'failed',
             'reason' => 'The renderer result could not be read.',
         ];
     }
 
-    /**
-     * Docker on Windows wants //d/path, not D:\path. Isolated here because it
-     * is the one place the host platform leaks into the pipeline.
-     */
+    /** Docker on Windows wants //d/path, not D:\path. */
     private function hostPath(string $absolute): string
     {
         if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {

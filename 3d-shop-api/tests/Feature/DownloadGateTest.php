@@ -8,6 +8,7 @@ use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -42,6 +43,7 @@ class DownloadGateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Queue::fake();
         Storage::fake('models');
         Storage::fake('public');
     }
@@ -71,10 +73,10 @@ class DownloadGateTest extends TestCase
 
     public function test_a_stranger_is_offered_no_download_url(): void
     {
-        $this->upload($this->user('seller'));
+        $product = $this->upload($this->user('seller'));
         app('auth')->forgetGuards();
 
-        $body = $this->getJson('/api/products/1')->json();
+        $body = $this->getJson("/api/products/{$product->id}")->json();
 
         $this->assertNull($body['download_urls']);
         $this->assertSame(Product::STATUS_NOT_PURCHASED, $body['product_status']);
@@ -83,10 +85,10 @@ class DownloadGateTest extends TestCase
     public function test_the_owner_is_offered_a_download_url(): void
     {
         $seller = $this->user('seller');
-        $this->upload($seller);
+        $product = $this->upload($seller);
 
         Sanctum::actingAs($seller);
-        $body = $this->getJson('/api/products/1')->json();
+        $body = $this->getJson("/api/products/{$product->id}")->json();
 
         $this->assertNotNull($body['download_urls']['obj']);
         $this->assertSame(Product::STATUS_OWNER, $body['product_status']);
@@ -105,7 +107,7 @@ class DownloadGateTest extends TestCase
         ]);
 
         Sanctum::actingAs($buyer);
-        $url = $this->getJson('/api/products/1')->json('download_urls.obj');
+        $url = $this->getJson("/api/products/{$product->id}")->json('download_urls.obj');
 
         $this->assertNotNull($url);
         $this->get($url)->assertSuccessful();
@@ -113,29 +115,29 @@ class DownloadGateTest extends TestCase
 
     public function test_an_unsigned_download_is_rejected(): void
     {
-        $this->upload($this->user('seller'));
+        $product = $this->upload($this->user('seller'));
 
-        $this->get('/api/products/1/download/obj')->assertForbidden();
+        $this->get("/api/products/{$product->id}/download/obj")->assertForbidden();
     }
 
     public function test_a_tampered_download_url_is_rejected(): void
     {
         $seller = $this->user('seller');
-        $this->upload($seller);
+        $product = $this->upload($seller);
 
         Sanctum::actingAs($seller);
-        $url = $this->getJson('/api/products/1')->json('download_urls.obj');
+        $url = $this->getJson("/api/products/{$product->id}")->json('download_urls.obj');
 
-        $this->get(str_replace('user=1', 'user=2', $url))->assertForbidden();
+        $this->get(str_replace('user='.$seller->id, 'user=999', $url))->assertForbidden();
     }
 
     public function test_a_download_url_expires(): void
     {
         $seller = $this->user('seller');
-        $this->upload($seller);
+        $product = $this->upload($seller);
 
         Sanctum::actingAs($seller);
-        $url = $this->getJson('/api/products/1')->json('download_urls.obj');
+        $url = $this->getJson("/api/products/{$product->id}")->json('download_urls.obj');
 
         $this->travel(16)->minutes();
 
@@ -144,10 +146,10 @@ class DownloadGateTest extends TestCase
 
     public function test_an_interactive_product_serves_a_public_preview(): void
     {
-        $this->upload($this->user('seller'));
+        $product = $this->upload($this->user('seller'));
         app('auth')->forgetGuards();
 
-        $url = $this->getJson('/api/products/1')->json('preview_urls.obj');
+        $url = $this->getJson("/api/products/{$product->id}")->json('preview_urls.obj');
 
         $this->assertNotNull($url);
         $this->get($url)->assertSuccessful();
@@ -155,14 +157,14 @@ class DownloadGateTest extends TestCase
 
     public function test_an_attested_stills_product_offers_no_preview_url(): void
     {
-        $this->upload($this->user('seller'), [
+        $product = $this->upload($this->user('seller'), [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
         ]);
         app('auth')->forgetGuards();
 
-        $body = $this->getJson('/api/products/1')->json();
+        $body = $this->getJson("/api/products/{$product->id}")->json();
 
         $this->assertSame([], $body['preview_urls']);
-        $this->get('/api/products/1/preview/obj')->assertForbidden();
+        $this->get("/api/products/{$product->id}/preview/obj")->assertForbidden();
     }
 }

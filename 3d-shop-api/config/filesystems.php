@@ -38,18 +38,33 @@ return [
             'report' => false,
         ],
 
+        // Driver is env-switchable so the disk names stay stable: product_files
+        // stores a disk name per row, and object storage is what lets render
+        // workers run on a machine that has no copy of the files.
         'models' => [
-            'driver' => 'local',
-            'root' => storage_path('app/private/models'),
+            'driver' => env('MODELS_DISK', 'local'),
+            'root' => env('MODELS_DISK_ROOT', storage_path('app/private/models')),
+            'key' => env('S3_KEY'),
+            'secret' => env('S3_SECRET'),
+            'region' => env('S3_REGION', 'us-east-1'),
+            'bucket' => env('S3_MODELS_BUCKET'),
+            'endpoint' => env('S3_ENDPOINT'),
+            'use_path_style_endpoint' => true,
             'throw' => false,
         ],
 
         'public' => [
-            'driver' => 'local',
-            'root' => storage_path('app/public'),
-            // Host-less: client and API share one origin via the dev proxy.
-            'url' => '/storage',
+            'driver' => env('PUBLIC_DISK', 'local'),
+            'root' => env('PUBLIC_DISK_ROOT', storage_path('app/public')),
+            // Host-less when local: client and API share one origin via the proxy.
+            'url' => env('PUBLIC_DISK_URL', '/storage'),
             'visibility' => 'public',
+            'key' => env('S3_KEY'),
+            'secret' => env('S3_SECRET'),
+            'region' => env('S3_REGION', 'us-east-1'),
+            'bucket' => env('S3_PUBLIC_BUCKET'),
+            'endpoint' => env('S3_ENDPOINT'),
+            'use_path_style_endpoint' => true,
             'throw' => false,
             'report' => false,
         ],

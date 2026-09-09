@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Jobs\RenderProductPreviews;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -24,6 +26,7 @@ class PreviewAnglesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Queue::fake();
         Storage::fake('models');
         Storage::fake('public');
     }
@@ -56,12 +59,12 @@ class PreviewAnglesTest extends TestCase
         $this->seller();
 
         // Multipart sends this as a JSON string, as the browser does.
-        $this->postJson('/api/products', $this->payload([
+        $id = $this->postJson('/api/products', $this->payload([
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'preview_angles' => json_encode([self::ANGLE]),
-        ]))->assertSuccessful();
+        ]))->assertSuccessful()->json('id');
 
-        $angles = Product::sole()->preview_angles;
+        $angles = Product::findOrFail($id)->preview_angles;
 
         $this->assertCount(1, $angles);
         $this->assertSame([3.2, 1.8, 4.1], $angles[0]['position']);
@@ -69,7 +72,7 @@ class PreviewAnglesTest extends TestCase
 
         $this->assertSame(
             [3.2, 1.8, 4.1],
-            $this->getJson('/api/products/1')->json('preview_angles.0.position')
+            $this->getJson("/api/products/{$id}")->json('preview_angles.0.position')
         );
     }
 
@@ -77,9 +80,10 @@ class PreviewAnglesTest extends TestCase
     {
         $this->seller();
 
-        $this->postJson('/api/products', $this->payload())->assertSuccessful();
+        $id = $this->postJson('/api/products', $this->payload())
+            ->assertSuccessful()->json('id');
 
-        $this->assertSame([], $this->getJson('/api/products/1')->json('preview_angles'));
+        $this->assertSame([], $this->getJson("/api/products/{$id}")->json('preview_angles'));
     }
 
     public function test_a_malformed_angle_is_rejected(): void
@@ -112,13 +116,39 @@ class PreviewAnglesTest extends TestCase
     public function test_the_owner_can_replace_the_angles_later(): void
     {
         $this->seller();
-        $this->postJson('/api/products', $this->payload())->assertSuccessful();
+        $id = $this->postJson('/api/products', $this->payload())
+            ->assertSuccessful()->json('id');
 
-        $this->putJson('/api/products/1', [
+        $this->putJson("/api/products/{$id}", [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'preview_angles' => [self::ANGLE, self::ANGLE],
         ])->assertSuccessful();
 
-        $this->assertCount(2, Product::sole()->preview_angles);
+        $this->assertCount(2, Product::findOrFail($id)->preview_angles);
     }
+
+    public function test_uploading_attested_stills_queues_a_render(): void
+    {
+        $this->seller();
+
+        $id = $this->postJson('/api/products', $this->payload([
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+            'preview_angles' => json_encode([self::ANGLE]),
+        ]))->assertSuccessful()->json('id');
+
+        Queue::assertPushed(
+            RenderProductPreviews::class,
+            fn (RenderProductPreviews $job) => $job->productId === $id
+        );
+    }
+
+    public function test_an_interactive_upload_does_not_queue_a_render(): void
+    {
+        $this->seller();
+
+        $this->postJson('/api/products', $this->payload())->assertSuccessful();
+
+        Queue::assertNothingPushed();
+    }
+
 }

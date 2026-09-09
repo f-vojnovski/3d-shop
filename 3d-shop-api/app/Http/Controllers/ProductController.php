@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Jobs\RenderProductPreviews;
 use App\Models\ProductFile;
+use App\Support\MeshPrescan;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller as BaseController;
@@ -73,6 +75,10 @@ class ProductController extends BaseController
 
             $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
 
+            if ($product->preview_mode === Product::PREVIEW_ATTESTED_STILLS) {
+                RenderProductPreviews::dispatch($product->id)->afterCommit();
+            }
+
             return new ProductResource($product->load('files'));
         });
     }
@@ -107,6 +113,10 @@ class ProductController extends BaseController
         }
 
         $product->update($fields);
+
+        if (array_key_exists('preview_angles', $fields) || array_key_exists('preview_mode', $fields)) {
+            RenderProductPreviews::dispatch($product->id);
+        }
 
         return new ProductResource($product->load('files'));
     }
@@ -204,6 +214,15 @@ class ProductController extends BaseController
             default => $format.'_files',
         };
 
+        // Measured here, while the upload is still on local disk. Once it is in
+        // object storage a prescan would mean transferring it back.
+        $scan = $kind === ProductFile::KIND_DELIVERABLE
+            ? MeshPrescan::of($file->getRealPath())
+            : null;
+
+        $checksum = hash_file('sha256', $file->getRealPath());
+        $bytes = $file->getSize();
+
         $name = uniqid().'.'.$file->getClientOriginalExtension();
         $path = Storage::disk($disk)->putFileAs($directory, $file, $name);
 
@@ -212,8 +231,12 @@ class ProductController extends BaseController
             'format' => $format,
             'disk' => $disk,
             'path' => $path,
-            'bytes' => Storage::disk($disk)->size($path),
-            'checksum' => hash_file('sha256', Storage::disk($disk)->path($path)),
+            'bytes' => $bytes,
+            'checksum' => $checksum,
+            'meta' => $scan === null ? null : [
+                'sniffed_format' => $scan->format,
+                'triangles' => $scan->triangles,
+            ],
         ]);
     }
 
