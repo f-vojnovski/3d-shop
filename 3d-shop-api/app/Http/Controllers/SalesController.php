@@ -33,8 +33,9 @@ class SalesController extends BaseController
 
             $newSale = [
                 'buyer_id' => $buyerId,
-                'product_id' => $product['id'],
-                'price' => $product['price'],
+                'product_id' => $product->id,
+                'price_cents' => $product->price_cents,
+                'currency' => $product->currency,
             ];
 
             $existingSale = Sale::where('buyer_id', $newSale['buyer_id'])
@@ -67,7 +68,7 @@ class SalesController extends BaseController
                 'users.name as buyer_name',
                 'products.id as product_id',
                 'products.name as product_name',
-                'sales.price as price')
+                'sales.price_cents as price_cents')
             ->orderByDesc('sales.id')
             ->get();
 

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchSales } from '../../../service/features/salesSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
+import { formatPrice } from '../../../service/util/formatPrice';
 import { Link } from 'react-router-dom';
 
 const SalesListing = () => {
@@ -51,7 +52,7 @@ const SalesListing = () => {
             {sale.product_name}{' '}
           </Link>
         </td>
-        <td>${sale.price}</td>
+        <td>${formatPrice(sale.price_cents)}</td>
       </tr>
     ));
 

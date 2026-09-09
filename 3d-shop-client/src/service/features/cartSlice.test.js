@@ -1,6 +1,6 @@
 import reducer, { addToCart, clearCart } from './cartSlice';
 
-const product = (id, price) => ({ id, price, name: `Product ${id}` });
+const product = (id, priceCents) => ({ id, price_cents: priceCents, name: `Product ${id}` });
 
 describe('cart reducer', () => {
   it('starts empty', () => {
@@ -11,30 +11,40 @@ describe('cart reducer', () => {
   });
 
   it('adds a product and accumulates the total', () => {
-    const state = reducer(undefined, addToCart(product(1, '40')));
+    const state = reducer(undefined, addToCart(product(1, 4000)));
 
     expect(state.products).toHaveLength(1);
-    expect(state.total).toBe(40);
+    expect(state.total).toBe(4000);
   });
 
   it('sums the prices of several products', () => {
-    let state = reducer(undefined, addToCart(product(1, '40')));
-    state = reducer(state, addToCart(product(2, '3')));
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = reducer(state, addToCart(product(2, 300)));
 
     expect(state.products.map((p) => p.id)).toEqual([1, 2]);
-    expect(state.total).toBe(43);
+    expect(state.total).toBe(4300);
+  });
+
+  // The reason prices are stored as minor units: as floats these two sum to
+  // 30.299999999999997, which would reach the payment step as the cart total.
+  it('sums exactly, with no floating point drift', () => {
+    let state = reducer(undefined, addToCart(product(1, 1010)));
+    state = reducer(state, addToCart(product(2, 2020)));
+
+    expect(state.total).toBe(3030);
+    expect(0.1 * 101 + 0.1 * 202).not.toBe(30.3);
   });
 
   it('ignores a product that is already in the cart', () => {
-    let state = reducer(undefined, addToCart(product(1, '40')));
-    state = reducer(state, addToCart(product(1, '40')));
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = reducer(state, addToCart(product(1, 4000)));
 
     expect(state.products).toHaveLength(1);
-    expect(state.total).toBe(40);
+    expect(state.total).toBe(4000);
   });
 
   it('empties the cart on clearCart', () => {
-    let state = reducer(undefined, addToCart(product(1, '40')));
+    let state = reducer(undefined, addToCart(product(1, 4000)));
     state = reducer(state, clearCart());
 
     expect(state).toMatchObject({ products: [], total: 0 });

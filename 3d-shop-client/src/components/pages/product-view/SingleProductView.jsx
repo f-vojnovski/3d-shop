@@ -7,6 +7,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
+import { formatPrice } from '../../../service/util/formatPrice';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
 import { API_URL } from '../../../consts';
@@ -31,8 +32,6 @@ const SingleProductView = () => {
     dispatch(fetchProductById(productId));
   }, [dispatch, productId]);
 
-  // Derived rather than stored: a manual choice only stands while that format
-  // exists on the product being shown, so it cannot survive navigation.
   const selectedFileType =
     chosenFileType === 'obj' && product?.obj_file_path
       ? 'obj'
@@ -126,7 +125,7 @@ const SingleProductView = () => {
                 <div className="col">
                   <span className="bolded-label">{product.name}</span>
                   <span> - </span>
-                  <span>${product.price}</span>
+                  <span>${formatPrice(product.price_cents)}</span>
                 </div>
               </div>
               <div className="row mb-2">

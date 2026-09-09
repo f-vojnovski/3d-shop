@@ -1,6 +1,7 @@
 import { Menu, MenuButton, MenuDivider, MenuItem } from '@szhsin/react-menu';
 import { FaShoppingCart } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
+import { formatPrice } from '../../../service/util/formatPrice';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import { MdOutlineClear } from 'react-icons/md';
 import { IoBagCheckOutline } from 'react-icons/io5';
@@ -26,7 +27,7 @@ const ShoppingCart = () => {
     <div className="row p-1" key={i}>
       <div className="col text-truncate">
         <span>
-          <span className="bolded-label">${product.price}</span> -{' '}
+          <span className="bolded-label">${formatPrice(product.price_cents)}</span> -{' '}
           {product.name}
         </span>
       </div>
@@ -48,7 +49,7 @@ const ShoppingCart = () => {
       >
         <div className="row p-1">
           <div className="col">
-            <span className="bolded-label">Total: ${totalPrice}</span>
+            <span className="bolded-label">Total: ${formatPrice(totalPrice)}</span>
           </div>
         </div>
         <MenuDivider />

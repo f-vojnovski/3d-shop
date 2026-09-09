@@ -13,6 +13,18 @@ class Sale extends Model
     protected $fillable = [
         'buyer_id',
         'product_id',
-        'price'
+        'price_cents',
+        'currency',
     ];
+
+    protected $attributes = [
+        'currency' => 'USD',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'price_cents' => 'integer',
+        ];
+    }
 }

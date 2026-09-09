@@ -39,7 +39,7 @@ const CheckoutPage = () => {
         <ProductOverview
           id={product.id}
           name={product.name}
-          price={product.price}
+          priceCents={product.price_cents}
         ></ProductOverview>
       </div>
     </div>

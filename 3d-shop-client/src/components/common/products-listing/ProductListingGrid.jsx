@@ -4,9 +4,13 @@ import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
-import ReactPaginate from 'react-paginate';
+import ReactPaginateModule from 'react-paginate';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearProductsStatus } from '../../../service/features/productsSlice';
+
+// react-paginate is CJS-only, so under ESM its default arrives as
+// { default: fn } and React would render an object.
+const ReactPaginate = ReactPaginateModule.default ?? ReactPaginateModule;
 
 const ProductListingGrid = (props) => {
   const { fetchFunction } = props;
@@ -61,7 +65,7 @@ const ProductListingGrid = (props) => {
           id={product.id}
           name={product.name}
           description={product.description}
-          price={product.price}
+          priceCents={product.price_cents}
           thumbnailUrl={product.thumbnail_path}
         ></ProductOverview>
       </div>

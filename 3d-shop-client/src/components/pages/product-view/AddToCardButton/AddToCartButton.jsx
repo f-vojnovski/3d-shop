@@ -8,7 +8,6 @@ const AddToCartButton = (props) => {
 
   const dispatch = useDispatch();
 
-  const totalPrice = useSelector((state) => state.cart.total);
   const productsInCart = useSelector((state) => state.cart.products);
 
   const onAddToCartClick = () => {

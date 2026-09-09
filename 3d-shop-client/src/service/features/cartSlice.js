@@ -21,7 +21,7 @@ export const cartSlice = createSlice({
       return {
         ...state,
         products: [...state.products, action.payload],
-        total: parseFloat(state.total) + parseFloat(action.payload.price),
+        total: state.total + action.payload.price_cents,
       };
     },
     clearCart: (state, action) => {

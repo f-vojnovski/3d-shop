@@ -18,7 +18,7 @@ class ProductController extends BaseController
      */
     public function index()
     {
-        return Product::orderBy("id")->paginate(16);
+        return Product::where('unlisted', false)->orderBy("id")->paginate(16);
     }
 
     /**
@@ -80,7 +80,7 @@ class ProductController extends BaseController
 
         $newProduct = [
             'name' => $request->input('name'),
-            'price' => $request->input('price'),
+            'price_cents' => (int) round($request->input('price') * 100),
             'description'=> $request->input('description'),
             'obj_file_path' => $objUrl,
             'gltf_file_path' => $gltfUrl,
@@ -145,7 +145,13 @@ class ProductController extends BaseController
             'name' => 'sometimes|required|max:255',
             'description' => 'sometimes|nullable|max:1000',
             'price' => 'sometimes|required|numeric|min:0|max:999999.99',
+            'unlisted' => 'sometimes|boolean',
         ]);
+
+        if (array_key_exists('price', $fields)) {
+            $fields['price_cents'] = (int) round($fields['price'] * 100);
+            unset($fields['price']);
+        }
 
         $product->update($fields);
 
@@ -170,7 +176,9 @@ class ProductController extends BaseController
      * @return \Illuminate\Http\Response
      */
     public function search($name) {
-        return Product::where('name', 'like', '%'.$name.'%')->get();
+        return Product::where('unlisted', false)
+            ->where('name', 'like', '%'.$name.'%')
+            ->get();
     }
 
     /**
@@ -191,7 +199,10 @@ class ProductController extends BaseController
      * @return \Illuminate\Http\Response
      */
     public function getProductsForUser($userId) {
-        return Product::orderBy("id")->where('user_id', $userId)->paginate(16);
+        return Product::where('unlisted', false)
+            ->orderBy("id")
+            ->where('user_id', $userId)
+            ->paginate(16);
     }
 
     public function getPurchasedProductsForUser() {
@@ -201,7 +212,7 @@ class ProductController extends BaseController
             ->where('sales.buyer_id', $userId)
             ->select('products.id as id',
                 'products.name as name',
-                'products.price as price',
+                'products.price_cents as price_cents',
                 'products.description as description',
                 'products.obj_file_path as obj_file_path',
                 'products.gltf_file_path as gltf_file_path',

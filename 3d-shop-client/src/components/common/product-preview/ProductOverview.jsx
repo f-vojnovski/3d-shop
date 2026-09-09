@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { API_URL } from '../../../consts';
+import { formatPrice } from '../../../service/util/formatPrice';
 
 const ProductOverview = (product) => {
   let thumbnailPath = `${API_URL}${product.thumbnailUrl}`;
@@ -20,7 +21,7 @@ const ProductOverview = (product) => {
               <Link to={`/product/${product.id}`} className="link-dark">
                 <div>{product.name}</div>
               </Link>
-              <div className="bolded-label">${product.price}</div>
+              <div className="bolded-label">${formatPrice(product.priceCents)}</div>
             </div>
           </div>
         </div>

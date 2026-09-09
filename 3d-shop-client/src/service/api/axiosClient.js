@@ -11,12 +11,10 @@ axiosClient.defaults.timeout = 15000;
 
 axiosClient.defaults.withCredentials = true;
 
-// Framework-generated text that names internals; never shown to a user.
+// Framework text that names internals; never shown to a user.
 const INTERNAL_MESSAGE = /^No query results for model/;
 
-// Rewrites error.message into something displayable, because that is what the
-// slices store and the components render. An empty string means "no useful
-// server message", which lets the calling component supply the context.
+// Empty means "nothing useful from the server"; the component supplies context.
 function displayableMessage(error) {
   const data = error.response?.data;
 
