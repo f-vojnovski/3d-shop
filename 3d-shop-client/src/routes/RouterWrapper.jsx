@@ -1,5 +1,4 @@
-import React from 'react';
-import { BrowserRouter as Router, useRoutes } from 'react-router-dom';
+import { useRoutes } from 'react-router-dom';
 import CheckoutPage from '../components/pages/checkout/CheckoutPage';
 import CurrentUserProductList from '../components/pages/current-user-product-list/CurrentUserProductList';
 import LoginPage from '../components/pages/login/LoginPage';

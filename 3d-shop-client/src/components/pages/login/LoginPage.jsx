@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import { toast } from 'react-toastify';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
-  const auth = useSelector((state) => state.auth);
   const authStatus = useSelector((state) => state.auth.status);
   const error = useSelector((state) => state.auth.error);
 

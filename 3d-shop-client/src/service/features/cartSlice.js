@@ -61,6 +61,6 @@ export const checkoutCart = createAsyncThunk(
 
     const body = { products: products };
 
-    const response = await postRequestWithToken('api/sales/buy', body, token);
+    await postRequestWithToken('api/sales/buy', body, token);
   }
 );

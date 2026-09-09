@@ -12,6 +12,7 @@ const StudioEnvironment = ({ intensity = 1 }) => {
     const pmrem = new PMREMGenerator(gl);
     const target = pmrem.fromScene(new RoomEnvironment(), 0.04);
 
+    // eslint-disable-next-line react-hooks/immutability -- three.js scene state is set by mutation
     scene.environment = target.texture;
     scene.environmentIntensity = intensity;
 
