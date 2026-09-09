@@ -1,9 +1,6 @@
-// Reads a picked file into memory as a data URI, so a model can be previewed
-// before it is uploaded. Browsers do not allow reading it straight off disk.
-//
-// FileReader can fail, most commonly when the file has been moved or renamed
-// since the user picked it. Without an error path the promise never settles and
-// the picker silently does nothing, so both failure events reject here.
+// Both failure events must reject: without them a FileReader error (usually the
+// file moved since it was picked) leaves the promise unsettled and the picker
+// silently does nothing.
 export const fileToDataUri = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();

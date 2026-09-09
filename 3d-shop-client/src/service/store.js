@@ -15,7 +15,8 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
+// lib/ is CommonJS; Vite's interop returns the namespace, not the storage object.
+import storage from 'redux-persist/es/storage';
 import { combineReducers } from 'redux';
 
 const persistConfig = {

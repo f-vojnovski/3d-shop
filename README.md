@@ -71,6 +71,7 @@ All routes are in [3d-shop-api/routes/api.php](3d-shop-api/routes/api.php). List
 | `POST` | `/api/auth/register` | | `name`, `email`, `password`, `password_confirmation`; returns user and token |
 | `POST` | `/api/auth/login` | | `name`, `password`; returns user and token |
 | `POST` | `/api/products` | ✓ | Upload, multipart: `name`, `price`, `description`, `thumbnail`, and `objModel` and/or `gltfModel` |
+| `PUT` | `/api/products/{id}` | ✓ | Edit `name`, `description` or `price` on a product the caller uploaded; 403 otherwise |
 | `GET` | `/api/products-authenticated/{id}` | ✓ | One product plus `product_status` of `owner`, `purchased` or `not-purchased` |
 | `GET` | `/api/current-user-products` | ✓ | Caller's uploads |
 | `GET` | `/api/owned-products` | ✓ | Products the caller has bought |
@@ -79,7 +80,7 @@ All routes are in [3d-shop-api/routes/api.php](3d-shop-api/routes/api.php). List
 | `POST` | `/api/auth/logout` | ✓ | Revoke the caller's tokens |
 | `GET` | `/api/user` | ✓ | The authenticated user |
 
-`PUT /api/products/{id}` is also declared for editing a product. The client never calls it and it does not currently resolve to a controller class.
+The client does not currently call `PUT /api/products/{id}`; the endpoint is there for editing a listing.
 
 ## Database
 
