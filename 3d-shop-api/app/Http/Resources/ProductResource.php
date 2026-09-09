@@ -24,6 +24,7 @@ class ProductResource extends JsonResource
             'currency' => $this->currency,
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
+            'preview_angles' => $this->preview_angles ?? [],
             'unlisted' => $this->unlisted,
             'created_at' => $this->created_at,
             'thumbnail_url' => $this->thumbnailUrl(),

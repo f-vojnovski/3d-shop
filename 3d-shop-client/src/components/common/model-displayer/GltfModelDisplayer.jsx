@@ -3,6 +3,7 @@ import { OrbitControls, useGLTF } from '@react-three/drei';
 import { API_URL } from '../../../consts';
 import { Fragment } from 'react';
 import useFitToView from './useFitToView';
+import CameraProbe from './CameraProbe';
 import StudioEnvironment from './StudioEnvironment';
 
 const GltfModelDisplayer = (props) => {
@@ -27,7 +28,8 @@ const GltfModelDisplayer = (props) => {
           <primitive object={gltf.scene} />
         </group>
       </group>
-      <OrbitControls></OrbitControls>
+      <OrbitControls makeDefault></OrbitControls>
+      {props.probeRef && <CameraProbe probeRef={props.probeRef} />}
     </Canvas>
   );
 

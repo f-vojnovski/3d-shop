@@ -24,6 +24,7 @@ class Product extends Model
         'currency',
         'user_id',
         'preview_mode',
+        'preview_angles',
         'unlisted',
     ];
 
@@ -39,6 +40,7 @@ class Product extends Model
         return [
             'price_cents' => 'integer',
             'unlisted' => 'boolean',
+            'preview_angles' => 'array',
         ];
     }
 

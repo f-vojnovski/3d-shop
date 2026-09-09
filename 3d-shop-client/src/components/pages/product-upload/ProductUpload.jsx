@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
+import PreviewAnglePicker from './PreviewAnglePicker';
 
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
@@ -26,6 +27,12 @@ const ProductUploadPage = () => {
 
   const [productThumbnail, setProductThumbnail] = useState('');
   const [thumbnailUri, setThumbnailUri] = useState('');
+
+  const [previewMode, setPreviewMode] = useState('interactive');
+  const [angles, setAngles] = useState([]);
+
+  // Filled in by CameraProbe from inside whichever preview canvas is showing.
+  const probeRef = useRef(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -61,6 +68,11 @@ const ProductUploadPage = () => {
     formData.append('name', productName);
     formData.append('price', productPrice);
     formData.append('description', productDescription);
+    formData.append('preview_mode', previewMode);
+
+    if (previewMode === 'attested_stills' && angles.length > 0) {
+      formData.append('preview_angles', JSON.stringify(angles));
+    }
 
     let body = formData;
 
@@ -114,7 +126,7 @@ const ProductUploadPage = () => {
     gltfProductPreview = (
       <div className="square">
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <GltfModelDisplayer fileUrl={gltfModelUri} isLocalFile={true} />
+          <GltfModelDisplayer fileUrl={gltfModelUri} isLocalFile={true} probeRef={probeRef} />
         </ErrorBoundary>
       </div>
     );
@@ -128,12 +140,26 @@ const ProductUploadPage = () => {
     objProductPreview = (
       <div className="square">
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <ObjModelDisplayer fileUrl={objModelUri} isLocalFile={true} />
+          <ObjModelDisplayer fileUrl={objModelUri} isLocalFile={true} probeRef={probeRef} />
         </ErrorBoundary>
       </div>
     );
   }
 
+
+  const captureAngle = () => {
+    const camera = probeRef.current?.();
+
+    if (!camera) {
+      toast.error('The preview is not ready yet.');
+      return;
+    }
+
+    setAngles((current) => [...current, camera]);
+  };
+
+  const removeAngle = (index) =>
+    setAngles((current) => current.filter((_, i) => i !== index));
 
   return (
     <div className="container-fluid my-auto form_max_width">
@@ -254,6 +280,15 @@ const ProductUploadPage = () => {
             <img className="product-thumbnail" src={thumbnailUri}></img>
           </div>
         </div>
+
+        <PreviewAnglePicker
+          previewMode={previewMode}
+          onPreviewModeChange={setPreviewMode}
+          angles={angles}
+          onCapture={captureAngle}
+          onRemove={removeAngle}
+          canCapture={Boolean(objModelUri || gltfModelUri)}
+        />
 
         <div className="row mt-1">
           <div className="col">

@@ -4,6 +4,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { API_URL } from '../../../consts';
 import { Fragment } from 'react';
 import useFitToView from './useFitToView';
+import CameraProbe from './CameraProbe';
 
 const ObjModelDisplayer = (props) => {
   let fileUrl;
@@ -26,7 +27,8 @@ const ObjModelDisplayer = (props) => {
           <primitive object={obj}></primitive>
         </group>
       </group>
-      <OrbitControls></OrbitControls>
+      <OrbitControls makeDefault></OrbitControls>
+      {props.probeRef && <CameraProbe probeRef={props.probeRef} />}
     </Canvas>
   );
 

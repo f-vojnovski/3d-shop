@@ -17,6 +17,15 @@ class ProductController extends BaseController
 {
     private const DELIVERABLE_DISK = 'models';
 
+    private const ANGLE_RULES = [
+        'preview_angles' => 'sometimes|nullable|array|max:8',
+        'preview_angles.*.position' => 'required|array|size:3',
+        'preview_angles.*.position.*' => 'required|numeric',
+        'preview_angles.*.target' => 'required|array|size:3',
+        'preview_angles.*.target.*' => 'required|numeric',
+        'preview_angles.*.fov' => 'required|numeric|min:1|max:179',
+    ];
+
     public function index()
     {
         return ProductResource::collection(
@@ -26,6 +35,8 @@ class ProductController extends BaseController
 
     public function store(Request $request)
     {
+        $this->decodeAngles($request);
+
         $request->validate([
             'name' => 'required|max:255',
             'description' => 'nullable|max:1000',
@@ -34,6 +45,7 @@ class ProductController extends BaseController
             'objModel' => 'nullable|file|max:51200',
             'gltfModel' => 'nullable|file|max:51200',
             'thumbnail' => 'required|file|image|max:5120',
+            ...self::ANGLE_RULES,
         ]);
 
         $models = array_filter([
@@ -51,6 +63,7 @@ class ProductController extends BaseController
                 'description' => $request->input('description'),
                 'price_cents' => (int) round($request->input('price') * 100),
                 'preview_mode' => $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
+                'preview_angles' => $request->input('preview_angles'),
                 'user_id' => Auth::user()->getAuthIdentifier(),
             ]);
 
@@ -71,6 +84,8 @@ class ProductController extends BaseController
 
     public function update(Request $request, $id)
     {
+        $this->decodeAngles($request);
+
         $product = Product::findOrFail($id);
 
         if ($product->user_id != Auth::user()->getAuthIdentifier()) {
@@ -83,6 +98,7 @@ class ProductController extends BaseController
             'price' => 'sometimes|required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
             'unlisted' => 'sometimes|boolean',
+            ...self::ANGLE_RULES,
         ]);
 
         if (array_key_exists('price', $fields)) {
@@ -165,6 +181,15 @@ class ProductController extends BaseController
                 ->orderBy('id')
                 ->paginate(16)
         );
+    }
+
+    private function decodeAngles(Request $request): void
+    {
+        $angles = $request->input('preview_angles');
+
+        if (is_string($angles)) {
+            $request->merge(['preview_angles' => json_decode($angles, true) ?? []]);
+        }
     }
 
     private function storeFile(
