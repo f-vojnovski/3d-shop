@@ -2,17 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
-
+// API-only application: no Blade views are shipped, so the root is an identity
+// payload rather than a landing page. The client is served separately by Vite.
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json([
+        'name' => config('app.name'),
+        'api' => url('/api/products'),
+    ]);
 });
