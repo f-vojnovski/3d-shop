@@ -61,9 +61,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->unsignedBigInteger('price_cents');
             $table->char('currency', 3)->default('USD');
-            $table->string('obj_file_path')->nullable();
-            $table->string('gltf_file_path')->nullable();
-            $table->string('thumbnail_path')->nullable();
             $table->foreignId('user_id')->constrained();
             $table->string('preview_mode')->default('interactive');
             $table->boolean('unlisted')->default(false);

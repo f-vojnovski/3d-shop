@@ -22,6 +22,12 @@ use App\Http\Controllers\SalesController;
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/products/search/{name}', [ProductController::class, 'search']);
+Route::get('/products/{id}/preview/{format}', [ProductController::class, 'previewModel'])
+    ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
+Route::get('/products/{id}/download/{format}', [ProductController::class, 'download'])
+    ->middleware('signed:relative')
+    ->name('products.download')
+    ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
 Route::get('/products-by-user/{userId}', [ProductController::class, 'getProductsForUser']);
 
 // Auth

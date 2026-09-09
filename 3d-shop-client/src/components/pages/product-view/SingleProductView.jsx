@@ -10,7 +10,6 @@ import LoadError from '../../common/load-error/LoadError';
 import { formatPrice } from '../../../service/util/formatPrice';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
-import { API_URL } from '../../../consts';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import { useState } from 'react';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
@@ -32,14 +31,10 @@ const SingleProductView = () => {
     dispatch(fetchProductById(productId));
   }, [dispatch, productId]);
 
-  const selectedFileType =
-    chosenFileType === 'obj' && product?.obj_file_path
-      ? 'obj'
-      : chosenFileType === 'gltf' && product?.gltf_file_path
-        ? 'gltf'
-        : product?.obj_file_path
-          ? 'obj'
-          : 'gltf';
+  const formats = product?.formats ?? [];
+  const selectedFileType = formats.includes(chosenFileType)
+    ? chosenFileType
+    : formats[0] ?? 'obj';
 
   if (productStatus === 'loading') {
     content = (
@@ -59,20 +54,20 @@ const SingleProductView = () => {
   if (productStatus === 'succeeded') {
     let objComponent = <></>;
 
-    if (product.obj_file_path) {
+    if (product.preview_urls?.obj) {
       objComponent = (
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <ObjModelDisplayer fileUrl={product.obj_file_path}></ObjModelDisplayer>
+          <ObjModelDisplayer fileUrl={product.preview_urls.obj}></ObjModelDisplayer>
         </ErrorBoundary>
       );
     }
 
     let gltfComponent = <></>;
 
-    if (product.gltf_file_path) {
+    if (product.preview_urls?.gltf) {
       gltfComponent = (
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <GltfModelDisplayer fileUrl={product.gltf_file_path}></GltfModelDisplayer>
+          <GltfModelDisplayer fileUrl={product.preview_urls.gltf}></GltfModelDisplayer>
         </ErrorBoundary>
       );
     }
@@ -88,28 +83,20 @@ const SingleProductView = () => {
       componentToDisplay = <>{gltfComponent}</>;
     }
 
-    if (product.product_status === 'owner' || product.product_status === 'purchased') {
-      if (product.obj_file_path) {
-        objDownloadButton = (
-          <>
-            <DownloadButton
-              link={`${API_URL}${product.obj_file_path}`}
-              text="Download .obj"
-            />
-          </>
-        );
-      }
+    if (product.download_urls?.obj) {
+      objDownloadButton = (
+        <>
+          <DownloadButton link={product.download_urls.obj} text="Download .obj" />
+        </>
+      );
+    }
 
-      if (product.gltf_file_path) {
-        gltfDownloadButton = (
-          <>
-            <DownloadButton
-              link={`${API_URL}${product.gltf_file_path}`}
-              text="Download .gltf"
-            />
-          </>
-        );
-      }
+    if (product.download_urls?.gltf) {
+      gltfDownloadButton = (
+        <>
+          <DownloadButton link={product.download_urls.gltf} text="Download .gltf" />
+        </>
+      );
     }
 
     content = (
@@ -145,10 +132,10 @@ const SingleProductView = () => {
                     value={selectedFileType}
                     onChange={(e) => handleFiletypeSelectionChange(e)}
                   >
-                    <option disabled={product.obj_file_path == null} value="obj">
+                    <option disabled={!formats.includes('obj')} value="obj">
                       .obj
                     </option>
-                    <option disabled={product.gltf_file_path == null} value="gltf">
+                    <option disabled={!formats.includes('gltf')} value="gltf">
                       .gltf
                     </option>
                   </select>

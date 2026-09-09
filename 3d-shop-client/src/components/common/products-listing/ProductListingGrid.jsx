@@ -66,7 +66,7 @@ const ProductListingGrid = (props) => {
           name={product.name}
           description={product.description}
           priceCents={product.price_cents}
-          thumbnailUrl={product.thumbnail_path}
+          thumbnailUrl={product.thumbnail_url}
         ></ProductOverview>
       </div>
     ));
