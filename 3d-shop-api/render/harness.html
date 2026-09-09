@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>render harness</title>
+<style>html,body{margin:0;background:#b3b3b3;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { fitToView } from '/fitToView.js';
+
+const post = (path, body) =>
+  fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(body) });
+
+async function main() {
+  const job = await (await fetch('/job.json')).json();
+  const { width, height } = job.output;
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true, preserveDrawingBuffer: true, alpha: true,
+  });
+  // Transparent so previews composite onto any page background.
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height);
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  document.body.appendChild(renderer.domElement);
+
+  const buffer = await (await fetch('/model')).arrayBuffer();
+  const isGltf = job.source.format === 'glb' || job.source.format === 'gltf';
+
+  let object;
+  if (isGltf) {
+    const gltf = await new Promise((res, rej) =>
+      new GLTFLoader().parse(buffer, '', res, rej));
+    object = gltf.scene;
+  } else {
+    object = new OBJLoader().parse(new TextDecoder().decode(buffer));
+  }
+
+  let triangles = 0;
+  object.traverse((o) => {
+    if (o.isMesh && o.geometry) {
+      const g = o.geometry;
+      triangles += (g.index ? g.index.count : (g.attributes.position?.count ?? 0)) / 3;
+    }
+  });
+
+  if (triangles === 0) {
+    await post('/failed', { reason: 'The model contained no geometry.' });
+    return;
+  }
+
+  const scene = new THREE.Scene();
+
+  // Same split as the client: glTF carries real materials and needs image-based
+  // lighting, an .obj without an .mtl is Phong and gets washed out by it.
+  if (isGltf) {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 1;
+    scene.add(directional(0xffffff, 0.6, [4, 5, 3]));
+    scene.add(directional(0xffffff, 0.2, [-4, -2, -4]));
+  } else {
+    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+    scene.add(directional(0xffffff, 1.1, [4, 5, 3]));
+    scene.add(directional(0xffffff, 0.35, [-4, -2, -4]));
+  }
+
+  const { scale, center } = fitToView(object);
+  const outer = new THREE.Group();
+  const inner = new THREE.Group();
+  outer.scale.setScalar(scale);
+  inner.position.set(center[0], center[1], center[2]);
+  inner.add(object);
+  outer.add(inner);
+  scene.add(outer);
+
+  const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+
+  for (let i = 0; i < job.angles.length; i += 1) {
+    const angle = job.angles[i];
+    camera.fov = angle.fov;
+    camera.position.set(...angle.position);
+    camera.up.set(...(angle.up ?? [0, 1, 0]));
+    camera.lookAt(...(angle.target ?? [0, 0, 0]));
+    camera.updateProjectionMatrix();
+
+    renderer.render(scene, camera);
+
+    await post('/image', {
+      index: i,
+      triangles: Math.round(triangles),
+      coverage: coverageOf(renderer),
+      png: renderer.domElement.toDataURL('image/png'),
+    });
+  }
+
+  await post('/done', { triangles: Math.round(triangles), count: job.angles.length });
+}
+
+// Background is transparent, so any alpha is geometry.
+function coverageOf(renderer) {
+  const { width, height } = renderer.domElement;
+  const gl = renderer.getContext();
+  const pixels = new Uint8Array(width * height * 4);
+  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+  let covered = 0;
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] > 8) covered += 1;
+  }
+
+  return covered / (width * height);
+}
+
+function directional(colour, intensity, position) {
+  const light = new THREE.DirectionalLight(colour, intensity);
+  light.position.set(...position);
+  return light;
+}
+
+main().catch((error) => post('/failed', { reason: String(error).slice(0, 300) }));
+</script>

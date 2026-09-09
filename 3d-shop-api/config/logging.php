@@ -58,6 +58,14 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'render' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/render.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

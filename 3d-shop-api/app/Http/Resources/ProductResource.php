@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Product;
+use App\Models\ProductFile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'unlisted' => $this->unlisted,
             'created_at' => $this->created_at,
             'thumbnail_url' => $this->thumbnailUrl(),
+            'preview_images' => $this->previewImageList(),
             'formats' => $formats,
             'preview_urls' => $this->previewUrls($formats),
             'download_urls' => $this->isDownloadableBy($viewerId)
@@ -37,6 +38,23 @@ class ProductResource extends JsonResource
                 : null,
             'product_status' => $status,
         ];
+    }
+
+    // Server-rendered stills, each carrying the camera it was rendered from.
+    private function previewImageList(): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
+            ->sortBy('sort')
+            ->map(fn (ProductFile $file) => [
+                'url' => Storage::disk($file->disk)->url($file->path),
+                'sort' => $file->sort,
+                'camera' => $file->meta['camera'] ?? null,
+                'checksum' => $file->checksum,
+                'source_checksum' => $file->meta['source_checksum'] ?? null,
+            ])
+            ->values()
+            ->all();
     }
 
     private function thumbnailUrl(): ?string
