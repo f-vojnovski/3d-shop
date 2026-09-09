@@ -25,6 +25,8 @@ class Product extends Model
         'user_id',
         'preview_mode',
         'preview_angles',
+        'preview_status',
+        'preview_error',
         'unlisted',
     ];
 
