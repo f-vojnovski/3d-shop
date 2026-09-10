@@ -369,11 +369,8 @@ class MeshFacts
     }
 
     /**
-     * Exact where the vertex data is reachable, and an over-estimate where it
-     * is not: rotating the corners of an axis-aligned box gives a box that
-     * contains the rotated geometry rather than hugging it, which on a car
-     * measured 17cm too wide. Real positions cost a sequential read and no
-     * extra memory, so they are worth it for a number shown as measured.
+     * Exact from vertex positions where they are reachable. The shortcut of
+     * rotating a box's corners over-estimates: 17cm too wide on the test car.
      *
      * @param  list<float>  $min
      * @param  list<float>  $max

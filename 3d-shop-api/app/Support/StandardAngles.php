@@ -5,12 +5,9 @@ namespace App\Support;
 /**
  * A turntable a seller can ask for instead of framing every shot by hand.
  *
- * These are constants rather than measurements because the harness fits every
- * model to the same size and centres it before placing the camera, so a
- * position here frames a 4-metre car and a 4-centimetre toy identically. That
- * also makes the slots durable: view 3 is 135 degrees for every product and
- * every version of it, so a replaced file can be compared with what it
- * replaced, shot for shot.
+ * Constants, not measurements: the harness fits and centres every model before
+ * placing the camera, so one position frames any size of model, and slot 3 is
+ * 135 degrees for every product and every version of it.
  */
 class StandardAngles
 {
@@ -24,12 +21,7 @@ class StandardAngles
     /** Slightly above the horizon: level-on hides the roof of anything. */
     private const ELEVATION_DEGREES = 18.0;
 
-    /**
-     * Starts on a corner rather than square-on. View 1 becomes the thumbnail
-     * and the opening shot, and an axis-aligned view is the flattest way to
-     * photograph anything; the square-on views are still in the set, further
-     * round.
-     */
+    /** View 1 is the thumbnail, and square-on is the flattest angle there is. */
     private const START_DEGREES = 45.0;
 
     /** @return list<array{position: list<float>, target: list<float>, fov: int, origin: string, slot: int}> */

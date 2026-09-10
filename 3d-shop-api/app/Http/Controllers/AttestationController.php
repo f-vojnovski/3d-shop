@@ -36,6 +36,8 @@ class AttestationController extends BaseController
                 'still_on_sale' => $attestedSource !== null && in_array($attestedSource, $current, true),
                 'format' => $preview->source?->format,
                 'measured' => $preview->source?->facts(),
+                'replaced_at' => $preview->source?->superseded_at,
+                'replacement_note' => $preview->source?->replacement_note,
             ],
             'reproduce' => [
                 'how' => 'Build the render container at the pinned three.js version, feed it this model and camera, and compare the image sha256.',

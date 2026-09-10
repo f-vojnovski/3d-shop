@@ -55,15 +55,25 @@ class Product extends Model
         return $this->hasMany(Sale::class);
     }
 
+    /** What is on sale now. Replaced files stay in `files`, not here. */
     public function deliverables(): HasMany
     {
-        return $this->files()->where('kind', ProductFile::KIND_DELIVERABLE);
+        return $this->files()->where('kind', ProductFile::KIND_DELIVERABLE)->current();
+    }
+
+    public function supersededDeliverables(): HasMany
+    {
+        return $this->files()
+            ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->whereNotNull('superseded_at')
+            ->orderBy('superseded_at');
     }
 
     public function previewImages(): HasMany
     {
         return $this->files()
             ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
+            ->current()
             ->orderBy('sort');
     }
 
@@ -71,12 +81,16 @@ class Product extends Model
     {
         return $this->files()
             ->where('kind', ProductFile::KIND_SELLER_IMAGE)
+            ->current()
             ->orderBy('sort');
     }
 
     public function thumbnail(): ?ProductFile
     {
-        return $this->files->firstWhere('kind', ProductFile::KIND_THUMBNAIL);
+        return $this->files->first(
+            fn (ProductFile $file) => $file->kind === ProductFile::KIND_THUMBNAIL
+                && ! $file->isSuperseded()
+        );
     }
 
     public function deliverableFor(string $format): ?ProductFile
@@ -84,6 +98,7 @@ class Product extends Model
         return $this->files->first(
             fn (ProductFile $file) => $file->kind === ProductFile::KIND_DELIVERABLE
                 && $file->format === $format
+                && ! $file->isSuperseded()
         );
     }
 
@@ -91,6 +106,7 @@ class Product extends Model
     {
         return $this->files
             ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded())
             ->pluck('format')
             ->filter()
             ->values()

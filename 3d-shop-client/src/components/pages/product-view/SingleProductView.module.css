@@ -111,3 +111,9 @@
   color: var(--clr-danger);
   font-size: 0.85rem;
 }
+
+.locked {
+  margin: 6px 0 0;
+  color: var(--clr-text-dim);
+  font-size: 0.8rem;
+}

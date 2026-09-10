@@ -2,7 +2,11 @@ import styles from './SingleProductView.module.css';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
-import { fetchProductById, withdrawProduct } from '../../../service/features/productSlice';
+import {
+  fetchProductById,
+  replaceFile,
+  withdrawProduct,
+} from '../../../service/features/productSlice';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
@@ -14,6 +18,7 @@ import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import AttestedStills from '../../common/attested-stills/AttestedStills';
 import ModelFacts from '../../common/model-facts/ModelFacts';
+import FileHistory from '../../common/file-history/FileHistory';
 import { BsPersonCircle } from 'react-icons/bs';
 
 const SingleProductView = () => {
@@ -27,6 +32,8 @@ const SingleProductView = () => {
   const [chosenFileType, setChosenFileType] = useState(null);
   const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
   const [shownFormat, setShownFormat] = useState(null);
+  const [note, setNote] = useState('');
+  const replacing = useSelector((state) => state.product.replacing);
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -115,6 +122,12 @@ const SingleProductView = () => {
             </div>
           )}
 
+          {measured?.replaced?.length > 0 && (
+            <div className={styles.section}>
+              <FileHistory format={measured.format} replaced={measured.replaced} />
+            </div>
+          )}
+
           {formats.length > 0 && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Included formats</p>
@@ -149,6 +162,35 @@ const SingleProductView = () => {
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Your files</p>
               <div className={styles.downloads}>{downloads}</div>
+            </div>
+          )}
+
+          {product.product_status === 'owner' && measuredFormat && (
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>Replace the .{measuredFormat} file</p>
+              <input
+                className="form-control form-control-sm mb-2"
+                placeholder="What changed? (optional)"
+                value={note}
+                maxLength={200}
+                onInput={(event) => setNote(event.target.value)}
+              />
+              <input
+                className="form-control form-control-sm"
+                type="file"
+                disabled={renderInProgress || replacing}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file) {
+                    dispatch(replaceFile({ productId: product.id, format: measuredFormat, file, note }));
+                    setNote('');
+                  }
+                }}
+              />
+              {renderInProgress && (
+                <p className={styles.locked}>Locked until the previews finish rendering.</p>
+              )}
             </div>
           )}
 

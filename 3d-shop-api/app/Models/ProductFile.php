@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,9 @@ class ProductFile extends Model
         'bytes',
         'checksum',
         'meta',
+        'superseded_at',
+        'superseded_by_id',
+        'replacement_note',
     ];
 
     protected function casts(): array
@@ -37,6 +41,7 @@ class ProductFile extends Model
             'meta' => 'array',
             'sort' => 'integer',
             'bytes' => 'integer',
+            'superseded_at' => 'datetime',
         ];
     }
 
@@ -60,6 +65,21 @@ class ProductFile extends Model
     public function angles(): array
     {
         return $this->meta['angles'] ?? [];
+    }
+
+    public function scopeCurrent(Builder $query): Builder
+    {
+        return $query->whereNull('superseded_at');
+    }
+
+    public function supersededBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'superseded_by_id');
+    }
+
+    public function isSuperseded(): bool
+    {
+        return $this->superseded_at !== null;
     }
 
     /** Measured from the file at upload, never supplied by the seller. */

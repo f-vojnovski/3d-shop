@@ -18,11 +18,8 @@ class MeshPrescan
     private const CHUNK = 1 << 22;
 
     /**
-     * glTF extensions the render container can actually honour. Anything else
-     * in `extensionsRequired` means the file is unreadable to it — Draco and
-     * meshopt geometry above all, which need a decoder the harness does not
-     * load. The counts stay readable either way, so without this check a
-     * compressed model would publish with a full specification and no pictures.
+     * What the harness can load. Compressed geometry keeps its counts readable,
+     * so a Draco file would otherwise publish full specs and no pictures.
      */
     private const SUPPORTED_EXTENSIONS = [
         'KHR_mesh_quantization',

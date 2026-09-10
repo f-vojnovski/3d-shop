@@ -46,6 +46,8 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])
         ->where('id', '[0-9]+');
+    Route::post('/products/{id}/replace', [ProductController::class, 'replace'])
+        ->where('id', '[0-9]+');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
     Route::get('/owned-products', [ProductController::class, 'getPurchasedProductsForUser']);
     Route::get('/products-authenticated/{id}', [ProductController::class, 'show']);

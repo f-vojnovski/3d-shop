@@ -158,11 +158,7 @@ class ProductController extends BaseController
         );
     }
 
-    /**
-     * The listing is editable; the previews are not. Whatever the renders were
-     * given at publish is what buyers see, so nothing here can leave a
-     * product's stills describing angles it no longer has.
-     */
+    /** Name, description and price only. Files change through replace(). */
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -172,6 +168,12 @@ class ProductController extends BaseController
         }
 
         $this->refuseSettledFields($request);
+
+        if (in_array($product->preview_status, ['queued', 'rendering'], true)) {
+            throw ValidationException::withMessages([
+                'name' => 'This product is still rendering. Try again when it has finished.',
+            ]);
+        }
 
         $fields = $request->validate([
             'name' => 'sometimes|required|max:255',
@@ -188,6 +190,73 @@ class ProductController extends BaseController
         $product->update($fields);
 
         return new ProductResource($product->load('files'));
+    }
+
+    /**
+     * Swaps one model file, re-renders its previews, and keeps the old file and
+     * previews as superseded so their attestation records still resolve.
+     */
+    public function replace(Request $request, $id)
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if ($product->user_id != Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        $fields = $request->validate([
+            'format' => 'required|in:obj,gltf',
+            'model' => 'required|file|max:51200',
+            'note' => 'nullable|string|max:200',
+        ]);
+
+        $current = $product->deliverableFor($fields['format']);
+
+        if ($current === null) {
+            throw ValidationException::withMessages([
+                'format' => "This product has no .{$fields['format']} file to replace.",
+            ]);
+        }
+
+        // A render in flight would leave the pictures and the file disagreeing.
+        if (in_array($product->preview_status, ['queued', 'rendering'], true)) {
+            throw ValidationException::withMessages([
+                'model' => 'This product is still rendering. Try again when it has finished.',
+            ]);
+        }
+
+        $file = $request->file('model');
+        $scan = $this->scanModels([$fields['format'] => $file])[$fields['format']];
+        $facts = MeshFacts::of($file->getRealPath(), $scan->format);
+
+        return DB::transaction(function () use ($product, $current, $file, $fields, $scan, $facts) {
+            // Cameras belong to the listing, so the views stay comparable.
+            $replacement = $this->storeFile(
+                $product,
+                $file,
+                ProductFile::KIND_DELIVERABLE,
+                self::DELIVERABLE_DISK,
+                $fields['format'],
+                $current->angles(),
+                scan: $scan,
+                facts: $facts
+            );
+
+            $current->stills()->update([
+                'superseded_at' => now(),
+                'superseded_by_id' => $replacement->id,
+            ]);
+
+            $current->update([
+                'superseded_at' => now(),
+                'superseded_by_id' => $replacement->id,
+                'replacement_note' => $fields['note'] ?? null,
+            ]);
+
+            RenderProductPreviews::dispatch($product->id, $fields['format'])->afterCommit();
+
+            return new ProductResource($product->load('files'));
+        });
     }
 
     /**

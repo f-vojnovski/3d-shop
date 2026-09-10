@@ -1,10 +1,16 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { deleteRequestWithToken, getRequest, getRequestWithToken } from '../api/axiosClient';
+import {
+  deleteRequestWithToken,
+  getRequest,
+  getRequestWithToken,
+  postRequestWithToken,
+} from '../api/axiosClient';
 
 const initialState = {
   product: null,
   status: 'idle',
   error: null,
+  replacing: false,
 };
 
 export const productSlice = createSlice({
@@ -27,6 +33,17 @@ export const productSlice = createSlice({
       .addCase(fetchProductById.rejected, (state, action) => {
         state.status = 'failed';
         state.productLoaded = 'false';
+        state.error = action.error.message;
+      })
+      .addCase(replaceFile.pending, (state) => {
+        state.replacing = true;
+      })
+      .addCase(replaceFile.fulfilled, (state, action) => {
+        state.replacing = false;
+        state.product = action.payload;
+      })
+      .addCase(replaceFile.rejected, (state, action) => {
+        state.replacing = false;
         state.error = action.error.message;
       })
       .addCase(withdrawProduct.fulfilled, (state) => {
@@ -62,5 +79,24 @@ export const withdrawProduct = createAsyncThunk(
     await deleteRequestWithToken(`api/products/${productId}`, token);
 
     return productId;
+  }
+);
+
+export const replaceFile = createAsyncThunk(
+  '/product/replaceFile',
+  async ({ productId, format, file, note }, { getState }) => {
+    const token = getState().auth.token;
+    const form = new FormData();
+
+    form.append('format', format);
+    form.append('model', file);
+
+    if (note) {
+      form.append('note', note);
+    }
+
+    const response = await postRequestWithToken(`api/products/${productId}/replace`, form, token);
+
+    return response.data;
   }
 );

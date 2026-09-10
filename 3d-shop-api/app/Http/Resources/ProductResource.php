@@ -48,6 +48,7 @@ class ProductResource extends JsonResource
     {
         return $this->files
             ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded())
             ->sortBy('format')
             ->map(fn (ProductFile $file) => [
                 'format' => $file->format,
@@ -57,6 +58,38 @@ class ProductResource extends JsonResource
                 'facts' => $file->facts(),
                 'bytes' => $file->bytes,
                 'images' => $this->stillsFrom($file),
+                'replaced' => $this->replacementsOf($file->format),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** What this format used to be. Public, not owner-only. */
+    private function replacementsOf(?string $format): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->where('format', $format)
+            ->filter(fn (ProductFile $file) => $file->isSuperseded())
+            // Id breaks ties: two replacements can land in the same second.
+            ->sortByDesc(fn (ProductFile $file) => [$file->superseded_at, $file->id])
+            ->map(fn (ProductFile $file) => [
+                'replaced_at' => $file->superseded_at,
+                'note' => $file->replacement_note,
+                'sha256' => $file->checksum,
+                'facts' => $file->facts(),
+                'images' => $this->files
+                    ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
+                    ->where('source_file_id', $file->id)
+                    ->sortBy('sort')
+                    ->map(fn (ProductFile $still) => [
+                        'id' => $still->id,
+                        'url' => Storage::disk($still->disk)->url($still->path),
+                        'sort' => $still->sort,
+                        'attestation_url' => "/api/previews/{$still->id}/attestation",
+                    ])
+                    ->values()
+                    ->all(),
             ])
             ->values()
             ->all();
@@ -82,6 +115,7 @@ class ProductResource extends JsonResource
         return $this->files
             ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
             ->where('source_file_id', $source->id)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded())
             ->sortBy('sort')
             ->map(fn (ProductFile $file) => $this->describeStill($file))
             ->values()
