@@ -52,6 +52,9 @@ class ProductResource extends JsonResource
                 'camera' => $file->meta['camera'] ?? null,
                 'checksum' => $file->checksum,
                 'source_checksum' => $file->meta['source_checksum'] ?? null,
+                'coverage' => $file->meta['coverage'] ?? null,
+                'renderer' => $file->meta['renderer'] ?? null,
+                'attestation_url' => "/api/previews/{$file->id}/attestation",
             ])
             ->values()
             ->all();

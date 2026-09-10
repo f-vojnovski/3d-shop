@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Product;
 use App\Models\ProductFile;
-use App\Support\MeshPrescan;
+use App\Support\RenderInput;
 use App\Support\RenderRunner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -68,12 +68,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Recorded at upload, so rejecting costs no transfer from object storage.
-        $scan = new MeshPrescan(
-            bytes: (int) $source->bytes,
-            triangles: (int) ($source->meta['triangles'] ?? 0),
-            format: (string) ($source->meta['sniffed_format'] ?? 'unknown'),
-        );
+        $scan = RenderInput::scanOf($source);
 
         $log->info('Admission check.', [
             'format' => $scan->format,
@@ -99,7 +94,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         try {
             $modelPath = $this->fetchModel($source, $scratch, $log);
             $result = $runner->run(
-                $this->renderRequest($product, $source, $scan),
+                RenderInput::request($product, $source, $scan),
                 $modelPath,
                 $scratch
             );
@@ -182,14 +177,10 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $target = $scratch.DIRECTORY_SEPARATOR.'model';
         $startedAt = microtime(true);
 
-        $read = Storage::disk($source->disk)->readStream($source->path);
-        $write = fopen($target, 'wb');
-        stream_copy_to_stream($read, $write);
-        fclose($write);
-        fclose($read);
+        $bytes = RenderInput::fetch($source, $target);
 
         $log->debug('Model fetched to scratch.', [
-            'bytes' => filesize($target),
+            'bytes' => $bytes,
             'seconds' => round(microtime(true) - $startedAt, 2),
         ]);
 
@@ -258,21 +249,5 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         }
 
         @rmdir($directory);
-    }
-
-    private function renderRequest(Product $product, ProductFile $source, MeshPrescan $scan): array
-    {
-        return [
-            'product_id' => $product->id,
-            'source' => [
-                'path' => $source->path,
-                'format' => $scan->format,
-                'checksum' => $source->checksum,
-                'bytes' => $scan->bytes,
-                'triangles' => $scan->triangles,
-            ],
-            'angles' => $product->preview_angles,
-            'output' => ['width' => 1200, 'height' => 900],
-        ];
     }
 }

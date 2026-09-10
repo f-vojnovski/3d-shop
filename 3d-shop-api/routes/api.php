@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AttestationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesController;
@@ -29,6 +30,8 @@ Route::get('/products/{id}/download/{format}', [ProductController::class, 'downl
     ->name('products.download')
     ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
 Route::get('/products-by-user/{userId}', [ProductController::class, 'getProductsForUser']);
+Route::get('/previews/{preview}/attestation', [AttestationController::class, 'show'])
+    ->name('previews.attestation');
 
 // Auth
 Route::post('/auth/register', [AuthController::class, 'register']);
