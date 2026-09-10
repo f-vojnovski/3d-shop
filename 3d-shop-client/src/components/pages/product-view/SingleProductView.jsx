@@ -13,6 +13,7 @@ import DownloadButton from '../../common/download-button/DownloadButton';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import { useState } from 'react';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
+import AttestedStills from '../../common/attested-stills/AttestedStills';
 
 const SingleProductView = () => {
   const params = useParams();
@@ -77,7 +78,9 @@ const SingleProductView = () => {
     };
 
     let componentToDisplay;
-    if (selectedFileType === 'obj') {
+    if (product.preview_mode === 'attested_stills') {
+      componentToDisplay = <AttestedStills product={product} />;
+    } else if (selectedFileType === 'obj') {
       componentToDisplay = <>{objComponent}</>;
     } else {
       componentToDisplay = <>{gltfComponent}</>;
