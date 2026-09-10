@@ -107,53 +107,34 @@ class ProductController extends BaseController
         return new ProductResource(Product::with('files')->findOrFail($id));
     }
 
+    /**
+     * The listing is editable; the previews are not. Whatever the renders were
+     * given at publish is what buyers see, so nothing here can leave a
+     * product's stills describing angles it no longer has.
+     */
     public function update(Request $request, $id)
     {
-        $this->decodeAngles($request);
-
         $product = Product::findOrFail($id);
 
         if ($product->user_id != Auth::user()->getAuthIdentifier()) {
             abort(403, 'You are not the owner of this product!');
         }
 
+        $this->refuseSettledFields($request);
+
         $fields = $request->validate([
             'name' => 'sometimes|required|max:255',
             'description' => 'sometimes|nullable|max:1000',
             'price' => 'sometimes|required|numeric|min:0|max:999999.99',
-            'preview_mode' => 'sometimes|in:interactive,attested_stills',
             'unlisted' => 'sometimes|boolean',
-            ...self::ANGLE_RULES,
         ]);
-
-        $angles = array_key_exists('preview_angles', $fields)
-            ? ($fields['preview_angles'] ?? [])
-            : null;
-
-        $mode = $fields['preview_mode'] ?? $product->preview_mode;
-        $formats = $product->deliverables()->pluck('format')->all();
-
-        $this->guardAnglesForMode($mode, $formats, $angles ?? $this->storedAngles($product));
 
         if (array_key_exists('price', $fields)) {
             $fields['price_cents'] = (int) round($fields['price'] * 100);
             unset($fields['price']);
         }
 
-        unset($fields['preview_angles']);
         $product->update($fields);
-
-        $changed = $angles === null ? [] : $this->applyAngles($product, $angles);
-
-        if ($mode === Product::PREVIEW_ATTESTED_STILLS) {
-            $reRender = $angles === null && array_key_exists('preview_mode', $fields)
-                ? $formats
-                : $changed;
-
-            foreach ($reRender as $format) {
-                RenderProductPreviews::dispatch($product->id, $format);
-            }
-        }
 
         return new ProductResource($product->load('files'));
     }
@@ -243,30 +224,20 @@ class ProductController extends BaseController
         }
     }
 
-    private function storedAngles(Product $product): array
+    private function refuseSettledFields(Request $request): void
     {
-        return $product->deliverables()->get()
-            ->mapWithKeys(fn (ProductFile $file) => [$file->format => $file->angles()])
-            ->all();
-    }
+        $settled = array_values(array_filter(
+            ['preview_angles', 'preview_mode', 'objModel', 'gltfModel', 'thumbnail'],
+            fn (string $field) => $request->has($field) || $request->hasFile($field)
+        ));
 
-    /** Returns the formats whose angles changed, so only those re-render. */
-    private function applyAngles(Product $product, array $angles): array
-    {
-        $changed = [];
-
-        foreach ($product->deliverables()->get() as $file) {
-            $wanted = $angles[$file->format] ?? [];
-
-            if ($wanted === $file->angles()) {
-                continue;
-            }
-
-            $file->withMeta(['angles' => $wanted]);
-            $changed[] = $file->format;
+        if ($settled === []) {
+            return;
         }
 
-        return $changed;
+        throw ValidationException::withMessages([
+            $settled[0] => 'Previews are settled when a product is published. Upload a new product to change them.',
+        ]);
     }
 
     private function decodeAngles(Request $request): void

@@ -7,7 +7,7 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\RenderInput;
 use App\Support\RenderRunner;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
-class RenderProductPreviews implements ShouldBeUniqueUntilProcessing, ShouldQueue
+class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -23,9 +23,8 @@ class RenderProductPreviews implements ShouldBeUniqueUntilProcessing, ShouldQueu
     public int $timeout = 600;
 
     /**
-     * The lock is released once the job starts, so an edit made while a render
-     * is running queues a follow-up instead of being silently dropped. This
-     * value only covers a job that dies before it ever starts.
+     * Above $timeout, so a worker killed mid-render stops blocking re-dispatch
+     * shortly after the job would have been abandoned anyway.
      */
     public int $uniqueFor = 700;
 
@@ -93,8 +92,6 @@ class RenderProductPreviews implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
         $this->settle($product, $source, 'rendering', null);
 
-        $anglesUsed = $source->angles();
-
         $scratch = storage_path('app/private/render-scratch/'.$product->id.'-'.$this->format);
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
@@ -131,15 +128,6 @@ class RenderProductPreviews implements ShouldBeUniqueUntilProcessing, ShouldQueu
                 $result['reason'] ?? 'Rendering failed.',
                 retryable: (bool) ($result['retryable'] ?? false)
             );
-
-            return;
-        }
-
-        // Two runs for one format can overlap now, so a run whose angles have
-        // been superseded must not overwrite the newer run's stills.
-        if ($source->fresh()?->angles() !== $anglesUsed) {
-            $log->info('Angles changed while rendering; leaving the newer render to finish.');
-            $this->removeDirectory($scratch);
 
             return;
         }

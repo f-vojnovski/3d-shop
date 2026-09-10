@@ -230,46 +230,4 @@ class RenderRetryTest extends TestCase
                 && $event->status === 'failed'
         );
     }
-
-    // The seller can edit angles while a render is in flight; the older run
-    // must not land its stills on top of the newer one's.
-    public function test_a_run_whose_angles_were_superseded_writes_nothing(): void
-    {
-        $product = $this->renderableProduct();
-        $source = $product->deliverables()->first();
-
-        $runner = new class extends RenderRunner
-        {
-            public ProductFile $source;
-
-            public function __construct()
-            {
-                parent::__construct();
-            }
-
-            public function run(array $request, string $modelPath, string $scratchDir): array
-            {
-                // Stands in for the seller saving new angles mid-render.
-                $this->source->withMeta(['angles' => [
-                    ['position' => [1, 1, 1], 'target' => [0, 0, 0], 'fov' => 60],
-                    ['position' => [2, 2, 2], 'target' => [0, 0, 0], 'fov' => 60],
-                ]]);
-
-                return [
-                    'status' => 'ok',
-                    'images' => [['file' => 'angle-0.png', 'index' => 0, 'coverage' => 0.3]],
-                    'blank' => [],
-                    'renderer' => ['engine' => 'three.js'],
-                ];
-            }
-        };
-
-        $runner->source = $source;
-
-        (new RenderProductPreviews($product->id, 'obj'))->handle($runner);
-
-        $this->assertSame(0, $source->fresh()->stills()->count());
-        $this->assertSame('rendering', $product->fresh()->preview_status);
-        $this->assertCount(2, $source->fresh()->angles());
-    }
 }

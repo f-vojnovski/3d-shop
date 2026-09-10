@@ -15,10 +15,10 @@ class MetaMergeTest extends TestCase
     private const ANGLE = ['position' => [3, 2, 4], 'target' => [0, 0, 0], 'fov' => 75];
 
     /**
-     * The render job loads its deliverable at the start and settles minutes
-     * later. Anything the seller changed in between must survive.
+     * A job settles from an instance it loaded minutes earlier, so the merge
+     * has to read the row as it is now rather than as the job remembers it.
      */
-    public function test_settling_a_render_does_not_revert_an_edit_made_while_it_ran(): void
+    public function test_settling_merges_against_the_stored_row_not_a_stale_copy(): void
     {
         $file = $this->deliverable();
         $asTheJobSeesIt = ProductFile::findOrFail($file->id);

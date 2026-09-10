@@ -115,18 +115,19 @@ class PreviewAnglesTest extends TestCase
         ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj');
     }
 
-    public function test_the_owner_can_replace_the_angles_later(): void
+    public function test_the_owner_cannot_replace_the_angles_later(): void
     {
         $this->seller();
-        $id = $this->postJson('/api/products', $this->payload())
-            ->assertSuccessful()->json('id');
+        $id = $this->postJson('/api/products', $this->payload([
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
+        ]))->assertSuccessful()->json('id');
 
         $this->putJson("/api/products/{$id}", [
-            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'preview_angles' => ['obj' => [self::ANGLE, self::ANGLE]],
-        ])->assertSuccessful();
+        ])->assertStatus(422)->assertJsonValidationErrors('preview_angles');
 
-        $this->assertCount(2, Product::findOrFail($id)->deliverables()->first()->angles());
+        $this->assertCount(1, Product::findOrFail($id)->deliverables()->first()->angles());
     }
 
     public function test_uploading_attested_stills_queues_a_render(): void
@@ -164,33 +165,45 @@ class PreviewAnglesTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_the_angles_cannot_be_emptied_on_an_attested_product(): void
+    public function test_the_preview_mode_is_settled_too(): void
     {
         $this->seller();
-
-        $id = $this->postJson('/api/products', $this->payload([
-            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
-        ]))->assertSuccessful()->json('id');
-
-        $this->putJson("/api/products/{$id}", ['preview_angles' => ['obj' => []]])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('preview_angles.obj');
-
-        $this->assertCount(1, Product::findOrFail($id)->deliverables()->first()->angles());
-    }
-
-    public function test_switching_to_attested_stills_requires_angles(): void
-    {
-        $this->seller();
-
         $id = $this->postJson('/api/products', $this->payload())
             ->assertSuccessful()->json('id');
 
         $this->putJson("/api/products/{$id}", [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-        ])->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj');
+        ])->assertStatus(422)->assertJsonValidationErrors('preview_mode');
 
         $this->assertSame(Product::PREVIEW_INTERACTIVE, Product::findOrFail($id)->preview_mode);
+    }
+
+    public function test_the_listing_itself_is_still_editable(): void
+    {
+        $this->seller();
+        $id = $this->postJson('/api/products', $this->payload())
+            ->assertSuccessful()->json('id');
+
+        $this->putJson("/api/products/{$id}", [
+            'name' => 'Renamed',
+            'price' => '31.00',
+            'unlisted' => true,
+        ])->assertSuccessful();
+
+        $product = Product::findOrFail($id);
+        $this->assertSame('Renamed', $product->name);
+        $this->assertSame(3100, $product->price_cents);
+        $this->assertTrue($product->unlisted);
+    }
+
+    public function test_replacing_a_model_file_is_refused(): void
+    {
+        $this->seller();
+        $id = $this->postJson('/api/products', $this->payload())
+            ->assertSuccessful()->json('id');
+
+        $this->putJson("/api/products/{$id}", ['objModel' => 'anything'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('objModel');
     }
 }

@@ -64,7 +64,7 @@ class PerFormatPreviewsTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_only_the_format_whose_angles_changed_re_renders(): void
+    public function test_published_angles_cannot_be_edited_so_nothing_re_renders(): void
     {
         $id = $this->upload(['obj' => [self::ANGLE], 'gltf' => [self::ANGLE]]);
         Queue::fake();
@@ -74,13 +74,9 @@ class PerFormatPreviewsTest extends TestCase
                 'obj' => [self::ANGLE],
                 'gltf' => [self::ANGLE, array_merge(self::ANGLE, ['fov' => 30])],
             ],
-        ])->assertSuccessful();
+        ])->assertStatus(422);
 
-        Queue::assertPushed(RenderProductPreviews::class, 1);
-        Queue::assertPushed(
-            RenderProductPreviews::class,
-            fn (RenderProductPreviews $job) => $job->format === 'gltf'
-        );
+        Queue::assertNothingPushed();
     }
 
     public function test_the_product_is_only_ready_when_every_format_is(): void
