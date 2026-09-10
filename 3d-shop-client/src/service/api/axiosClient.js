@@ -33,10 +33,32 @@ function displayableMessage(error) {
   return error.message || 'Could not reach the server.';
 }
 
+// Set by the store, which cannot be imported here without a cycle.
+let onUnauthorized = null;
+
+export function registerUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
+// A 401 from signing in means the credentials were wrong, not that a session
+// ended, and clearing state there would fight the login form.
+const CREDENTIAL_ROUTES = /\/?api\/auth\/(login|register)$/;
+
+export function endsTheSession(error) {
+  return (
+    error.response?.status === 401 && !CREDENTIAL_ROUTES.test(error.config?.url ?? '')
+  );
+}
+
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     error.message = displayableMessage(error);
+
+    if (onUnauthorized !== null && endsTheSession(error)) {
+      onUnauthorized();
+    }
+
     return Promise.reject(error);
   }
 );
@@ -67,4 +89,10 @@ export function patchRequest(URL, payload) {
 
 export function deleteRequest(URL) {
   return axiosClient.delete(`/${URL}`).then((response) => response);
+}
+
+export function deleteRequestWithToken(URL, token) {
+  return axiosClient
+    .delete(`/${URL}`, { headers: { Authorization: `Bearer ${token}` } })
+    .then((response) => response);
 }

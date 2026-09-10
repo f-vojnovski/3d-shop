@@ -10,6 +10,13 @@ use Illuminate\Routing\Controller as BaseController;
 
 class AuthController extends BaseController
 {
+    /**
+     * A real bcrypt digest at the configured cost, of a random value. It has to
+     * be valid: `password_verify` rejects a malformed hash in 0.2ms against
+     * 190ms for a real one, which is the timing signal this is here to remove.
+     */
+    private const ABSENT_USER_HASH = '$2y$12$lcrScVYpCelgj6Dw.cmIOeVvhjVSLwPVfE5rBXzUOY3dOOXZI8wWG';
+
     public function register(Request $request) {
         $fields = $request->validate([
             'name' => 'required|string|unique:users,name',
@@ -41,15 +48,12 @@ class AuthController extends BaseController
 
         $user = User::where('name', $fields['name'])->first();
 
-        if (!$user) {
+        // One answer for a wrong name and a wrong password, and a hash check
+        // either way: a faster refusal for names that do not exist answers the
+        // same question the message used to.
+        if (!Hash::check($fields['password'], $user->password ?? self::ABSENT_USER_HASH)) {
             return response([
-                'message' => 'Username not found'
-            ], 401);
-        }
-
-        if (!Hash::check($fields['password'], $user->password)) {
-            return response([
-                'message' => 'Incorrect password'
+                'message' => 'Those credentials do not match our records.'
             ], 401);
         }
 

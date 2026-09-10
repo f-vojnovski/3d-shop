@@ -1,5 +1,8 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 import { postRequestWithToken } from '../api/axiosClient';
+import { logoutUser, sessionExpired } from './authSlice';
+
+const endsASession = isAnyOf(logoutUser.fulfilled, logoutUser.rejected, sessionExpired);
 
 const initialState = {
   products: [],
@@ -60,7 +63,10 @@ export const cartSlice = createSlice({
         state.error = null;
         state.products = [];
         state.total = 0;
-      });
+      })
+      // The cart is persisted, so without this the next person to use the
+      // browser inherits the last one's.
+      .addMatcher(endsASession, () => initialState);
   },
 });
 

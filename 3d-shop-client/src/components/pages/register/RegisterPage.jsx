@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { postRegisterData } from '../../../service/features/authSlice';
-import { toast } from '../../common/toast/toastStore';
+import { notify } from '../../../service/features/toastSlice';
 import { useEffect } from 'react';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import {
@@ -35,16 +35,16 @@ const RegisterPage = () => {
     }
 
     if (authStatus === 'succeeded') {
-      toast.success(`Welcome, ${name}. Your account is ready and you are signed in.`);
+      dispatch(notify('success', `Welcome, ${name}. Your account is ready and you are signed in.`));
       navigate('/products');
     }
-  }, [user, authStatus, name, navigate]);
+  }, [user, authStatus, dispatch, name, navigate]);
 
   useEffect(() => {
     if (authStatus === 'failed') {
-      toast.error(error || 'Could not create your account.');
+      dispatch(notify('error', error || 'Could not create your account.'));
     }
-  }, [authStatus, error]);
+  }, [authStatus, dispatch, error]);
 
   const onRegisterButtonClick = () => {
     const found = firstErrors({

@@ -25,6 +25,11 @@ class SalesController extends BaseController
         foreach ($request->input('products') as $item) {
             $product = Product::find($item['id']);
 
+            if ($product->unlisted) {
+                DB::rollBack();
+                abort(409, "Product {$product->id} is no longer for sale.");
+            }
+
             // A seller cannot buy from themselves.
             if ($product->user_id == $buyerId) {
                 DB::rollBack();

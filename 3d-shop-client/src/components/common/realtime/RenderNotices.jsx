@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from '../toast/toastStore';
+import { notify } from '../../../service/features/toastSlice';
 import { fetchProductById } from '../../../service/features/productSlice';
 import { createEcho } from '../../../service/realtime/echo';
 
@@ -28,9 +28,9 @@ const RenderNotices = () => {
 
     echo.private(channel).listen('.preview.render.finished', (event) => {
       if (event.status === 'ready') {
-        toast.success(`Previews are ready for ${event.productName}.`);
+        dispatch(notify('success', `Previews are ready for ${event.productName}.`));
       } else {
-        toast.error(event.error || `Previews failed for ${event.productName}.`);
+        dispatch(notify('error', event.error || `Previews failed for ${event.productName}.`));
       }
 
       if (viewed.current === event.productId) {

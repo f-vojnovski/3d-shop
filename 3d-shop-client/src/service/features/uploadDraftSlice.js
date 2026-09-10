@@ -23,7 +23,9 @@ export const uploadDraftSlice = createSlice({
 
       state.models[format] = { file, uri, name: file.name };
       state.shots[format] = state.shots[format] ?? [];
-      state.active = state.active ?? format;
+      // Focus what was just attached: it has no angles yet, and publishing is
+      // blocked until every attached format has one.
+      state.active = format;
     },
 
     dropModel: (state, action) => {

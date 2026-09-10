@@ -32,12 +32,16 @@ describe('upload draft', () => {
     });
   });
 
-  it('makes the first attached format the active tab and keeps it there', () => {
+  // A format that was just attached has no angles, and publishing is blocked
+  // until it has one, so it is the tab the seller needs to be on.
+  it('makes the format that was just attached the active tab', () => {
     let state = reducer(undefined, attachModel({ format: 'obj', file: file('a.obj'), uri: 'a' }));
+    expect(state.active).toBe('obj');
+
     state = reducer(state, attachModel({ format: 'gltf', file: file('b.glb'), uri: 'b' }));
 
     expect(Object.keys(state.models)).toEqual(['obj', 'gltf']);
-    expect(state.active).toBe('obj');
+    expect(state.active).toBe('gltf');
   });
 
   it('gives each format its own shots', () => {

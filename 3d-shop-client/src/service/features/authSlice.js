@@ -13,7 +13,14 @@ const initialState = {
 export const authSlice = createSlice({
   name: 'auth',
   initialState: initialState,
-  reducers: {},
+  reducers: {
+    sessionExpired: (state) => {
+      state.token = null;
+      state.user = null;
+      state.status = 'idle';
+      state.error = null;
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(postLoginData.pending, (state, action) => {
@@ -76,6 +83,8 @@ export const postLoginData = createAsyncThunk('auth/postLoginData', async (body)
   const response = await postRequest('api/auth/login', body);
   return response.data;
 });
+
+export const { sessionExpired } = authSlice.actions;
 
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',

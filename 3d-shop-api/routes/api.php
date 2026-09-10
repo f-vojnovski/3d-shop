@@ -34,13 +34,17 @@ Route::get('/previews/{preview}/attestation', [AttestationController::class, 'sh
     ->name('previews.attestation');
 
 // Auth
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+// Login refuses a wrong name and a wrong password identically, which only
+// slows an attacker down if the guesses are also rate limited.
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update'])
+        ->where('id', '[0-9]+');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])
         ->where('id', '[0-9]+');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
     Route::get('/owned-products', [ProductController::class, 'getPurchasedProductsForUser']);

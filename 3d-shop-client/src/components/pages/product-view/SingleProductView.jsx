@@ -2,7 +2,7 @@ import styles from './SingleProductView.module.css';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
-import { fetchProductById } from '../../../service/features/productSlice';
+import { fetchProductById, withdrawProduct } from '../../../service/features/productSlice';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
@@ -24,6 +24,7 @@ const SingleProductView = () => {
   const error = useSelector((state) => state.product.error);
 
   const [chosenFileType, setChosenFileType] = useState(null);
+  const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -134,6 +135,40 @@ const SingleProductView = () => {
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Your files</p>
               <div className={styles.downloads}>{downloads}</div>
+            </div>
+          )}
+
+          {product.product_status === 'owner' && (
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>Listing</p>
+              {product.unlisted ? (
+                <p className={styles.withdrawn}>Removed from sale.</p>
+              ) : confirmingWithdrawal ? (
+                <div className={styles.confirm}>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => dispatch(withdrawProduct(product.id))}
+                  >
+                    Confirm removal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => setConfirmingWithdrawal(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm"
+                  onClick={() => setConfirmingWithdrawal(true)}
+                >
+                  Remove from sale
+                </button>
+              )}
             </div>
           )}
         </div>

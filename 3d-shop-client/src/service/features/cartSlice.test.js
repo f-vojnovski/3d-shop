@@ -4,6 +4,7 @@ import reducer, {
   clearCheckoutError,
   removeFromCart,
 } from './cartSlice';
+import { logoutUser, sessionExpired } from './authSlice';
 
 const product = (id, priceCents) => ({ id, price_cents: priceCents, name: `Product ${id}` });
 
@@ -81,6 +82,34 @@ describe('cart reducer', () => {
 
   // A failure used to sit in the slice forever, so a later visit to checkout
   // reported a problem that had already been dealt with.
+  // The cart is in local storage, so whatever is left in it is what the next
+  // person to open the browser sees.
+  it('is emptied when the user signs out', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+
+    state = reducer(state, { type: logoutUser.fulfilled.type });
+
+    expect(state.products).toHaveLength(0);
+    expect(state.total).toBe(0);
+  });
+
+  it('is emptied even when signing out failed to reach the API', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+
+    state = reducer(state, { type: logoutUser.rejected.type });
+
+    expect(state.products).toHaveLength(0);
+  });
+
+  it('is emptied when the session turns out to be over', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+
+    state = reducer(state, sessionExpired());
+
+    expect(state.products).toHaveLength(0);
+    expect(state.total).toBe(0);
+  });
+
   it('forgets a failed checkout without emptying the cart', () => {
     let state = reducer(undefined, addToCart(product(1, 4000)));
     state = { ...state, status: 'failed', error: 'Payment declined.' };

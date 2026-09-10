@@ -1,9 +1,10 @@
-import { useSyncExternalStore } from 'react';
-import { dismiss, getToasts, subscribe } from './toastStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { dismissToast, selectToasts } from '../../../service/features/toastSlice';
 import styles from './Toasts.module.css';
 
 const Toasts = () => {
-  const toasts = useSyncExternalStore(subscribe, getToasts, getToasts);
+  const dispatch = useDispatch();
+  const toasts = useSelector(selectToasts);
 
   // Mounted even when empty: a live region that appears with its text is not
   // announced, because there was no region to observe a change in.
@@ -16,7 +17,7 @@ const Toasts = () => {
             type="button"
             className={styles.close}
             aria-label="Dismiss"
-            onClick={() => dismiss(item.id)}
+            onClick={() => dispatch(dismissToast(item.id))}
           >
             ×
           </button>

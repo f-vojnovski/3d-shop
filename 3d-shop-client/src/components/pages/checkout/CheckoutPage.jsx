@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '../../common/toast/toastStore';
+import { notify } from '../../../service/features/toastSlice';
 import {
   checkoutCart,
   clearCart,
@@ -28,7 +28,7 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (cartStatus === 'succeeded') {
-      toast.success('Checkout successful, enjoy using your newly acquired products!');
+      dispatch(notify('success', 'Checkout successful, enjoy using your newly acquired products!'));
       dispatch(clearCart());
       navigate('/purchases');
     }
@@ -36,7 +36,7 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (cartStatus === 'failed') {
-      toast.error(error || 'There was a problem completing your purchase.');
+      dispatch(notify('error', error || 'There was a problem completing your purchase.'));
       dispatch(clearCheckoutError());
     }
   }, [cartStatus, error, dispatch]);

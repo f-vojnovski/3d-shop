@@ -47,11 +47,11 @@ class ProductController extends BaseController
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
-            'objModel' => 'nullable|file|max:51200',
-            'gltfModel' => 'nullable|file|max:51200',
-            'thumbnail' => 'required|file|image|max:5120',
+            'objModel' => 'nullable|file|max:51200|extensions:obj',
+            'gltfModel' => 'nullable|file|max:51200|extensions:gltf,glb',
+            'thumbnail' => 'required|file|image|mimes:jpeg,png,webp|max:5120',
             'images' => 'sometimes|array|max:8',
-            'images.*' => 'file|image|max:5120',
+            'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
             ...self::ANGLE_RULES,
         ]);
 
@@ -72,7 +72,9 @@ class ProductController extends BaseController
             $angles
         );
 
-        return DB::transaction(function () use ($request, $models, $angles) {
+        $scans = $this->scanModels($models);
+
+        return DB::transaction(function () use ($request, $models, $angles, $scans) {
             $product = Product::create([
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
@@ -88,7 +90,8 @@ class ProductController extends BaseController
                     ProductFile::KIND_DELIVERABLE,
                     self::DELIVERABLE_DISK,
                     $format,
-                    $angles[$format] ?? []
+                    $angles[$format] ?? [],
+                    scan: $scans[$format]
                 );
             }
 
@@ -151,6 +154,23 @@ class ProductController extends BaseController
         $product->update($fields);
 
         return new ProductResource($product->load('files'));
+    }
+
+    /**
+     * Withdraws a listing instead of deleting it: a buyer keeps what they paid
+     * for, so the rows and files have to stay.
+     */
+    public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+
+        if ($product->user_id != Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        $product->update(['unlisted' => true]);
+
+        return response()->noContent();
     }
 
     public function previewModel($id, string $format): StreamedResponse
@@ -242,6 +262,40 @@ class ProductController extends BaseController
         }
     }
 
+    /**
+     * @param  array<string, UploadedFile>  $models
+     * @return array<string, MeshPrescan>
+     */
+    private function scanModels(array $models): array
+    {
+        $fields = ['obj' => 'objModel', 'gltf' => 'gltfModel'];
+        $accepted = ['obj' => ['obj'], 'gltf' => ['gltf', 'glb']];
+        $scans = [];
+
+        foreach ($models as $format => $file) {
+            $scan = MeshPrescan::of($file->getRealPath());
+
+            if ($rejection = $scan->rejection()) {
+                throw ValidationException::withMessages([$fields[$format] => $rejection]);
+            }
+
+            // The extension is the uploader's word; the magic bytes are not.
+            if (! in_array($scan->format, $accepted[$format], true)) {
+                throw ValidationException::withMessages([
+                    $fields[$format] => sprintf(
+                        'That file is a .%s, not a .%s.',
+                        $scan->format,
+                        $format
+                    ),
+                ]);
+            }
+
+            $scans[$format] = $scan;
+        }
+
+        return $scans;
+    }
+
     private function refuseSettledFields(Request $request): void
     {
         $settled = array_values(array_filter(
@@ -274,7 +328,8 @@ class ProductController extends BaseController
         string $disk,
         ?string $format = null,
         array $angles = [],
-        int $sort = 0
+        int $sort = 0,
+        ?MeshPrescan $scan = null
     ): ProductFile {
         $directory = match ($kind) {
             ProductFile::KIND_THUMBNAIL => 'thumbnails',
@@ -282,16 +337,14 @@ class ProductController extends BaseController
             default => $format.'_files',
         };
 
-        // Measured here, while the upload is still on local disk. Once it is in
-        // object storage a prescan would mean transferring it back.
-        $scan = $kind === ProductFile::KIND_DELIVERABLE
-            ? MeshPrescan::of($file->getRealPath())
-            : null;
-
         $checksum = hash_file('sha256', $file->getRealPath());
         $bytes = $file->getSize();
 
-        $name = uniqid().'.'.$file->getClientOriginalExtension();
+        // Derived here, never from the client's filename: a real PNG called
+        // `x.php` passes image validation and would land on the public disk
+        // under a name a web server may hand to an interpreter.
+        $extension = $scan === null ? $file->extension() : $scan->format;
+        $name = uniqid().($extension === '' ? '' : '.'.$extension);
         $path = Storage::disk($disk)->putFileAs($directory, $file, $name);
 
         return $product->files()->create([

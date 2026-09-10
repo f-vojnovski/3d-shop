@@ -1,6 +1,6 @@
 import { MdAddShoppingCart } from 'react-icons/md';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from '../../../common/toast/toastStore';
+import { notify } from '../../../../service/features/toastSlice';
 import { addToCart } from '../../../../service/features/cartSlice';
 
 const AddToCartButton = (props) => {
@@ -13,9 +13,9 @@ const AddToCartButton = (props) => {
   const onAddToCartClick = () => {
     if (!productsInCart.some((e) => e.id == product.id)) {
       dispatch(addToCart(product));
-      toast.success(`Item added to cart.`);
+      dispatch(notify('success', `Item added to cart.`));
     } else {
-      toast.info(`This item is already in your shopping cart.`);
+      dispatch(notify('info', `This item is already in your shopping cart.`));
     }
   };
 
@@ -31,6 +31,14 @@ const AddToCartButton = (props) => {
     return (
       <button className="btn btn-primary text-nowrap w-100" disabled={true}>
         You have purchased this product
+      </button>
+    );
+  }
+
+  if (product.unlisted) {
+    return (
+      <button className="btn btn-primary text-nowrap w-100" disabled={true}>
+        No longer for sale
       </button>
     );
   }

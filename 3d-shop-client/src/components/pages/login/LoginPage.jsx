@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
-import { toast } from '../../common/toast/toastStore';
+import { notify } from '../../../service/features/toastSlice';
 import { useNavigate } from 'react-router-dom';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import { firstErrors, required } from '../../../service/util/validate';
@@ -21,16 +21,16 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (authStatus === 'succeeded') {
-      toast.success('You are logged in!');
+      dispatch(notify('success', 'You are logged in!'));
       navigate('/');
     }
-  }, [authStatus, navigate]);
+  }, [authStatus, dispatch, navigate]);
 
   useEffect(() => {
     if (authStatus === 'failed') {
-      toast.error(error || 'Could not sign you in.');
+      dispatch(notify('error', error || 'Could not sign you in.'));
     }
-  }, [authStatus, error]);
+  }, [authStatus, dispatch, error]);
 
   const onLoginClicked = () => {
     const found = firstErrors({

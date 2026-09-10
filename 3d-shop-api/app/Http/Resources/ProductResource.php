@@ -40,7 +40,6 @@ class ProductResource extends JsonResource
         ];
     }
 
-    // Server-rendered stills, each carrying the camera it was rendered from.
     /**
      * One entry per model file: its angles, its own render status and its
      * stills. The seller's tabs and the buyer's format switch both read this.

@@ -23,7 +23,7 @@ import {
 import { clearModelCache } from '../../common/model-displayer/modelCache';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import { firstErrors, price as validatePrice, required } from '../../../service/util/validate';
-import { toast } from '../../common/toast/toastStore';
+import { notify } from '../../../service/features/toastSlice';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import CameraRoll from './CameraRoll';
 import CaptureStage from './CaptureStage';
@@ -75,14 +75,14 @@ const ProductUploadPage = () => {
 
       dispatch(clearUploadState());
       dispatch(resetDraft());
-      toast.success('Your product is live.');
+      dispatch(notify('success', 'Your product is live.'));
       navigate(`/product/${uploaded.id}`);
     }
   }, [status, uploaded, models, dispatch, navigate]);
 
   useEffect(() => {
     if (status === 'failed') {
-      toast.error(error || 'Upload failed. Check the files and try again.');
+      dispatch(notify('error', error || 'Upload failed. Check the files and try again.'));
       dispatch(clearUploadState());
     }
   }, [status, error, dispatch]);
@@ -96,8 +96,8 @@ const ProductUploadPage = () => {
 
       if (format) {
         if (file.size > MAX_MODEL_BYTES) {
-          toast.error(
-            `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_MODEL_BYTES)}.`
+          dispatch(
+            notify('error', `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_MODEL_BYTES)}.`)
           );
           continue;
         }
@@ -108,8 +108,8 @@ const ProductUploadPage = () => {
 
       if (isImage(file)) {
         if (file.size > MAX_IMAGE_BYTES) {
-          toast.error(
-            `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_IMAGE_BYTES)}.`
+          dispatch(
+            notify('error', `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_IMAGE_BYTES)}.`)
           );
           continue;
         }
@@ -126,7 +126,7 @@ const ProductUploadPage = () => {
         continue;
       }
 
-      toast.error(`${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`);
+      dispatch(notify('error', `${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`));
     }
   }, [dispatch, thumbnail]);
 

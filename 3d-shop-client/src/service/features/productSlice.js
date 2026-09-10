@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getRequest, getRequestWithToken } from '../api/axiosClient';
+import { deleteRequestWithToken, getRequest, getRequestWithToken } from '../api/axiosClient';
 
 const initialState = {
   product: null,
@@ -28,6 +28,11 @@ export const productSlice = createSlice({
         state.status = 'failed';
         state.productLoaded = 'false';
         state.error = action.error.message;
+      })
+      .addCase(withdrawProduct.fulfilled, (state) => {
+        if (state.product !== null) {
+          state.product.unlisted = true;
+        }
       });
   },
 });
@@ -48,3 +53,14 @@ export const fetchProductById = createAsyncThunk('/product/getById', async (prod
   }
   return response.data;
 });
+
+export const withdrawProduct = createAsyncThunk(
+  '/product/withdraw',
+  async (productId, { getState }) => {
+    const token = getState().auth.token;
+
+    await deleteRequestWithToken(`api/products/${productId}`, token);
+
+    return productId;
+  }
+);
