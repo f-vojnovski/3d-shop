@@ -8,6 +8,7 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
+use App\Support\StandardAngles;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller as BaseController;
@@ -50,13 +51,16 @@ class ProductController extends BaseController
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
             'objModel' => 'nullable|file|max:51200|extensions:obj',
             'gltfModel' => 'nullable|file|max:51200|extensions:gltf,glb',
-            'thumbnail' => 'required|file|image|mimes:jpeg,png,webp|max:5120',
+            'thumbnail' => 'nullable|file|image|mimes:jpeg,png,webp|max:5120',
             'images' => 'sometimes|array|max:8',
             'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
+            'standard_views' => 'sometimes|array',
+            'standard_views.*' => 'in:obj,gltf',
             ...self::ANGLE_RULES,
         ]);
 
         $angles = $request->input('preview_angles') ?? [];
+        $standard = $request->input('standard_views') ?? [];
 
         $models = array_filter([
             'obj' => $request->file('objModel'),
@@ -70,8 +74,25 @@ class ProductController extends BaseController
         $this->guardAnglesForMode(
             $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
             array_keys($models),
-            $angles
+            $angles,
+            $standard
         );
+
+        // The seller's own shots come first: they chose those, and view 1 is
+        // what a buyer sees before touching anything.
+        foreach ($standard as $format) {
+            if (isset($models[$format])) {
+                $angles[$format] = array_merge($angles[$format] ?? [], StandardAngles::set());
+            }
+        }
+
+        // Only a render can stand in for a missing thumbnail, so a listing that
+        // will not produce one has to arrive with its own.
+        if ($request->file('thumbnail') === null && $standard === []) {
+            throw ValidationException::withMessages([
+                'thumbnail' => 'Pick a thumbnail, or turn on the standard views and the first one will be used.',
+            ]);
+        }
 
         $scans = $this->scanModels($models);
 
@@ -106,7 +127,9 @@ class ProductController extends BaseController
                 );
             }
 
-            $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
+            if ($request->file('thumbnail') !== null) {
+                $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
+            }
 
             foreach (array_values($request->file('images') ?? []) as $sort => $image) {
                 $this->storeFile(
@@ -258,16 +281,16 @@ class ProductController extends BaseController
      * Every format a buyer can pick needs an angle, or that tab shows an empty
      * gallery with nothing to explain it.
      */
-    private function guardAnglesForMode(string $mode, array $formats, array $angles): void
+    private function guardAnglesForMode(string $mode, array $formats, array $angles, array $standard): void
     {
         if ($mode !== Product::PREVIEW_ATTESTED_STILLS) {
             return;
         }
 
         foreach ($formats as $format) {
-            if (($angles[$format] ?? []) === []) {
+            if (($angles[$format] ?? []) === [] && ! in_array($format, $standard, true)) {
                 throw ValidationException::withMessages([
-                    "preview_angles.{$format}" => "Capture at least one camera angle for the .{$format} file.",
+                    "preview_angles.{$format}" => "Capture at least one camera angle for the .{$format} file, or ask for the standard views.",
                 ]);
             }
         }

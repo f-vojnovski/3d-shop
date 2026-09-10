@@ -130,6 +130,44 @@ class UploadHardeningTest extends TestCase
     }
 
     /**
+     * Compressed geometry keeps its counts in the readable part of the file, so
+     * without this it would publish with a full specification and no pictures.
+     */
+    public function test_a_model_needing_a_decoder_we_lack_is_refused(): void
+    {
+        $this->postJson('/api/products', $this->payload([
+            'objModel' => null,
+            'gltfModel' => $this->glbRequiring(['KHR_draco_mesh_compression']),
+        ]))->assertStatus(422)->assertJsonValidationErrors('gltfModel');
+
+        $this->assertSame(0, Product::count());
+    }
+
+    public function test_an_extension_the_renderer_handles_is_allowed(): void
+    {
+        $this->postJson('/api/products', $this->payload([
+            'objModel' => null,
+            'gltfModel' => $this->glbRequiring(['KHR_mesh_quantization']),
+        ]))->assertSuccessful();
+    }
+
+    private function glbRequiring(array $required): UploadedFile
+    {
+        $gltf = json_encode([
+            'asset' => ['version' => '2.0'],
+            'extensionsRequired' => $required,
+            'scenes' => [['nodes' => []]],
+        ]);
+        $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
+        $body = pack('VV', strlen($json), 0x4e4f534a).$json;
+
+        return UploadedFile::fake()->createWithContent(
+            'model.glb',
+            'glTF'.pack('VV', 2, 12 + strlen($body)).$body
+        );
+    }
+
+    /**
      * Image bytes under a name a web server may hand to an interpreter, with
      * the MIME type content sniffing would report. This is what reaches the
      * validator on a real upload, and `image` accepts it.

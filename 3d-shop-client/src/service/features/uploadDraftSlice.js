@@ -7,6 +7,7 @@ const initialState = {
   thumbnail: null,
   sellerImages: [],
   previewMode: 'attested_stills',
+  standardViews: {},
   details: { name: '', description: '', price: '' },
   errors: {},
   nextShotId: 1,
@@ -33,6 +34,7 @@ export const uploadDraftSlice = createSlice({
 
       delete state.models[format];
       delete state.shots[format];
+      delete state.standardViews[format];
 
       if (state.thumbnail?.from === format) {
         state.thumbnail = null;
@@ -124,6 +126,12 @@ export const uploadDraftSlice = createSlice({
       state.details = { ...state.details, ...action.payload };
     },
 
+    toggleStandardViews: (state, action) => {
+      const format = action.payload;
+
+      state.standardViews[format] = !state.standardViews[format];
+    },
+
     setPreviewMode: (state, action) => {
       state.previewMode = action.payload;
     },
@@ -147,6 +155,7 @@ export const {
   removeSellerImage,
   moveShot,
   setThumbnail,
+  toggleStandardViews,
   setDetails,
   setPreviewMode,
   setErrors,

@@ -10,6 +10,7 @@ use App\Support\RenderRunner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -302,6 +303,47 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 ],
             ]);
         }
+
+        $this->adoptThumbnail($product);
+    }
+
+    /**
+     * A seller who asked for the standard views may not have framed anything,
+     * so there was no shot to make a thumbnail from at publish time. The first
+     * rendered view stands in. Locked because the formats render concurrently
+     * and both would otherwise claim the slot.
+     */
+    private function adoptThumbnail(Product $product): void
+    {
+        DB::transaction(function () use ($product) {
+            $fresh = Product::query()->whereKey($product->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null || $fresh->thumbnail() !== null) {
+                return;
+            }
+
+            $still = $fresh->files()
+                ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
+                ->orderBy('sort')
+                ->first();
+
+            if ($still === null) {
+                return;
+            }
+
+            // Points at the same stored object rather than copying it: both
+            // rows keep it alive, and files:prune only deletes what nothing
+            // references.
+            $fresh->files()->create([
+                'kind' => ProductFile::KIND_THUMBNAIL,
+                'disk' => $still->disk,
+                'path' => $still->path,
+                'sort' => 0,
+                'bytes' => $still->bytes,
+                'checksum' => $still->checksum,
+                'meta' => ['from' => 'standard_view'],
+            ]);
+        });
     }
 
     private function removeDirectory(string $directory): void

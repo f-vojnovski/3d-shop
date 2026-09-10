@@ -17,10 +17,23 @@ class MeshPrescan
 
     private const CHUNK = 1 << 22;
 
+    /**
+     * glTF extensions the render container can actually honour. Anything else
+     * in `extensionsRequired` means the file is unreadable to it — Draco and
+     * meshopt geometry above all, which need a decoder the harness does not
+     * load. The counts stay readable either way, so without this check a
+     * compressed model would publish with a full specification and no pictures.
+     */
+    private const SUPPORTED_EXTENSIONS = [
+        'KHR_mesh_quantization',
+        'KHR_texture_transform',
+    ];
+
     public function __construct(
         public readonly int $bytes,
         public readonly int $faces,
         public readonly string $format,
+        public readonly array $unsupported = [],
     ) {}
 
     public static function of(string $absolutePath): self
@@ -32,6 +45,7 @@ class MeshPrescan
             bytes: $bytes,
             faces: $format === 'obj' ? self::countObjFaces($absolutePath) : 0,
             format: $format,
+            unsupported: $format === 'obj' ? [] : self::unsupportedExtensions($absolutePath, $format),
         );
     }
 
@@ -63,7 +77,53 @@ class MeshPrescan
             return 'That file is not a recognised .obj, .gltf or .glb model.';
         }
 
+        if ($this->unsupported !== []) {
+            return sprintf(
+                'This model needs %s, which our renderer cannot read. Export it without compression.',
+                implode(' and ', $this->unsupported)
+            );
+        }
+
         return null;
+    }
+
+    /** @return list<string> */
+    private static function unsupportedExtensions(string $path, string $format): array
+    {
+        $json = $format === 'glb' ? self::glbJson($path) : @file_get_contents($path);
+        $gltf = json_decode((string) $json, true);
+
+        if (! is_array($gltf)) {
+            return [];
+        }
+
+        return array_values(array_diff(
+            array_map('strval', $gltf['extensionsRequired'] ?? []),
+            self::SUPPORTED_EXTENSIONS
+        ));
+    }
+
+    private static function glbJson(string $path): string
+    {
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return '';
+        }
+
+        $header = (string) fread($handle, 20);
+
+        if (strlen($header) < 20) {
+            fclose($handle);
+
+            return '';
+        }
+
+        ['length' => $length, 'type' => $type] = unpack('Vlength/Vtype', substr($header, 12, 8));
+        $json = $type === 0x4e4f534a ? (string) fread($handle, $length) : '';
+        fclose($handle);
+
+        return $json;
     }
 
     /** Magic bytes, not the filename, which the uploader controls. */

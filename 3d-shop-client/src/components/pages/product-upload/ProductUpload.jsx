@@ -19,6 +19,7 @@ import {
   setErrors,
   setPreviewMode,
   setThumbnail,
+  toggleStandardViews,
 } from '../../../service/features/uploadDraftSlice';
 import { clearModelCache } from '../../common/model-displayer/modelCache';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
@@ -50,8 +51,17 @@ const dataUriToFile = async (uri, name) => {
 };
 
 const ProductUploadPage = () => {
-  const { active, details, errors, models, previewMode, sellerImages, shots, thumbnail } =
-    useSelector((state) => state.uploadDraft);
+  const {
+    active,
+    details,
+    errors,
+    models,
+    previewMode,
+    sellerImages,
+    shots,
+    standardViews,
+    thumbnail,
+  } = useSelector((state) => state.uploadDraft);
   const attached = useSelector(selectAttachedFormats);
   const activeShots = useSelector(selectActiveShots);
 
@@ -191,17 +201,23 @@ const ProductUploadPage = () => {
   };
 
   const submit = () => {
+    // A render can stand in for a thumbnail the seller never framed.
+    const rendersWillSupplyOne =
+      previewMode === ATTESTED && attached.some((format) => standardViews[format]);
+
     const missing = previewMode === ATTESTED
-      ? attached.filter((format) => (shots[format] ?? []).length === 0)
+      ? attached.filter((format) => (shots[format] ?? []).length === 0 && !standardViews[format])
       : [];
 
     const found = firstErrors({
       name: required(details.name, 'A name'),
       price: validatePrice(details.price),
-      thumbnail: thumbnail ? null : 'Pick a thumbnail: capture one or drop an image.',
+      thumbnail: thumbnail || rendersWillSupplyOne
+        ? null
+        : 'Pick a thumbnail: capture one, drop an image, or turn on the standard views.',
       angles: missing.length === 0
         ? null
-        : `Capture at least one view of ${missing.map(labelFor).join(' and ')}.`,
+        : `Capture a view of ${missing.map(labelFor).join(' and ')}, or turn on the standard views.`,
     });
 
     dispatch(setErrors(found));
@@ -216,7 +232,9 @@ const ProductUploadPage = () => {
       form.append(format.field, models[format.key].file);
     });
 
-    form.append('thumbnail', thumbnail.file);
+    if (thumbnail) {
+      form.append('thumbnail', thumbnail.file);
+    }
 
     sellerImages.forEach((image, index) => {
       form.append(`images[${index}]`, image.file);
@@ -225,6 +243,12 @@ const ProductUploadPage = () => {
     form.append('description', details.description);
     form.append('price', details.price);
     form.append('preview_mode', previewMode);
+
+    attached
+      .filter((format) => standardViews[format])
+      .forEach((format, index) => {
+        form.append(`standard_views[${index}]`, format);
+      });
 
     if (previewMode === ATTESTED) {
       // Only the camera numbers travel; the roll images stay in the browser.
@@ -279,6 +303,15 @@ const ProductUploadPage = () => {
       </div>
 
       <CaptureStage format={active} uri={models[active].uri} probe={probe} onCapture={capture} />
+
+      <label className={styles.standard}>
+        <input
+          type="checkbox"
+          checked={Boolean(standardViews[active])}
+          onChange={() => dispatch(toggleStandardViews(active))}
+        />
+        <span>Add 8 standard views of {labelFor(active)}</span>
+      </label>
 
       {activeShots.length > 0 && (
         <CameraRoll

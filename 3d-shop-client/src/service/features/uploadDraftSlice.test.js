@@ -7,6 +7,7 @@ import reducer, {
   resetDraft,
   retakeShot,
   setThumbnail,
+  toggleStandardViews,
 } from './uploadDraftSlice';
 
 const file = (name) => ({ name });
@@ -23,6 +24,24 @@ const withShots = (count) => {
 };
 
 describe('upload draft', () => {
+  // Opt-in per format: a seller who frames their own shots should never have a
+  // turntable appear underneath them.
+  it('asks for standard views per format, off by default', () => {
+    let state = reducer(undefined, attachModel({ format: 'obj', file: file('a.obj'), uri: 'a' }));
+    state = reducer(state, attachModel({ format: 'gltf', file: file('b.glb'), uri: 'b' }));
+
+    expect(state.standardViews).toEqual({});
+
+    state = reducer(state, toggleStandardViews('obj'));
+
+    expect(state.standardViews.obj).toBe(true);
+    expect(state.standardViews.gltf).toBeFalsy();
+
+    state = reducer(state, toggleStandardViews('obj'));
+
+    expect(state.standardViews.obj).toBe(false);
+  });
+
   it('starts empty', () => {
     expect(reducer(undefined, { type: '@@INIT' })).toMatchObject({
       models: {},
