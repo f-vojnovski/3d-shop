@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\PreviewRenderFinished;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\RenderInput;
@@ -127,6 +128,8 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         $this->storeImages($product, $scratch, $result);
 
+        event(PreviewRenderFinished::for($product->refresh()));
+
         $log->info('Render complete.', [
             'seconds' => $seconds,
             'renderer_seconds' => $result['seconds'] ?? null,
@@ -149,6 +152,12 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             'preview_status' => 'failed',
             'preview_error' => 'Preview rendering did not complete after retrying.',
         ]);
+
+        $product = Product::find($this->productId);
+
+        if ($product !== null) {
+            event(PreviewRenderFinished::for($product));
+        }
     }
 
     private function failOrRetry(Product $product, $log, string $reason, bool $retryable): void
@@ -170,6 +179,8 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     {
         $log->warning('Giving up on render.', ['reason' => $reason]);
         $product->update(['preview_status' => 'failed', 'preview_error' => $reason]);
+
+        event(PreviewRenderFinished::for($product));
     }
 
     private function fetchModel(ProductFile $source, string $scratch, $log): string

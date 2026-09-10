@@ -6,6 +6,7 @@ import CookiesConsentWrapper from './components/common/cookies-popup/CookiesCons
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import RoutesWrapper from './routes/RouterWrapper';
+import RenderNotices from './components/common/realtime/RenderNotices';
 
 const App = () => {
   return (
@@ -14,6 +15,7 @@ const App = () => {
         <div>
           <Header></Header>
           <RoutesWrapper />
+          <RenderNotices />
           <CookiesConsentWrapper />
           <ToastContainer closeButton={true} position="bottom-center" />
         </div>

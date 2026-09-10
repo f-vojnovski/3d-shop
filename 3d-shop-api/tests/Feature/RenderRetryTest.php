@@ -6,9 +6,11 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
+use App\Events\PreviewRenderFinished;
 use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Jobs\FakeJob;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -27,6 +29,7 @@ class RenderRetryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Event::fake([PreviewRenderFinished::class]);
         Storage::fake('models');
         Storage::fake('public');
     }
@@ -176,5 +179,49 @@ class RenderRetryTest extends TestCase
         ]);
 
         return $product;
+    }
+
+    public function test_giving_up_tells_the_seller(): void
+    {
+        $product = $this->renderableProduct();
+
+        $this->runJob($product, [
+            'retryable' => false,
+            'reason' => 'Every rendered image was blank.',
+        ], attempt: 1);
+
+        Event::assertDispatched(
+            PreviewRenderFinished::class,
+            fn (PreviewRenderFinished $event) => $event->productId === $product->id
+                && $event->sellerId === $product->user_id
+                && $event->status === 'failed'
+                && $event->error === 'Every rendered image was blank.'
+        );
+    }
+
+    public function test_a_retry_says_nothing_until_it_is_settled(): void
+    {
+        $product = $this->renderableProduct();
+
+        try {
+            $this->runJob($product, ['retryable' => true], attempt: 1);
+        } catch (RuntimeException) {
+            // The throw is how the queue is told to retry.
+        }
+
+        Event::assertNotDispatched(PreviewRenderFinished::class);
+    }
+
+    public function test_exhausting_the_attempts_tells_the_seller(): void
+    {
+        $product = $this->renderableProduct();
+
+        (new RenderProductPreviews($product->id))->failed(new RuntimeException('worker died'));
+
+        Event::assertDispatched(
+            PreviewRenderFinished::class,
+            fn (PreviewRenderFinished $event) => $event->productId === $product->id
+                && $event->status === 'failed'
+        );
     }
 }
