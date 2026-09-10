@@ -9,13 +9,17 @@ namespace App\Support;
  */
 class MeshPrescan
 {
-    public const MAX_TRIANGLES = 5_000_000;
+    public const MAX_FACES = 5_000_000;
+
+    // Measured: the renderer needs about 2.8x the file size in memory against
+    // a 2 GB container cap.
+    public const MAX_BYTES = 600 * 1024 * 1024;
 
     private const CHUNK = 1 << 22;
 
     public function __construct(
         public readonly int $bytes,
-        public readonly int $triangles,
+        public readonly int $faces,
         public readonly string $format,
     ) {}
 
@@ -26,23 +30,32 @@ class MeshPrescan
 
         return new self(
             bytes: $bytes,
-            triangles: $format === 'obj' ? self::countObjFaces($absolutePath) : 0,
+            faces: $format === 'obj' ? self::countObjFaces($absolutePath) : 0,
             format: $format,
         );
     }
 
     public function withinLimits(): bool
     {
-        return $this->triangles <= self::MAX_TRIANGLES;
+        return $this->faces <= self::MAX_FACES && $this->bytes <= self::MAX_BYTES;
     }
 
     public function rejection(): ?string
     {
-        if (! $this->withinLimits()) {
+        if ($this->faces > self::MAX_FACES) {
             return sprintf(
-                'This model has about %s triangles, over the %s limit for preview rendering.',
-                number_format($this->triangles),
-                number_format(self::MAX_TRIANGLES)
+                'This model has about %s faces, over the %s limit for preview rendering.',
+                number_format($this->faces),
+                number_format(self::MAX_FACES)
+            );
+        }
+
+        // The only bound glTF gets: counting its faces would mean parsing it.
+        if ($this->bytes > self::MAX_BYTES) {
+            return sprintf(
+                'This model is %s MB, over the %s MB limit for preview rendering.',
+                number_format($this->bytes / 1048576, 1),
+                number_format(self::MAX_BYTES / 1048576)
             );
         }
 

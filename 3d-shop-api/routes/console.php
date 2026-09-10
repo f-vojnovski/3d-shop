@@ -8,5 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Needs `schedule:work` (or cron) running; `files:prune` is safe by hand too.
+// Needs `schedule:work` (or cron) running; both are safe to run by hand too.
 Schedule::command('files:prune')->daily();
+Schedule::command('renders:reap')->hourly();

@@ -100,9 +100,12 @@ class Product extends Model
             return self::STATUS_OWNER;
         }
 
-        return $this->sales()->where('buyer_id', $userId)->exists()
-            ? self::STATUS_PURCHASED
-            : self::STATUS_NOT_PURCHASED;
+        // Read from the relation only because `forViewer` filtered it to this user.
+        $purchased = $this->relationLoaded('sales')
+            ? $this->sales->contains(fn (Sale $sale) => (int) $sale->buyer_id === (int) $userId)
+            : $this->sales()->where('buyer_id', $userId)->exists();
+
+        return $purchased ? self::STATUS_PURCHASED : self::STATUS_NOT_PURCHASED;
     }
 
     public function isDownloadableBy(?int $userId): bool
@@ -112,6 +115,13 @@ class Product extends Model
             [self::STATUS_OWNER, self::STATUS_PURCHASED],
             true
         );
+    }
+
+    public function scopeForViewer($query, ?int $userId)
+    {
+        return $userId === null
+            ? $query
+            : $query->with(['sales' => fn ($sales) => $sales->where('buyer_id', $userId)]);
     }
 
     public function servesInteractivePreview(): bool

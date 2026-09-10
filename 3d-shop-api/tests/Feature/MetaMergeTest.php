@@ -80,7 +80,7 @@ class MetaMergeTest extends TestCase
             'checksum' => str_repeat('a', 64),
             'meta' => [
                 'sniffed_format' => 'obj',
-                'triangles' => 10,
+                'faces' => 10,
                 'angles' => [self::ANGLE],
                 'render' => ['status' => 'queued', 'error' => null],
             ],

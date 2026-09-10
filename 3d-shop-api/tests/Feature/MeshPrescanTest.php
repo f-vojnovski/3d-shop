@@ -24,7 +24,7 @@ class MeshPrescanTest extends TestCase
         $scan = MeshPrescan::of($this->tempFile($obj));
 
         $this->assertSame('obj', $scan->format);
-        $this->assertSame(3, $scan->triangles);
+        $this->assertSame(3, $scan->faces);
         $this->assertNull($scan->rejection());
     }
 
@@ -35,7 +35,7 @@ class MeshPrescanTest extends TestCase
 
         $scan = MeshPrescan::of($this->tempFile($body));
 
-        $this->assertSame(200_000, $scan->triangles);
+        $this->assertSame(200_000, $scan->faces);
     }
 
     public function test_it_identifies_a_glb_by_magic_bytes_not_extension(): void
@@ -65,7 +65,7 @@ class MeshPrescanTest extends TestCase
     {
         $scan = new MeshPrescan(
             bytes: 900_000_000,
-            triangles: MeshPrescan::MAX_TRIANGLES + 1,
+            faces: MeshPrescan::MAX_FACES + 1,
             format: 'obj',
         );
 
@@ -77,7 +77,7 @@ class MeshPrescanTest extends TestCase
     {
         $scan = new MeshPrescan(
             bytes: 1,
-            triangles: MeshPrescan::MAX_TRIANGLES,
+            faces: MeshPrescan::MAX_FACES,
             format: 'obj',
         );
 

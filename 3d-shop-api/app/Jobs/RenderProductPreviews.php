@@ -23,10 +23,11 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     public int $timeout = 600;
 
     /**
-     * Above $timeout, so a worker killed mid-render stops blocking re-dispatch
-     * shortly after the job would have been abandoned anyway.
+     * Must outlive the job's whole life, retries included: 2 attempts of 600s
+     * plus a 30s backoff is 1230s, and a lock expiring mid-retry would let a
+     * duplicate render start alongside the one already running.
      */
-    public int $uniqueFor = 700;
+    public int $uniqueFor = 1320;
 
     public function __construct(
         public int $productId,
@@ -80,7 +81,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $log->info('Admission check.', [
             'format' => $scan->format,
             'bytes' => $scan->bytes,
-            'triangles' => $scan->triangles,
+            'faces' => $scan->faces,
             'disk' => $source->disk,
         ]);
 

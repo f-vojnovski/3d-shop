@@ -1,5 +1,7 @@
 // Reads /in/job.json and /in/model, writes PNGs and result.json to /out.
 // Chrome POSTs each image back, so completion is observed, not timed.
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -11,6 +13,22 @@ const APP = '/app';
 const PORT = 8710;
 const TIMEOUT_MS = Number(process.env.RENDER_TIMEOUT ?? 180) * 1000;
 const CHROME = process.env.CHROME_BIN ?? '/usr/bin/chromium';
+
+// Names the code that drew the pixels, not just the libraries: rebuild the
+// image from the pinned versions and this digest has to come out the same.
+function harnessDigest() {
+  try {
+    const hash = createHash('sha256');
+
+    for (const file of ['/app/harness.html', '/app/render.mjs', '/app/fitToView.js']) {
+      hash.update(readFileSync(file));
+    }
+
+    return hash.digest('hex').slice(0, 16);
+  } catch {
+    return 'unknown';
+  }
+}
 
 /** An attested image is only checkable if the record names the exact renderer. */
 function rendererIdentity() {
@@ -27,6 +45,7 @@ function rendererIdentity() {
     three: process.env.THREE_VERSION ?? 'unknown',
     browser,
     rasterizer: 'swiftshader',
+    harness: harnessDigest(),
   };
 }
 

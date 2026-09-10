@@ -105,15 +105,25 @@ class RenderRetryTest extends TestCase
     }
 
     /**
-     * The two are configured in different files, so nothing else catches a
-     * change that lets Redis re-release a render while it is still running.
+     * These live in different files, so nothing else catches a change that lets
+     * Redis re-release a render that is still running.
      */
     public function test_the_queue_waits_longer_than_a_render_may_take(): void
     {
         $job = new RenderProductPreviews(1, 'obj');
 
         $this->assertGreaterThan($job->timeout, config('queue.connections.redis.retry_after'));
-        $this->assertGreaterThan($job->timeout, $job->uniqueFor);
+    }
+
+    /** The lock has to cover every attempt plus the waits between them. */
+    public function test_the_uniqueness_lock_outlives_every_attempt(): void
+    {
+        $job = new RenderProductPreviews(1, 'obj');
+
+        $worstCase = $job->tries * $job->timeout
+            + ($job->tries - 1) * max($job->backoff());
+
+        $this->assertGreaterThanOrEqual($worstCase, $job->uniqueFor);
     }
 
     private function runJob(Product $product, array $result, int $attempt): void
@@ -178,7 +188,7 @@ class RenderRetryTest extends TestCase
             'checksum' => str_repeat('a', 64),
             'meta' => [
                 'sniffed_format' => 'obj',
-                'triangles' => 1,
+                'faces' => 1,
                 'angles' => [self::ANGLE],
                 'render' => ['status' => 'queued', 'error' => null],
             ],

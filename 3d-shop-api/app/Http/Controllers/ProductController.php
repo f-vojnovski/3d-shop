@@ -34,7 +34,7 @@ class ProductController extends BaseController
     public function index()
     {
         return ProductResource::collection(
-            Product::with('files')->where('unlisted', false)->orderBy('id')->paginate(16)
+            Product::with('files')->forViewer(Auth::id())->where('unlisted', false)->orderBy('id')->paginate(16)
         );
     }
 
@@ -104,7 +104,9 @@ class ProductController extends BaseController
 
     public function show($id)
     {
-        return new ProductResource(Product::with('files')->findOrFail($id));
+        return new ProductResource(
+            Product::with('files')->forViewer(Auth::id())->findOrFail($id)
+        );
     }
 
     /**
@@ -166,6 +168,7 @@ class ProductController extends BaseController
     {
         return ProductResource::collection(
             Product::with('files')
+                ->forViewer(Auth::id())
                 ->where('unlisted', false)
                 ->where('name', 'like', '%'.$name.'%')
                 ->get()
@@ -176,7 +179,8 @@ class ProductController extends BaseController
     {
         return ProductResource::collection(
             Product::with('files')
-                ->where('user_id', Auth::user()->getAuthIdentifier())
+                ->forViewer(Auth::id())
+                ->where('user_id', Auth::id())
                 ->orderBy('id')
                 ->paginate(16)
         );
@@ -186,6 +190,7 @@ class ProductController extends BaseController
     {
         return ProductResource::collection(
             Product::with('files')
+                ->forViewer(Auth::id())
                 ->where('unlisted', false)
                 ->where('user_id', $userId)
                 ->orderBy('id')
@@ -199,6 +204,7 @@ class ProductController extends BaseController
 
         return ProductResource::collection(
             Product::with('files')
+                ->forViewer($userId)
                 ->whereHas('sales', fn ($query) => $query->where('buyer_id', $userId))
                 ->orderBy('id')
                 ->paginate(16)
@@ -283,7 +289,7 @@ class ProductController extends BaseController
             'checksum' => $checksum,
             'meta' => $scan === null ? null : [
                 'sniffed_format' => $scan->format,
-                'triangles' => $scan->triangles,
+                'faces' => $scan->faces,
                 'angles' => $angles,
                 'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
             ],

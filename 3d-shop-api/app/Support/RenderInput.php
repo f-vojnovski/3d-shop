@@ -17,7 +17,7 @@ class RenderInput
         // Recorded at upload, so rejecting costs no transfer from object storage.
         return new MeshPrescan(
             bytes: (int) $source->bytes,
-            triangles: (int) ($source->meta['triangles'] ?? 0),
+            faces: (int) ($source->meta['faces'] ?? $source->meta['triangles'] ?? 0),
             format: (string) ($source->meta['sniffed_format'] ?? 'unknown'),
         );
     }
@@ -31,7 +31,7 @@ class RenderInput
                 'format' => $scan->format,
                 'checksum' => $source->checksum,
                 'bytes' => $scan->bytes,
-                'triangles' => $scan->triangles,
+                'faces' => $scan->faces,
             ],
             'angles' => $source->angles(),
             'output' => ['width' => 1200, 'height' => 900],

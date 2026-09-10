@@ -108,7 +108,7 @@ class AttestationTest extends TestCase
             'path' => 'obj_files/model.obj',
             'bytes' => 1805882,
             'checksum' => self::SOURCE_HASH,
-            'meta' => ['sniffed_format' => 'obj', 'triangles' => 25940],
+            'meta' => ['sniffed_format' => 'obj', 'faces' => 25940],
         ]);
 
         $preview = $product->files()->create([
