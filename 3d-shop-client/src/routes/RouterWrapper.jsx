@@ -1,5 +1,6 @@
 import { useRoutes } from 'react-router-dom';
 import CheckoutPage from '../components/pages/checkout/CheckoutPage';
+import OrderComplete from '../components/pages/checkout/OrderComplete';
 import CurrentUserProductList from '../components/pages/current-user-product-list/CurrentUserProductList';
 import LoginPage from '../components/pages/login/LoginPage';
 import ProductUploadPage from '../components/pages/product-upload/ProductUpload';
@@ -22,6 +23,7 @@ const RoutesWrapper = () =>
     { path: '/products/:pageNumber', element: <ModelsListPage /> },
     { path: '/product/:productId', element: <SingleProductView /> },
     { path: '/checkout', element: guarded(<CheckoutPage />) },
+    { path: '/checkout/complete', element: guarded(<OrderComplete />) },
     { path: '/upload', element: guarded(<ProductUploadPage />) },
     { path: '/my-products', element: guarded(<CurrentUserProductList />) },
     { path: '/my-products/:pageNumber', element: guarded(<CurrentUserProductList />) },

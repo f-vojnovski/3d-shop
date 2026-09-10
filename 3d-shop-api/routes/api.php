@@ -3,7 +3,9 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesController;
 /*
@@ -33,6 +35,11 @@ Route::get('/products-by-user/{userId}', [ProductController::class, 'getProducts
 Route::get('/previews/{preview}/attestation', [AttestationController::class, 'show'])
     ->name('previews.attestation');
 
+// The gateway calls this, not a browser: no session, no token, and a signature
+// instead of either.
+Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])
+    ->withoutMiddleware(['throttle:api']);
+
 // Auth
 // Login refuses a wrong name and a wrong password identically, which only
 // slows an attacker down if the guesses are also rate limited.
@@ -53,6 +60,9 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/products-authenticated/{id}', [ProductController::class, 'show']);
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    Route::post('/checkout/session', [CheckoutController::class, 'session']);
+    Route::get('/orders/{id}', [CheckoutController::class, 'show'])->where('id', '[0-9]+');
 
     Route::post('/sales/buy', [SalesController::class, 'makeSale']);
     Route::get('/sales/', [SalesController::class, 'getSalesForAuthenticatedUser']);

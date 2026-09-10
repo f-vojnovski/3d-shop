@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { notify } from '../../../service/features/toastSlice';
 import {
   checkoutCart,
-  clearCart,
   clearCheckoutError,
   removeFromCart,
 } from '../../../service/features/cartSlice';
@@ -16,6 +15,7 @@ const CheckoutPage = () => {
   const products = useSelector((state) => state.cart.products);
   const total = useSelector((state) => state.cart.total);
   const cartStatus = useSelector((state) => state.cart.status);
+  const order = useSelector((state) => state.cart.order);
   const error = useSelector((state) => state.cart.error);
 
   const dispatch = useDispatch();
@@ -27,12 +27,19 @@ const CheckoutPage = () => {
   };
 
   useEffect(() => {
-    if (cartStatus === 'succeeded') {
-      dispatch(notify('success', 'Checkout successful, enjoy using your newly acquired products!'));
-      dispatch(clearCart());
-      navigate('/purchases');
+    if (cartStatus !== 'succeeded' || !order) {
+      return;
     }
-  }, [cartStatus, dispatch, navigate]);
+
+    // Either the server wants the buyer on a payment page, or there was
+    // nothing to charge and the order is already settled.
+    if (order.checkout_url) {
+      window.location.assign(order.checkout_url);
+      return;
+    }
+
+    navigate(`/checkout/complete?order=${order.id}`);
+  }, [cartStatus, order, navigate]);
 
   useEffect(() => {
     if (cartStatus === 'failed') {

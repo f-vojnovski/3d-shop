@@ -1,14 +1,18 @@
-import { createSlice, createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
+import { createAction, createSlice, createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
 import { postRequestWithToken } from '../api/axiosClient';
 import { logoutUser, sessionExpired } from './authSlice';
 
 const endsASession = isAnyOf(logoutUser.fulfilled, logoutUser.rejected, sessionExpired);
+
+/** Dispatched by the return page once the server reports the order paid. */
+export const orderSettled = createAction('cart/orderSettled');
 
 const initialState = {
   products: [],
   total: 0,
   status: 'idle',
   error: null,
+  order: null,
 };
 
 export const cartSlice = createSlice({
@@ -61,8 +65,20 @@ export const cartSlice = createSlice({
       .addCase(checkoutCart.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.error = null;
+        state.order = action.payload;
+
+        // Only an order that is already settled empties the cart. One that is
+        // waiting on a card keeps it, or a buyer who abandons the payment page
+        // comes back to nothing.
+        if (action.payload?.status === 'paid') {
+          state.products = [];
+          state.total = 0;
+        }
+      })
+      .addCase(orderSettled, (state) => {
         state.products = [];
         state.total = 0;
+        state.order = null;
       })
       // The cart is persisted, so without this the next person to use the
       // browser inherits the last one's.
@@ -75,17 +91,23 @@ export default cartSlice.reducer;
 export const { addToCart, removeFromCart, clearCart, clearCheckoutError } =
   cartSlice.actions;
 
+/**
+ * Opens a priced order. The server decides what it costs, and answers either
+ * with somewhere to pay or with an order already settled — a free product, or
+ * a build with payments switched off.
+ */
 export const checkoutCart = createAsyncThunk(
   'cart/checkout',
   async (arg, { getState }) => {
     const state = getState();
-    const token = state.auth.token;
-    const products = state.cart.products.map((x) => {
-      return { id: x.id };
-    });
+    const products = state.cart.products.map((product) => ({ id: product.id }));
 
-    const body = { products: products };
+    const response = await postRequestWithToken(
+      'api/checkout/session',
+      { products },
+      state.auth.token
+    );
 
-    await postRequestWithToken('api/sales/buy', body, token);
+    return response.data;
   }
 );

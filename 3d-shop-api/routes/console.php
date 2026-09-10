@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 // Needs `schedule:work` (or cron) running; both are safe to run by hand too.
 Schedule::command('files:prune')->daily();
 Schedule::command('renders:reap')->hourly();
+Schedule::command('payments:reconcile')->everyFifteenMinutes();

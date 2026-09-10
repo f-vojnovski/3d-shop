@@ -5,6 +5,7 @@ import reducer, {
   removeFromCart,
 } from './cartSlice';
 import { logoutUser, sessionExpired } from './authSlice';
+import { checkoutCart, orderSettled } from './cartSlice';
 
 const product = (id, priceCents) => ({ id, price_cents: priceCents, name: `Product ${id}` });
 
@@ -108,6 +109,46 @@ describe('cart reducer', () => {
 
     expect(state.products).toHaveLength(0);
     expect(state.total).toBe(0);
+  });
+
+  // A buyer who abandons the payment page must come back to a full cart.
+  it('keeps the cart while an order is waiting to be paid', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+
+    state = reducer(state, {
+      type: checkoutCart.fulfilled.type,
+      payload: { id: 7, status: 'pending', checkout_url: 'https://pay.test/7' },
+    });
+
+    expect(state.products).toHaveLength(1);
+    expect(state.total).toBe(4000);
+    expect(state.order.checkout_url).toBe('https://pay.test/7');
+  });
+
+  it('empties the cart when the order needed no payment', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+
+    state = reducer(state, {
+      type: checkoutCart.fulfilled.type,
+      payload: { id: 7, status: 'paid' },
+    });
+
+    expect(state.products).toHaveLength(0);
+    expect(state.total).toBe(0);
+  });
+
+  it('empties the cart once the payment is confirmed', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = reducer(state, {
+      type: checkoutCart.fulfilled.type,
+      payload: { id: 7, status: 'pending', checkout_url: 'https://pay.test/7' },
+    });
+
+    state = reducer(state, orderSettled());
+
+    expect(state.products).toHaveLength(0);
+    expect(state.total).toBe(0);
+    expect(state.order).toBeNull();
   });
 
   it('forgets a failed checkout without emptying the cart', () => {

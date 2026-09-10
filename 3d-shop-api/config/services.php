@@ -35,4 +35,27 @@ return [
         ],
     ],
 
+    'payments' => [
+        'enabled' => env('PAYMENTS_ENABLED', false),
+        'gateway' => env('PAYMENT_GATEWAY', 'paypal'),
+    ],
+
+    'paypal' => [
+        // Sandbox by default: live needs a deliberate change.
+        'base' => env('PAYPAL_BASE', 'https://api-m.sandbox.paypal.com'),
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'secret' => env('PAYPAL_SECRET'),
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+    ],
+
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', 'whsec_test'),
+    ],
+
+    // Basis points, so 1500 is 15%. Integers all the way down.
+    'commission' => [
+        'bps' => env('COMMISSION_BPS', 1500),
+    ],
+
 ];
