@@ -75,6 +75,16 @@ describe('upload draft', () => {
     expect(state.thumbnail.index).toBe(1);
   });
 
+  it('keeps the thumbnail on its own picture when an earlier shot is removed', () => {
+    let state = withShots(3);
+    state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 2 }));
+    const chosen = state.shots.obj[2].id;
+
+    state = reducer(state, removeShot({ format: 'obj', index: 0 }));
+
+    expect(state.shots.obj[state.thumbnail.index].id).toBe(chosen);
+  });
+
   it('drops the thumbnail when the shot behind it is removed', () => {
     let state = withShots(2);
     state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 1 }));

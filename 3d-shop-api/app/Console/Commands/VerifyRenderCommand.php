@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\File;
 
 class VerifyRenderCommand extends Command
 {
-    protected $signature = 'render:verify {product : Product id}';
+    protected $signature = 'render:verify {product : Product id} {--format= : Only this model format}';
 
     protected $description = 'Re-render a product and compare the output hashes against its stored attestations';
 
@@ -25,25 +25,61 @@ class VerifyRenderCommand extends Command
             return self::FAILURE;
         }
 
-        $source = $product->files->firstWhere('kind', ProductFile::KIND_DELIVERABLE);
-        $stored = $product->files
-            ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
-            ->sortBy('sort')
-            ->keyBy('sort');
+        $deliverables = $product->deliverables()
+            ->when($this->option('format'), fn ($query, $format) => $query->where('format', $format))
+            ->get();
 
-        if ($source === null || $stored->isEmpty()) {
+        if ($deliverables->isEmpty()) {
+            $this->error('No model file to verify.');
+
+            return self::FAILURE;
+        }
+
+        $failures = 0;
+        $verified = 0;
+
+        foreach ($deliverables as $source) {
+            $outcome = $this->verifyFormat($runner, $product, $source);
+
+            $failures += $outcome['failures'];
+            $verified += $outcome['verified'];
+        }
+
+        if ($verified === 0) {
             $this->error('This product has no attested stills to verify.');
 
             return self::FAILURE;
         }
 
-        $scratch = storage_path('app/private/render-verify/'.$product->id);
+        if ($failures > 0) {
+            $this->error("{$failures} check(s) failed.");
+
+            return self::FAILURE;
+        }
+
+        $this->info('Every still reproduces byte-for-byte from the current model.');
+
+        return self::SUCCESS;
+    }
+
+    /** @return array{failures: int, verified: int} */
+    private function verifyFormat(RenderRunner $runner, Product $product, ProductFile $source): array
+    {
+        $stored = $source->stills()->get()->keyBy('sort');
+
+        if ($stored->isEmpty()) {
+            $this->line(".{$source->format}: no stills recorded, skipped.");
+
+            return ['failures' => 0, 'verified' => 0];
+        }
+
+        $scratch = storage_path('app/private/render-verify/'.$product->id.'-'.$source->format);
         File::deleteDirectory($scratch);
         File::makeDirectory($scratch, 0775, true);
 
         $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
         $bytes = RenderInput::fetch($source, $modelPath);
-        $this->line("Fetched {$bytes} bytes from the {$source->disk} disk.");
+        $this->line(".{$source->format}: fetched {$bytes} bytes from the {$source->disk} disk.");
 
         $result = $runner->run(
             RenderInput::request($product, $source, RenderInput::scanOf($source)),
@@ -52,13 +88,13 @@ class VerifyRenderCommand extends Command
         );
 
         if (($result['status'] ?? 'failed') !== 'ok') {
-            $this->error('Re-render failed: '.($result['reason'] ?? 'unknown'));
+            $this->error(".{$source->format}: re-render failed: ".($result['reason'] ?? 'unknown'));
 
-            return self::FAILURE;
+            return ['failures' => 1, 'verified' => 0];
         }
 
         $rows = [];
-        $mismatches = 0;
+        $failures = 0;
 
         foreach ($result['images'] as $image) {
             $produced = hash_file(
@@ -67,9 +103,10 @@ class VerifyRenderCommand extends Command
             );
             $record = $stored->get($image['index']);
             $matches = $record !== null && hash_equals($record->checksum, $produced);
-            $mismatches += $matches ? 0 : 1;
+            $failures += $matches ? 0 : 1;
 
             $rows[] = [
+                ".{$source->format}",
                 $image['index'],
                 substr((string) $record?->checksum, 0, 16).'…',
                 substr($produced, 0, 16).'…',
@@ -77,26 +114,23 @@ class VerifyRenderCommand extends Command
             ];
         }
 
-        $this->table(['angle', 'attested', 're-rendered', ''], $rows);
+        $this->table(['format', 'angle', 'attested', 're-rendered', ''], $rows);
 
         // A swapped model leaves the stills intact but no longer depicting what
         // is for sale, which the pixel hashes alone would not reveal.
         $attestedSource = $stored->first()->meta['source_checksum'] ?? null;
 
         if ($attestedSource !== null && ! hash_equals($attestedSource, (string) $source->checksum)) {
-            $this->error('The current model is not the one these stills were rendered from.');
-            $mismatches++;
+            $this->error(".{$source->format}: the current model is not the one these stills came from.");
+            $failures++;
         }
 
-        if ($mismatches > 0) {
-            $this->error("{$mismatches} check(s) failed. Scratch kept at {$scratch}");
-
-            return self::FAILURE;
+        if ($failures > 0) {
+            $this->error(".{$source->format}: scratch kept at {$scratch}");
+        } else {
+            File::deleteDirectory($scratch);
         }
 
-        File::deleteDirectory($scratch);
-        $this->info('Every still reproduces byte-for-byte from the current model.');
-
-        return self::SUCCESS;
+        return ['failures' => $failures, 'verified' => count($result['images'])];
     }
 }

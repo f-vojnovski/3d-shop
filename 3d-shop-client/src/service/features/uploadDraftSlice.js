@@ -71,8 +71,14 @@ export const uploadDraftSlice = createSlice({
 
       state.shots[format] = shotsOf(state, format).filter((_, at) => at !== index);
 
-      if (state.thumbnail?.from === format && state.thumbnail.index === index) {
+      if (state.thumbnail?.from !== format) {
+        return;
+      }
+
+      if (state.thumbnail.index === index) {
         state.thumbnail = null;
+      } else if (state.thumbnail.index > index) {
+        state.thumbnail = { ...state.thumbnail, index: state.thumbnail.index - 1 };
       }
     },
 

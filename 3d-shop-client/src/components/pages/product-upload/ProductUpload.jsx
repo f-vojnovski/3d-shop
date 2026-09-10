@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { clearUploadState, uploadProduct } from '../../../service/features/productUploadSlice';
@@ -18,6 +18,7 @@ import {
   setPreviewMode,
   setThumbnail,
 } from '../../../service/features/uploadDraftSlice';
+import { clearModelCache } from '../../common/model-displayer/modelCache';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import { firstErrors, price as validatePrice, required } from '../../../service/util/validate';
 import { toast } from '../../common/toast/toastStore';
@@ -29,6 +30,7 @@ import {
   FORMATS,
   MAX_IMAGE_BYTES,
   MAX_MODEL_BYTES,
+  SUPPORTED_SUMMARY,
   formatOf,
   isImage,
   labelFor,
@@ -65,12 +67,17 @@ const ProductUploadPage = () => {
 
   useEffect(() => {
     if (status === 'succeeded' && uploaded) {
+      Object.values(models).forEach((model) => {
+        URL.revokeObjectURL(model.uri);
+        clearModelCache(model.uri);
+      });
+
       dispatch(clearUploadState());
       dispatch(resetDraft());
       toast.success('Your product is live.');
       navigate(`/product/${uploaded.id}`);
     }
-  }, [status, uploaded, dispatch, navigate]);
+  }, [status, uploaded, models, dispatch, navigate]);
 
   useEffect(() => {
     if (status === 'failed') {
@@ -78,7 +85,7 @@ const ProductUploadPage = () => {
     }
   }, [status, error]);
 
-  const accept = async (files) => {
+  const accept = useCallback(async (files) => {
     for (const file of files) {
       const format = formatOf(file);
 
@@ -90,7 +97,7 @@ const ProductUploadPage = () => {
           continue;
         }
 
-        dispatch(attachModel({ format, file, uri: await fileToDataUri(file) }));
+        dispatch(attachModel({ format, file, uri: URL.createObjectURL(file) }));
         continue;
       }
 
@@ -106,7 +113,38 @@ const ProductUploadPage = () => {
         continue;
       }
 
-      toast.error(`${file.name} is not a model or an image.`);
+      toast.error(`${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`);
+    }
+  }, [dispatch]);
+
+  // A drop that misses the zone would otherwise be handled by the browser,
+  // which opens the file and looks like the page silently ignoring it.
+  useEffect(() => {
+    const swallow = (event) => event.preventDefault();
+
+    const anywhere = (event) => {
+      event.preventDefault();
+
+      if (event.dataTransfer?.files?.length) {
+        accept(Array.from(event.dataTransfer.files));
+      }
+    };
+
+    window.addEventListener('dragover', swallow);
+    window.addEventListener('drop', anywhere);
+
+    return () => {
+      window.removeEventListener('dragover', swallow);
+      window.removeEventListener('drop', anywhere);
+    };
+  }, [accept]);
+
+  const releaseModel = (format) => {
+    const url = models[format]?.uri;
+
+    if (url) {
+      URL.revokeObjectURL(url);
+      clearModelCache(url);
     }
   };
 
@@ -214,7 +252,10 @@ const ProductUploadPage = () => {
         <button
           type="button"
           className={styles.drop_}
-          onClick={() => dispatch(dropModel(active))}
+          onClick={() => {
+            releaseModel(active);
+            dispatch(dropModel(active));
+          }}
         >
           Remove {labelFor(active)}
         </button>

@@ -25,10 +25,16 @@ export const formatOf = (file) => {
 
 export const isImage = (file) => IMAGE_EXTENSIONS.includes(extensionOf(file));
 
+// Extensions plus MIME types: browsers filter the picker on one or the other.
 export const acceptAttribute = [
   ...FORMATS.flatMap((format) => format.extensions),
+  'model/gltf-binary',
+  'model/gltf+json',
   ...IMAGE_EXTENSIONS,
+  'image/*',
 ].join(',');
+
+export const SUPPORTED_SUMMARY = `${FORMATS.flatMap((format) => format.extensions).join(', ')} or an image`;
 
 export const labelFor = (key) => FORMATS.find((format) => format.key === key)?.label ?? key;
 

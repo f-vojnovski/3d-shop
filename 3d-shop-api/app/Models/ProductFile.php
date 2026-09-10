@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class ProductFile extends Model
 {
@@ -69,8 +70,22 @@ class ProductFile extends Model
         return $this->meta['render']['error'] ?? null;
     }
 
+    /**
+     * Merges against the row as it is now, not as this instance remembers it: a
+     * render settling after the seller edited the angles used to write the old
+     * angles back over the new ones.
+     */
     public function withMeta(array $values): void
     {
-        $this->update(['meta' => array_replace($this->meta ?? [], $values)]);
+        DB::transaction(function () use ($values) {
+            $fresh = static::query()->whereKey($this->getKey())->lockForUpdate()->first();
+
+            if ($fresh === null) {
+                return;
+            }
+
+            $fresh->update(['meta' => array_replace($fresh->meta ?? [], $values)]);
+            $this->setRawAttributes($fresh->getAttributes(), true);
+        });
     }
 }

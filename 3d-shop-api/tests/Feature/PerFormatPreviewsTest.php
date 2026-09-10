@@ -108,6 +108,42 @@ class PerFormatPreviewsTest extends TestCase
         $this->assertSame('Nothing rendered.', $product->preview_error);
     }
 
+    // A format uploaded without angles used to drag the whole product back to
+    // 'none', hiding the stills the other format had already produced.
+    public function test_one_ready_format_is_enough_for_the_product_to_be_ready(): void
+    {
+        $product = Product::with('files')->findOrFail(
+            $this->upload(['obj' => [self::ANGLE], 'gltf' => [self::ANGLE]])
+        );
+
+        $product->deliverables()->where('format', 'obj')->first()
+            ->withMeta(['render' => ['status' => 'ready', 'error' => null]]);
+        $product->deliverables()->where('format', 'gltf')->first()
+            ->withMeta(['render' => ['status' => 'none', 'error' => null]]);
+
+        $product->refreshPreviewStatus();
+
+        $this->assertSame('ready', $product->fresh()->preview_status);
+    }
+
+    public function test_a_failure_outranks_a_ready_format(): void
+    {
+        $product = Product::with('files')->findOrFail(
+            $this->upload(['obj' => [self::ANGLE], 'gltf' => [self::ANGLE]])
+        );
+
+        $product->deliverables()->where('format', 'obj')->first()
+            ->withMeta(['render' => ['status' => 'ready', 'error' => null]]);
+        $product->deliverables()->where('format', 'gltf')->first()
+            ->withMeta(['render' => ['status' => 'failed', 'error' => 'Nothing rendered.']]);
+
+        $product->refreshPreviewStatus();
+
+        $product->refresh();
+        $this->assertSame('failed', $product->preview_status);
+        $this->assertSame('Nothing rendered.', $product->preview_error);
+    }
+
     public function test_the_payload_groups_previews_by_format(): void
     {
         $id = $this->upload(['obj' => [self::ANGLE], 'gltf' => [self::ANGLE]]);

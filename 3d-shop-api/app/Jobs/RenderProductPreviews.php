@@ -7,7 +7,7 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\RenderInput;
 use App\Support\RenderRunner;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
-class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
+class RenderProductPreviews implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Queueable;
 
@@ -23,8 +23,9 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     public int $timeout = 600;
 
     /**
-     * Above $timeout, so a worker killed mid-render stops blocking re-dispatch
-     * shortly after the job would have been abandoned anyway.
+     * The lock is released once the job starts, so an edit made while a render
+     * is running queues a follow-up instead of being silently dropped. This
+     * value only covers a job that dies before it ever starts.
      */
     public int $uniqueFor = 700;
 
@@ -92,6 +93,8 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         $this->settle($product, $source, 'rendering', null);
 
+        $anglesUsed = $source->angles();
+
         $scratch = storage_path('app/private/render-scratch/'.$product->id.'-'.$this->format);
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
@@ -132,10 +135,19 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Two runs for one format can overlap now, so a run whose angles have
+        // been superseded must not overwrite the newer run's stills.
+        if ($source->fresh()?->angles() !== $anglesUsed) {
+            $log->info('Angles changed while rendering; leaving the newer render to finish.');
+            $this->removeDirectory($scratch);
+
+            return;
+        }
+
         $this->storeImages($product, $source, $scratch, $result);
         $this->settle($product, $source, 'ready', $this->blankNotice($result));
 
-        event(PreviewRenderFinished::for($product->refresh(), $this->format));
+        $this->announce($product->refresh(), $log);
 
         $log->info('Render complete.', [
             'seconds' => $seconds,
@@ -174,7 +186,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         $product->refreshPreviewStatus();
 
-        event(PreviewRenderFinished::for($product->refresh(), $this->format));
+        $this->announce($product->refresh(), Log::channel('render'));
     }
 
     private function failOrRetry(Product $product, $log, string $reason, bool $retryable): void
@@ -202,7 +214,22 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             $this->settle($product, $source, 'failed', $reason);
         }
 
-        event(PreviewRenderFinished::for($product->refresh(), $this->format));
+        $this->announce($product->refresh(), $log);
+    }
+
+    /**
+     * The seller's notice is best effort: a broadcaster that is down must not
+     * turn a finished render into a failed job.
+     */
+    private function announce(Product $product, $log): void
+    {
+        try {
+            event(PreviewRenderFinished::for($product, $this->format));
+        } catch (Throwable $exception) {
+            $log->warning('Could not announce the render.', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     /** Records this format's outcome, then recomputes the product's own status. */
@@ -248,6 +275,20 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $source->stills()->each(fn (ProductFile $old) => $old->delete());
 
         foreach ($result['images'] as $image) {
+            // The container parses untrusted geometry, so what it names its
+            // output is input: only files it was supposed to write are read.
+            $index = $image['index'] ?? null;
+
+            if (! is_int($index) || ! preg_match('/^angle-\d+\.png$/', (string) ($image['file'] ?? ''))) {
+                Log::channel('render')->warning('Renderer named an unexpected file.', [
+                    'product_id' => $product->id,
+                    'file' => $image['file'] ?? null,
+                    'index' => $index,
+                ]);
+
+                continue;
+            }
+
             $bytes = (string) file_get_contents(
                 $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$image['file']
             );
@@ -260,12 +301,12 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 'format' => 'png',
                 'disk' => 'public',
                 'path' => $path,
-                'sort' => $image['index'],
+                'sort' => $index,
                 'bytes' => strlen($bytes),
                 'checksum' => hash('sha256', $bytes),
                 'meta' => [
                     'source_format' => $source->format,
-                    'camera' => $source->angles()[$image['index']] ?? null,
+                    'camera' => $source->angles()[$index] ?? null,
                     'coverage' => $image['coverage'] ?? null,
                     'renderer' => $result['renderer'] ?? null,
                     'source_checksum' => $source->checksum,

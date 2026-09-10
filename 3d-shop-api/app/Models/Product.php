@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
@@ -119,29 +120,37 @@ class Product extends Model
     }
 
     /**
-     * Each deliverable renders on its own, so the product's status is the worst
-     * of them: a buyer should not be told previews are ready while one format
-     * is still rendering.
+     * Each deliverable renders on its own, so the product takes the least
+     * finished of them: a buyer should not be told previews are ready while a
+     * format is still rendering. Locked because every per-format job calls it.
      */
     public function refreshPreviewStatus(): void
     {
-        $statuses = $this->deliverables()->get()
-            ->map(fn (ProductFile $file) => $file->renderStatus());
+        DB::transaction(function () {
+            $product = static::query()->whereKey($this->getKey())->lockForUpdate()->first();
 
-        $failed = $this->deliverables()->get()
-            ->first(fn (ProductFile $file) => $file->renderStatus() === 'failed');
+            if ($product === null) {
+                return;
+            }
 
-        $status = match (true) {
-            $statuses->isEmpty() => 'none',
-            $statuses->contains('rendering') || $statuses->contains('queued') => 'rendering',
-            $failed !== null => 'failed',
-            $statuses->every(fn (string $one) => $one === 'ready') => 'ready',
-            default => 'none',
-        };
+            $files = $product->deliverables()->get();
+            $statuses = $files->map(fn (ProductFile $file) => $file->renderStatus());
+            $failed = $files->first(fn (ProductFile $file) => $file->renderStatus() === 'failed');
 
-        $this->update([
-            'preview_status' => $status,
-            'preview_error' => $failed?->renderError(),
-        ]);
+            $status = match (true) {
+                $statuses->isEmpty() => 'none',
+                $statuses->contains('queued') || $statuses->contains('rendering') => 'rendering',
+                $failed !== null => 'failed',
+                $statuses->contains('ready') => 'ready',
+                default => 'none',
+            };
+
+            $product->update([
+                'preview_status' => $status,
+                'preview_error' => $failed?->renderError(),
+            ]);
+
+            $this->setRawAttributes($product->getAttributes(), true);
+        });
     }
 }
