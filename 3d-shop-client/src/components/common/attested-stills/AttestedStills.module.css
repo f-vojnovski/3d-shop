@@ -82,14 +82,6 @@
   color: var(--clr-text-dim);
 }
 
-.badgeSeller {
-  padding: 6px 10px;
-  border-top: 1px solid var(--clr-line);
-  border-left: 3px solid var(--clr-text-dim);
-  color: var(--clr-text-dim);
-  font-size: 0.78rem;
-}
-
 .notice {
   position: absolute;
   inset: 0;

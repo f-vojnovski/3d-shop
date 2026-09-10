@@ -41,7 +41,7 @@ class AttestationController extends BaseController
                 'how' => 'Build the render container at the pinned three.js version, feed it this model and camera, and compare the image sha256.',
                 'command' => "php artisan render:verify {$preview->product_id}",
                 'why_it_works' => 'Software rasterization makes output byte-identical across runs of the same renderer image.',
-                'limit' => 'This is the server restating its own record. Signing the manifest (C2PA) is what would let a third party check it without trusting us.',
+                'limit' => 'The server is restating its own record. Nothing here is signed, so this is internal consistency rather than third-party proof.',
             ],
         ];
     }

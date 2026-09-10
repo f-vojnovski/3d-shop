@@ -114,13 +114,15 @@ describe('AttestedStills', () => {
     expect(screen.getByText('Every image was blank.')).toBeInTheDocument();
   });
 
-  it("labels the seller's own images as not rendered", async () => {
+  // Labelling the seller's images reads as a disclaimer against them; the tab
+  // already says whose they are.
+  it("leaves the seller's own images unlabelled", async () => {
     render(<AttestedStills product={product([preview('obj', 1)], [sellerImage(0)])} />);
 
     await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
 
-    expect(screen.getByText(/Supplied by the seller/)).toBeInTheDocument();
-    expect(screen.queryByText(/Rendered by our server/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/System-rendered/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/supplied by the seller/i)).not.toBeInTheDocument();
     expect(screen.getByAltText('Half-track, image 1 from the seller')).toBeInTheDocument();
   });
 
@@ -133,7 +135,7 @@ describe('AttestedStills', () => {
   it("shows the attested stills first, not the seller's images", () => {
     render(<AttestedStills product={product([preview('obj', 1)], [sellerImage(0)])} />);
 
-    expect(screen.getByText(/Rendered by our server/)).toBeInTheDocument();
+    expect(screen.getByText(/System-rendered/)).toBeInTheDocument();
   });
 
   it('still offers the seller tab when a render failed', async () => {

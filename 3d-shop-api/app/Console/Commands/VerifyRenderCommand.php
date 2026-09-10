@@ -45,14 +45,16 @@ class VerifyRenderCommand extends Command
             $verified += $outcome['verified'];
         }
 
-        if ($verified === 0) {
-            $this->error('This product has no attested stills to verify.');
+        // Failures first: a format that refused before it could render leaves
+        // nothing verified, and "nothing to verify" is the wrong diagnosis.
+        if ($failures > 0) {
+            $this->error("{$failures} check(s) failed.");
 
             return self::FAILURE;
         }
 
-        if ($failures > 0) {
-            $this->error("{$failures} check(s) failed.");
+        if ($verified === 0) {
+            $this->error('This product has no attested stills to verify.');
 
             return self::FAILURE;
         }
@@ -80,6 +82,21 @@ class VerifyRenderCommand extends Command
         $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
         $bytes = RenderInput::fetch($source, $modelPath);
         $this->line(".{$source->format}: fetched {$bytes} bytes from the {$source->disk} disk.");
+
+        // Named here rather than left to show up as mismatched pixels: if the
+        // stored bytes changed, every still is describing a file that is gone.
+        $fetched = (string) hash_file('sha256', $modelPath);
+
+        if (! hash_equals((string) $source->checksum, $fetched)) {
+            $this->error(sprintf(
+                '.%s: the stored file is not the one that was recorded (%s… on disk, %s… recorded).',
+                $source->format,
+                substr($fetched, 0, 16),
+                substr((string) $source->checksum, 0, 16)
+            ));
+
+            return ['failures' => 1, 'verified' => 0];
+        }
 
         $result = $runner->run(
             RenderInput::request($product, $source, RenderInput::scanOf($source)),

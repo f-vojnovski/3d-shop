@@ -126,11 +126,13 @@ const AttestedStills = ({ product, onFormat }) => {
         </div>
       )}
 
-      <div className={fromSeller ? styles.badgeSeller : styles.badge}>
-        {fromSeller
-          ? 'Supplied by the seller. Not rendered from the model on sale.'
-          : `Rendered by our server from the .${shown.preview.format} file on sale.`}
-      </div>
+      {/* Only our own images are labelled. A note on the seller's reads as a
+          disclaimer against them, and the tab already says whose they are. */}
+      {!fromSeller && (
+        <div className={styles.badge}>
+          System-rendered from the .{shown.preview.format} file on sale.
+        </div>
+      )}
     </div>
   );
 };
