@@ -1,6 +1,6 @@
 // Reads /in/job.json and /in/model, writes PNGs and result.json to /out.
 // Chrome POSTs each image back, so completion is observed, not timed.
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -11,6 +11,24 @@ const APP = '/app';
 const PORT = 8710;
 const TIMEOUT_MS = Number(process.env.RENDER_TIMEOUT ?? 180) * 1000;
 const CHROME = process.env.CHROME_BIN ?? '/usr/bin/chromium';
+
+/** An attested image is only checkable if the record names the exact renderer. */
+function rendererIdentity() {
+  let browser = 'unknown';
+
+  try {
+    browser = execFileSync(CHROME, ['--version'], { encoding: 'utf8' }).trim();
+  } catch {
+    // Reported as unknown rather than failing a render that already succeeded.
+  }
+
+  return {
+    engine: 'three.js',
+    three: process.env.THREE_VERSION ?? 'unknown',
+    browser,
+    rasterizer: 'swiftshader',
+  };
+}
 
 const MIN_COVERAGE = 0.001;
 
@@ -89,7 +107,7 @@ async function main() {
   const expected = job.angles?.length ?? 0;
 
   if (expected === 0) {
-    await writeResult({ status: 'failed', reason: 'No angles requested.' });
+    await writeResult({ status: 'failed', reason: 'No angles requested.', retryable: false });
     return 2;
   }
 
@@ -117,12 +135,13 @@ async function main() {
   chrome.kill('SIGTERM');
 
   if (timedOut) {
-    await writeResult({ status: 'failed', reason: 'Rendering timed out.', seconds, stderr: stderr.slice(-600) });
+    await writeResult({ status: 'failed', reason: 'Rendering timed out.', retryable: true, seconds, stderr: stderr.slice(-600) });
     return 3;
   }
 
   if (state.failed !== null) {
-    await writeResult({ status: 'failed', reason: state.failed, seconds });
+    // Harness-reported failures are the model's fault, not the renderer's.
+    await writeResult({ status: 'failed', reason: state.failed, retryable: false, seconds });
     return 4;
   }
 
@@ -143,7 +162,7 @@ async function main() {
   }
 
   if (images.length === 0) {
-    await writeResult({ status: 'failed', reason: 'Every rendered image was blank.', blank, seconds });
+    await writeResult({ status: 'failed', reason: 'Every rendered image was blank.', retryable: false, blank, seconds });
     return 5;
   }
 
@@ -153,7 +172,7 @@ async function main() {
     blank,
     triangles: state.triangles,
     seconds,
-    renderer: 'three.js via chromium/swiftshader',
+    renderer: rendererIdentity(),
   });
 
   return 0;
@@ -162,6 +181,6 @@ async function main() {
 main()
   .then((code) => process.exit(code))
   .catch(async (error) => {
-    await writeResult({ status: 'failed', reason: String(error).slice(0, 300) });
+    await writeResult({ status: 'failed', reason: String(error).slice(0, 300), retryable: true });
     process.exit(1);
   });

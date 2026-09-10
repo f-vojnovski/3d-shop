@@ -54,6 +54,7 @@ class RenderRunner
             return [
                 'status' => 'failed',
                 'reason' => 'The renderer produced no result.',
+                'retryable' => true,
                 'exit_code' => $process->getExitCode(),
                 'stderr' => substr(trim($process->getErrorOutput()), -600),
             ];
@@ -62,6 +63,7 @@ class RenderRunner
         return json_decode((string) file_get_contents($resultFile), true) ?? [
             'status' => 'failed',
             'reason' => 'The renderer result could not be read.',
+            'retryable' => true,
         ];
     }
 

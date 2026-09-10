@@ -1,5 +1,7 @@
-FROM node:22-slim AS three
 ARG THREE_VERSION=0.186.0
+
+FROM node:22-slim AS three
+ARG THREE_VERSION
 WORKDIR /pkg
 # Copy wholesale: three.module.js re-exports three.core.js and the addons import
 # each other, so curating files breaks the module graph with no useful error.
@@ -22,6 +24,8 @@ COPY 3d-shop-api/render/render.mjs /app/render.mjs
 # The client's own module, so server renders frame a model as the viewer did.
 COPY 3d-shop-client/src/components/common/model-displayer/fitToView.js /app/fitToView.js
 
-ENV CHROME_BIN=/usr/bin/chromium
+ARG THREE_VERSION
+ENV CHROME_BIN=/usr/bin/chromium \
+    THREE_VERSION=${THREE_VERSION}
 WORKDIR /app
 ENTRYPOINT ["node", "/app/render.mjs"]

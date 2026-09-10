@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
@@ -20,14 +21,22 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     public int $tries = 2;
     public int $timeout = 600;
 
-    /** Two renders of one product would share a scratch directory. */
-    public int $uniqueFor = 1800;
+    /**
+     * Above $timeout, so a worker killed mid-render stops blocking re-dispatch
+     * shortly after the job would have been abandoned anyway.
+     */
+    public int $uniqueFor = 700;
 
     public function __construct(public int $productId) {}
 
     public function uniqueId(): string
     {
         return (string) $this->productId;
+    }
+
+    public function backoff(): array
+    {
+        return [30];
     }
 
     public function handle(RenderRunner $runner): void
@@ -38,7 +47,11 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $log = Log::channel('render')->withContext(['product_id' => $product->id]);
+        $log = Log::channel('render')->withContext([
+            'product_id' => $product->id,
+            'attempt' => $this->attempts(),
+            'worker' => gethostname().'/'.getmypid(),
+        ]);
 
         if (($product->preview_angles ?? []) === []) {
             $product->update(['preview_status' => 'none', 'preview_error' => null]);
@@ -50,7 +63,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $source = $product->files->firstWhere('kind', ProductFile::KIND_DELIVERABLE);
 
         if ($source === null) {
-            $this->reject($product, $log, 'This product has no model file to render.');
+            $this->giveUp($product, $log, 'This product has no model file to render.');
 
             return;
         }
@@ -70,7 +83,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         ]);
 
         if ($rejection = $scan->rejection()) {
-            $this->reject($product, $log, $rejection);
+            $this->giveUp($product, $log, $rejection);
 
             return;
         }
@@ -81,43 +94,53 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
 
+        $startedAt = microtime(true);
+
         try {
             $modelPath = $this->fetchModel($source, $scratch, $log);
-
-            $startedAt = microtime(true);
             $result = $runner->run(
                 $this->renderRequest($product, $source, $scan),
                 $modelPath,
                 $scratch
             );
-            $seconds = round(microtime(true) - $startedAt, 2);
-
-            if (($result['status'] ?? 'failed') !== 'ok') {
-                $log->error('Render failed.', [
-                    'seconds' => $seconds,
-                    'scratch' => $scratch,
-                    'result' => $result,
-                ]);
-                $this->reject($product, $log, $result['reason'] ?? 'Rendering failed.');
-
-                return;
-            }
-
-            $this->storeImages($product, $scratch, $result);
-
-            $log->info('Render complete.', [
-                'seconds' => $seconds,
-                'renderer_seconds' => $result['seconds'] ?? null,
-                'images' => count($result['images']),
-                'blank' => $result['blank'] ?? [],
-                'triangles' => $result['triangles'] ?? null,
-            ]);
-
-            $this->removeDirectory($scratch);
         } catch (Throwable $exception) {
             $log->error('Render threw.', ['message' => $exception->getMessage()]);
-            $this->reject($product, $log, 'Rendering failed unexpectedly.');
+            $this->failOrRetry($product, $log, 'Rendering failed unexpectedly.', retryable: true);
+
+            return;
         }
+
+        $seconds = round(microtime(true) - $startedAt, 2);
+
+        if (($result['status'] ?? 'failed') !== 'ok') {
+            // Scratch is kept on failure: result.json is the only diagnostic.
+            $log->error('Render failed.', [
+                'seconds' => $seconds,
+                'scratch' => $scratch,
+                'result' => $result,
+            ]);
+
+            $this->failOrRetry(
+                $product,
+                $log,
+                $result['reason'] ?? 'Rendering failed.',
+                retryable: (bool) ($result['retryable'] ?? false)
+            );
+
+            return;
+        }
+
+        $this->storeImages($product, $scratch, $result);
+
+        $log->info('Render complete.', [
+            'seconds' => $seconds,
+            'renderer_seconds' => $result['seconds'] ?? null,
+            'images' => count($result['images']),
+            'blank' => $result['blank'] ?? [],
+            'triangles' => $result['triangles'] ?? null,
+        ]);
+
+        $this->removeDirectory($scratch);
     }
 
     public function failed(?Throwable $exception): void
@@ -129,14 +152,31 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         Product::whereKey($this->productId)->update([
             'preview_status' => 'failed',
-            'preview_error' => 'Preview rendering did not complete.',
+            'preview_error' => 'Preview rendering did not complete after retrying.',
         ]);
     }
 
-    /**
-     * Streams the model out of storage onto local scratch. This is the whole
-     * reason a worker needs no shared filesystem: it pulls what it needs.
-     */
+    private function failOrRetry(Product $product, $log, string $reason, bool $retryable): void
+    {
+        if ($retryable && $this->attempts() < $this->tries) {
+            $log->warning('Retryable failure, releasing for another attempt.', [
+                'reason' => $reason,
+                'attempts_used' => $this->attempts(),
+            ]);
+
+            // Left as 'rendering' so the UI does not flap to failed and back.
+            throw new RuntimeException('Render failed, retrying: '.$reason);
+        }
+
+        $this->giveUp($product, $log, $reason);
+    }
+
+    private function giveUp(Product $product, $log, string $reason): void
+    {
+        $log->warning('Giving up on render.', ['reason' => $reason]);
+        $product->update(['preview_status' => 'failed', 'preview_error' => $reason]);
+    }
+
     private function fetchModel(ProductFile $source, string $scratch, $log): string
     {
         $target = $scratch.DIRECTORY_SEPARATOR.'model';
@@ -200,12 +240,6 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                     count($blank) + count($result['images'])
                 ),
         ]);
-    }
-
-    private function reject(Product $product, $log, string $reason): void
-    {
-        $log->warning('Render rejected.', ['reason' => $reason]);
-        $product->update(['preview_status' => 'failed', 'preview_error' => $reason]);
     }
 
     private function removeDirectory(string $directory): void
