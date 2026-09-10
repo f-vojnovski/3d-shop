@@ -80,7 +80,6 @@ class MeshFacts
         $faces = 0;
         $normals = false;
         $uvs = false;
-        $materials = [];
         $min = [INF, INF, INF];
         $max = [-INF, -INF, -INF];
         $corners = [];
@@ -110,22 +109,22 @@ class MeshFacts
             if ($kind === 'f ') {
                 $faces++;
                 $corners[substr_count(trim($line), ' ')] = true;
+
+                // Declaring `vt` and `vn` blocks proves nothing: a face has to
+                // reference them, and `f 1 2 3` references neither however many
+                // texture coordinates sit above it in the file.
+                if (! $uvs || ! $normals) {
+                    $corner = strtok(substr($line, 2), " 	
+");
+                    $slots = $corner === false ? [] : explode('/', $corner);
+                    $uvs = $uvs || (($slots[1] ?? '') !== '');
+                    $normals = $normals || (($slots[2] ?? '') !== '');
+                }
+
                 continue;
             }
 
-            if ($kind === 'vn') {
-                $normals = true;
-                continue;
-            }
 
-            if ($kind === 'vt') {
-                $uvs = true;
-                continue;
-            }
-
-            if (str_starts_with($line, 'usemtl ')) {
-                $materials[trim(substr($line, 7))] = true;
-            }
         }
 
         fclose($handle);
@@ -136,9 +135,10 @@ class MeshFacts
             topology: self::topologyOf(array_keys($corners)),
             normals: $normals,
             uvs: $uvs,
-            // An .obj names its materials but keeps them in a .mtl that does
-            // not travel with a single-file upload, so this counts slots used.
-            materials: $materials === [] ? null : count($materials),
+            // Left unreported rather than guessed: an .obj keeps its materials
+            // in a .mtl, which a single-file upload never carries, so any
+            // number here would describe something the buyer does not receive.
+            materials: null,
             textures: [],
             bounds: self::boundsOf($min, $max),
             rigged: false,

@@ -34,7 +34,6 @@ class MeshFactsTest extends TestCase
         $this->assertSame(MeshFacts::TRIANGLES, $facts->topology);
         $this->assertTrue($facts->normals);
         $this->assertTrue($facts->uvs);
-        $this->assertSame(1, $facts->materials);
         $this->assertSame([1.0, 2.0, 0.0], $facts->bounds['size']);
     }
 
@@ -52,13 +51,48 @@ class MeshFactsTest extends TestCase
         );
     }
 
-    public function test_an_obj_without_materials_reports_none_rather_than_zero(): void
+    public function test_a_bare_obj_claims_nothing(): void
     {
         $facts = MeshFacts::of($this->obj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"), 'obj');
 
         $this->assertNull($facts->materials);
         $this->assertFalse($facts->uvs);
         $this->assertFalse($facts->normals);
+    }
+
+    /**
+     * The flag has to mean "this model has usable UVs", not "somebody wrote a
+     * vt line". A seller could otherwise advertise a texture-ready mesh by
+     * declaring coordinates that no face references.
+     */
+    public function test_declared_coordinates_no_face_uses_do_not_count(): void
+    {
+        $facts = MeshFacts::of($this->obj(
+            "v 0 0 0\nv 1 0 0\nv 0 2 0\nvt 0 0\nvn 0 0 1\nf 1 2 3\n"
+        ), 'obj');
+
+        $this->assertFalse($facts->uvs);
+        $this->assertFalse($facts->normals);
+    }
+
+    public function test_normals_can_be_referenced_without_uvs(): void
+    {
+        $facts = MeshFacts::of($this->obj(
+            "v 0 0 0\nv 1 0 0\nv 0 2 0\nvt 0 0\nvn 0 0 1\nf 1//1 2//1 3//1\n"
+        ), 'obj');
+
+        $this->assertFalse($facts->uvs);
+        $this->assertTrue($facts->normals);
+    }
+
+    /** The .mtl cannot be uploaded, so no number here would be honest. */
+    public function test_an_obj_never_claims_materials(): void
+    {
+        $facts = MeshFacts::of($this->obj(
+            "usemtl paint\nv 0 0 0\nv 1 0 0\nv 0 2 0\nf 1 2 3\n"
+        ), 'obj');
+
+        $this->assertNull($facts->materials);
     }
 
     public function test_it_measures_a_glb(): void

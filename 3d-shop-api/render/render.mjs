@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { extname, join, resolve, sep } from 'node:path';
 
 const IN = '/in';
 const OUT = '/out';
@@ -74,6 +74,25 @@ function readBody(request) {
   });
 }
 
+/**
+ * `/three/*` is the only path built from the request, and a model can ask the
+ * page to fetch arbitrary URIs, so the resolved path is confined to /app rather
+ * than trusted to contain no traversal.
+ */
+function libraryRoute(path) {
+  if (! path.startsWith('/three/')) {
+    return null;
+  }
+
+  const resolved = resolve(join(APP, path.slice(1)));
+
+  if (resolved !== join(APP, 'three') && ! resolved.startsWith(join(APP, 'three') + sep)) {
+    return null;
+  }
+
+  return [resolved, TYPES[extname(path)] ?? 'text/javascript'];
+}
+
 const server = createServer(async (request, response) => {
   const path = request.url.split('?')[0];
 
@@ -98,10 +117,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  const route = ROUTES[path]
-    ?? (path.startsWith('/three/')
-      ? [join(APP, path.slice(1)), TYPES[extname(path)] ?? 'text/javascript']
-      : null);
+  const route = ROUTES[path] ?? libraryRoute(path);
 
   if (route === null) {
     response.writeHead(404).end();
