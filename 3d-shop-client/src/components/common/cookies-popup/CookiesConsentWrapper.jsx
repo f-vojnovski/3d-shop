@@ -1,24 +1,29 @@
-import CookieConsent from 'react-cookie-consent';
+import { useState } from 'react';
 import { CONSENT_COOKIE_NAME } from '../../../consts';
+import cookies from '../../../service/cookies/cookiesWrapper';
+import styles from './CookiesConsentWrapper.module.css';
+
+const CONSENT_DAYS = 150;
 
 const CookiesConsentWrapper = () => {
+  const [accepted, setAccepted] = useState(Boolean(cookies.get(CONSENT_COOKIE_NAME)));
+
+  if (accepted) {
+    return null;
+  }
+
+  const accept = () => {
+    cookies.set(CONSENT_COOKIE_NAME, 'true', CONSENT_DAYS);
+    setAccepted(true);
+  };
+
   return (
-    <CookieConsent
-      location="bottom"
-      buttonText="Accept cookies"
-      cookieName={CONSENT_COOKIE_NAME}
-      buttonClasses="btn btn-primary btn-sm"
-      disableButtonStyles={true}
-      style={{
-        background: '#1f2428',
-        borderTop: '1px solid #2b3237',
-        color: '#e9edf0',
-        alignItems: 'center',
-      }}
-      expires={150}
-    >
-      This website uses cookies to enhance the user experience.
-    </CookieConsent>
+    <div className={styles.banner} role="region" aria-label="Cookie consent">
+      <span>This site uses cookies to keep you signed in.</span>
+      <button type="button" className="btn btn-primary btn-sm" onClick={accept}>
+        Accept cookies
+      </button>
+    </div>
   );
 };
 

@@ -1,0 +1,16 @@
+.banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--clr-surface-raised);
+  border-top: 1px solid var(--clr-line);
+  color: var(--clr-text);
+  font-size: 0.9rem;
+}

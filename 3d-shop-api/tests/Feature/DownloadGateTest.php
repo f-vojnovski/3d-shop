@@ -159,6 +159,9 @@ class DownloadGateTest extends TestCase
     {
         $product = $this->upload($this->user('seller'), [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+            'preview_angles' => json_encode([
+                ['position' => [3, 2, 4], 'target' => [0, 0, 0], 'fov' => 75],
+            ]),
         ]);
         app('auth')->forgetGuards();
 

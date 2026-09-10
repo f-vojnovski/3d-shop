@@ -44,8 +44,7 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-/* Buttons are CSS-variable driven in 5.3, so the accent lands without
-   restyling the component. */
+/* Buttons read these at runtime in 5.3, so the accent needs no restyling. */
 .btn-primary {
   --bs-btn-bg: var(--clr-accent);
   --bs-btn-border-color: var(--clr-accent);
@@ -149,7 +148,7 @@ code {
   padding: 22px 20px 44px;
 }
 
-/* The upload page's local model preview; the displayers fill it. */
+/* The model displayers position themselves against this. */
 .preview-square {
   position: relative;
   width: 100%;
@@ -159,6 +158,12 @@ code {
   border: 1px solid var(--clr-line);
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+.field-error {
+  margin-top: 4px;
+  color: var(--clr-danger);
+  font-size: 0.82rem;
 }
 
 .bolded-label {
@@ -205,8 +210,6 @@ code {
   margin-bottom: 0;
 }
 
-/* Was 300px !important with a remote placeholder background, which forced
-   square cards and fetched an image from placeholder.pics on every render. */
 .product-thumbnail {
   width: 100%;
   aspect-ratio: 4 / 3;

@@ -63,11 +63,22 @@ describe('AttestedStills', () => {
     };
 
     const { unmount } = render(<AttestedStills product={product(failed)} />);
-    expect(screen.getByText(/no previews are available/i)).toBeInTheDocument();
+    expect(screen.getByText(/could not be rendered/i)).toBeInTheDocument();
     expect(screen.queryByText(failed.preview_error)).not.toBeInTheDocument();
     unmount();
 
     render(<AttestedStills product={product({ ...failed, product_status: 'owner' })} />);
     expect(screen.getByText(failed.preview_error)).toBeInTheDocument();
   });
+
+  it('separates having no angles from having tried and failed', () => {
+    const none = { preview_status: 'none', preview_images: [], product_status: 'owner' };
+
+    render(<AttestedStills product={product(none)} />);
+
+    expect(screen.getByText(/no camera angles/i)).toBeInTheDocument();
+    expect(screen.getByText(/capture at least one camera angle/i)).toBeInTheDocument();
+    expect(screen.queryByText(/could not be rendered/i)).not.toBeInTheDocument();
+  });
+
 });

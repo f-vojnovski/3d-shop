@@ -4,7 +4,7 @@ vi.mock('../cookies/cookiesConsentChecker', () => ({
   default: () => false,
 }));
 
-const { default: reducer, postLoginData } = await import('./authSlice');
+const { default: reducer, postLoginData, logoutUser } = await import('./authSlice');
 
 describe('auth reducer', () => {
   it('starts logged out and idle', () => {
@@ -15,9 +15,7 @@ describe('auth reducer', () => {
     });
   });
 
-  // Regression: a bare return made this dispatch `fulfilled` with an undefined
-  // payload, the reducer threw reading payload.user, and status stayed
-  // 'loading' forever, leaving the login page spinning.
+  // A bare return here dispatched `fulfilled` with no payload and hung the page.
   it('rejects login instead of hanging when cookie consent is missing', async () => {
     const dispatched = [];
     const thunk = postLoginData({ name: 'a', password: 'b' });
@@ -35,5 +33,19 @@ describe('auth reducer', () => {
     const final = dispatched.reduce((state, action) => reducer(state, action), undefined);
     expect(final.status).toBe('failed');
     expect(final.error).toMatch(/cookies/i);
+  });
+
+  it('does not keep an error from a failed logout', () => {
+    const loggedIn = { token: 'abc', user: { id: 1 }, status: 'succeeded', error: null };
+
+    const state = reducer(loggedIn, {
+      type: logoutUser.rejected.type,
+      error: { message: 'Network Error' },
+    });
+
+    expect(state.token).toBeNull();
+    expect(state.user).toBeNull();
+    expect(state.error).toBeNull();
+    expect(state.status).toBe('idle');
   });
 });

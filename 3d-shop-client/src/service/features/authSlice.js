@@ -42,7 +42,6 @@ export const authSlice = createSlice({
         state.token = null;
         state.user = null;
         state.error = null;
-        state.error = action.error.message;
       })
       .addCase(postRegisterData.pending, (state, action) => {
         state.status = 'loading';

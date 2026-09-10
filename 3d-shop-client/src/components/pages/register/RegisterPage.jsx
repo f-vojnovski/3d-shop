@@ -4,6 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { postRegisterData } from '../../../service/features/authSlice';
 import { toast } from 'react-toastify';
 import { useEffect } from 'react';
+import SubmitButton from '../../common/submit-button/SubmitButton';
+import {
+  email as validateEmail,
+  firstErrors,
+  minLength,
+  required,
+  same,
+} from '../../../service/util/validate';
 
 const RegisterPage = () => {
   const dispatch = useDispatch();
@@ -12,8 +20,9 @@ const RegisterPage = () => {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState();
+  const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [errors, setErrors] = useState({});
 
   const user = useSelector((state) => state.auth.user);
   const authStatus = useSelector((state) => state.auth.status);
@@ -26,10 +35,10 @@ const RegisterPage = () => {
     }
 
     if (authStatus === 'succeeded') {
-      toast.success('You are now logged in!');
-      navigate('/');
+      toast.success(`Welcome, ${name}. Your account is ready and you are signed in.`);
+      navigate('/products');
     }
-  }, [user, authStatus, navigate]);
+  }, [user, authStatus, name, navigate]);
 
   useEffect(() => {
     if (authStatus === 'failed') {
@@ -38,14 +47,27 @@ const RegisterPage = () => {
   }, [authStatus, error]);
 
   const onRegisterButtonClick = () => {
-    const body = {
-      name: name,
-      email: email,
-      password: password,
-      password_confirmation: passwordConfirm,
-    };
+    const found = firstErrors({
+      email: required(email, 'An email address') ?? validateEmail(email),
+      name: required(name, 'A username'),
+      password: required(password, 'A password') ?? minLength(password, 8, 'The password'),
+      passwordConfirm: same(password, passwordConfirm, 'The passwords do not match.'),
+    });
 
-    dispatch(postRegisterData(body));
+    setErrors(found);
+
+    if (Object.keys(found).length > 0) {
+      return;
+    }
+
+    dispatch(
+      postRegisterData({
+        name,
+        email,
+        password,
+        password_confirmation: passwordConfirm,
+      })
+    );
   };
 
   return (
@@ -65,6 +87,7 @@ const RegisterPage = () => {
               placeholder="example@example.com"
               onInput={(e) => setEmail(e.target.value)}
             />
+            {errors.email && <div className="field-error">{errors.email}</div>}
           </div>
         </div>
 
@@ -77,6 +100,7 @@ const RegisterPage = () => {
               placeholder="John Doe"
               onInput={(e) => setName(e.target.value)}
             />
+            {errors.name && <div className="field-error">{errors.name}</div>}
           </div>
         </div>
 
@@ -88,6 +112,7 @@ const RegisterPage = () => {
               className="form-control"
               onInput={(e) => setPassword(e.target.value)}
             />
+            {errors.password && <div className="field-error">{errors.password}</div>}
           </div>
         </div>
 
@@ -99,14 +124,18 @@ const RegisterPage = () => {
               className="form-control"
               onInput={(e) => setPasswordConfirm(e.target.value)}
             />
+            {errors.passwordConfirm && <div className="field-error">{errors.passwordConfirm}</div>}
           </div>
         </div>
 
         <div className="row mt-3">
           <div className="col">
-            <button type="button" className="btn btn-primary" onClick={() => onRegisterButtonClick()}>
+            <SubmitButton
+              pending={authStatus === 'loading'}
+              onClick={() => onRegisterButtonClick()}
+            >
               Register
-            </button>
+            </SubmitButton>
           </div>
         </div>
       </div>

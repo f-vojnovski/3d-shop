@@ -72,3 +72,8 @@
   text-align: center;
   color: var(--clr-text-dim);
 }
+
+.hint {
+  color: var(--clr-accent);
+  font-size: 0.85rem;
+}

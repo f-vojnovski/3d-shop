@@ -12,6 +12,8 @@ import { toast } from 'react-toastify';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import PreviewAnglePicker from './PreviewAnglePicker';
+import SubmitButton from '../../common/submit-button/SubmitButton';
+import { firstErrors, price as validatePrice, required } from '../../../service/util/validate';
 
 const ProductUploadPage = () => {
   const [productName, setProductName] = useState('');
@@ -30,8 +32,13 @@ const ProductUploadPage = () => {
   const [previewMode, setPreviewMode] = useState('interactive');
   const [angles, setAngles] = useState([]);
 
+  const [errors, setErrors] = useState({});
+
   // Filled in by CameraProbe from inside whichever preview canvas is showing.
   const probeRef = useRef(null);
+  const gltfInputRef = useRef(null);
+  const objInputRef = useRef(null);
+  const thumbnailInputRef = useRef(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -54,7 +61,29 @@ const ProductUploadPage = () => {
     }
   }, [status, error]);
 
+  const validate = () => {
+    const found = firstErrors({
+      name: required(productName, 'A product name'),
+      price: validatePrice(productPrice),
+      model:
+        gltfProductFile || objProductFile ? null : 'Attach at least one model file (.obj or .gltf).',
+      thumbnail: productThumbnail ? null : 'A thumbnail image is required.',
+      angles:
+        previewMode === 'attested_stills' && angles.length === 0
+          ? 'Capture at least one camera angle for server-rendered previews.'
+          : null,
+    });
+
+    setErrors(found);
+
+    return Object.keys(found).length === 0;
+  };
+
   const onUploadClicked = () => {
+    if (!validate()) {
+      return;
+    }
+
     const formData = new FormData();
 
     if (gltfProductFile) {
@@ -69,52 +98,47 @@ const ProductUploadPage = () => {
     formData.append('description', productDescription);
     formData.append('preview_mode', previewMode);
 
-    if (previewMode === 'attested_stills' && angles.length > 0) {
+    if (previewMode === 'attested_stills') {
       formData.append('preview_angles', JSON.stringify(angles));
     }
 
-    let body = formData;
-
-    dispatch(uploadProduct(body));
+    dispatch(uploadProduct(formData));
   };
 
-  const handleGltfModelAttachment = (e) => {
-    var file = e.target.files[0];
-    setGltfProductFile(file);
+  const attach =
+    ({ extensions, label, setFile, setUri }) =>
+    (event) => {
+      const file = event.target.files[0];
 
-    fileToDataUri(file)
-      .then((uri) => {
-        setGltfModelUri(uri);
-      })
-      .catch(() => {
-        toast.error('Could not read the .gltf model. Please pick the file again.');
-      });
-  };
+      if (!file) {
+        return;
+      }
 
-  const handleObjModelAttachment = (e) => {
-    var file = e.target.files[0];
-    setObjProductFile(file);
+      const name = file.name.toLowerCase();
 
-    fileToDataUri(file)
-      .then((uri) => {
-        setObjModelUri(uri);
-      })
-      .catch(() => {
-        toast.error('Could not read the .obj model. Please pick the file again.');
-      });
-  };
+      // Rejected here so a wrong file never reaches the model viewer.
+      if (!extensions.some((extension) => name.endsWith(extension))) {
+        toast.error(`${label} must be ${extensions.join(' or ')}.`);
+        event.target.value = '';
+        return;
+      }
 
-  const handleThumbnailAttachment = (e) => {
-    var file = e.target.files[0];
-    setProductThumbnail(file);
+      setFile(file);
 
-    fileToDataUri(file)
-      .then((uri) => {
-        setThumbnailUri(uri);
-      })
-      .catch(() => {
-        toast.error('Could not read the thumbnail. Please pick the file again.');
-      });
+      fileToDataUri(file)
+        .then(setUri)
+        .catch(() => {
+          toast.error(`Could not read ${label}. Please pick the file again.`);
+        });
+    };
+
+  const detach = ({ input, setFile, setUri }) => {
+    setFile('');
+    setUri('');
+
+    if (input.current) {
+      input.current.value = '';
+    }
   };
 
   let gltfProductPreview;
@@ -177,6 +201,7 @@ const ProductUploadPage = () => {
             value={productName}
             onInput={(e) => setProductName(e.target.value)}
           />
+          {errors.name && <div className="field-error">{errors.name}</div>}
         </div>
       </div>
 
@@ -207,50 +232,122 @@ const ProductUploadPage = () => {
               onInput={(e) => setProductPrice(e.target.value)}
             />
           </div>
+          {errors.price && <div className="field-error">{errors.price}</div>}
         </div>
 
         <div className="row mt-4 mb-2">
           <div className="col">
-            <h5>Upload your model in at least one of the specified formats!</h5>
+            <h5>Your model files</h5>
+            <div className="form-text">
+              At least one of .obj or .gltf is required. You can provide both.
+            </div>
+            {errors.model && <div className="field-error">{errors.model}</div>}
           </div>
         </div>
 
         <div className="row mt-1 mb-3">
           <div className="col">
-            <label htmlFor="formFile" className="form-label">
-              Your model (.gltf file)
-            </label>
-            <input
-              className="form-control"
-              type="file"
-              onChange={(e) => handleGltfModelAttachment(e)}
-            />
+            <label className="form-label">Your model (.gltf or .glb file)</label>
+            <div className="d-flex gap-2">
+              <input
+                ref={gltfInputRef}
+                className="form-control"
+                type="file"
+                accept=".gltf,.glb"
+                onChange={attach({
+                  extensions: ['.gltf', '.glb'],
+                  label: 'The model',
+                  setFile: setGltfProductFile,
+                  setUri: setGltfModelUri,
+                })}
+              />
+              {gltfProductFile && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary text-nowrap"
+                  onClick={() =>
+                    detach({
+                      input: gltfInputRef,
+                      setFile: setGltfProductFile,
+                      setUri: setGltfModelUri,
+                    })
+                  }
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="row mt-1 mb-3">
           <div className="col">
-            <label htmlFor="formFile" className="form-label">
-              Your model (.obj file)
-            </label>
-            <input
-              className="form-control"
-              type="file"
-              onChange={(e) => handleObjModelAttachment(e)}
-            />
+            <label className="form-label">Your model (.obj file)</label>
+            <div className="d-flex gap-2">
+              <input
+                ref={objInputRef}
+                className="form-control"
+                type="file"
+                accept=".obj"
+                onChange={attach({
+                  extensions: ['.obj'],
+                  label: 'The model',
+                  setFile: setObjProductFile,
+                  setUri: setObjModelUri,
+                })}
+              />
+              {objProductFile && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary text-nowrap"
+                  onClick={() =>
+                    detach({
+                      input: objInputRef,
+                      setFile: setObjProductFile,
+                      setUri: setObjModelUri,
+                    })
+                  }
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="row mt-1 mb-3">
           <div className="col">
-            <label htmlFor="formFile" className="form-label">
-              Thumbnail (image file)
-            </label>
-            <input
-              className="form-control"
-              type="file"
-              onChange={(e) => handleThumbnailAttachment(e)}
-            />
+            <label className="form-label">Thumbnail image (required)</label>
+            <div className="d-flex gap-2">
+              <input
+                ref={thumbnailInputRef}
+                className="form-control"
+                type="file"
+                accept="image/*"
+                onChange={attach({
+                  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
+                  label: 'The thumbnail',
+                  setFile: setProductThumbnail,
+                  setUri: setThumbnailUri,
+                })}
+              />
+              {productThumbnail && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary text-nowrap"
+                  onClick={() =>
+                    detach({
+                      input: thumbnailInputRef,
+                      setFile: setProductThumbnail,
+                      setUri: setThumbnailUri,
+                    })
+                  }
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            {errors.thumbnail && <div className="field-error">{errors.thumbnail}</div>}
           </div>
         </div>
 
@@ -276,7 +373,9 @@ const ProductUploadPage = () => {
 
         <div className="row mt-1">
           <div className="col d-flex justify-content-center">
-            <img className="product-thumbnail" src={thumbnailUri}></img>
+            {thumbnailUri && (
+              <img className="product-thumbnail" src={thumbnailUri} alt="Thumbnail preview" />
+            )}
           </div>
         </div>
 
@@ -289,6 +388,14 @@ const ProductUploadPage = () => {
           canCapture={Boolean(objModelUri || gltfModelUri)}
         />
 
+        {errors.angles && (
+          <div className="row mt-1">
+            <div className="col">
+              <div className="field-error">{errors.angles}</div>
+            </div>
+          </div>
+        )}
+
         <div className="row mt-1">
           <div className="col">
             Please make sure that the product previews <strong>work</strong> before
@@ -298,15 +405,13 @@ const ProductUploadPage = () => {
 
         <div className="row mt-3 mb-5">
           <div className="col">
-            <button
-              type="button"
+            <SubmitButton
               className="btn btn-primary w-100"
-              onClick={() => {
-                onUploadClicked();
-              }}
+              pending={status === 'loading'}
+              onClick={() => onUploadClicked()}
             >
               Upload product!
-            </button>
+            </SubmitButton>
           </div>
         </div>
       </div>

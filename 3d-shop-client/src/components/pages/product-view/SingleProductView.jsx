@@ -29,6 +29,20 @@ const SingleProductView = () => {
     dispatch(fetchProductById(productId));
   }, [dispatch, productId]);
 
+  const renderInProgress =
+    product?.id === Number(productId) &&
+    ['queued', 'rendering'].includes(product?.preview_status);
+
+  useEffect(() => {
+    if (!renderInProgress) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => dispatch(fetchProductById(productId)), 3000);
+
+    return () => clearInterval(timer);
+  }, [renderInProgress, dispatch, productId]);
+
   const formats = product?.formats ?? [];
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';
 

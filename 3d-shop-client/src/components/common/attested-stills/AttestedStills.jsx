@@ -19,13 +19,23 @@ const AttestedStills = ({ product }) => {
     );
   }
 
-  if (product.preview_status === 'failed' || stills.length === 0) {
+  if (stills.length === 0) {
+    // 'none' means nothing was ever asked for; 'failed' means we tried.
+    const nothingRequested = product.preview_status === 'none';
+
     return (
       <div className={styles.notice}>
-        <span>No previews are available for this product.</span>
-        {/* The reason is a seller diagnostic, so only the owner sees it. */}
-        {isOwner && product.preview_error && (
-          <span className="text-danger">{product.preview_error}</span>
+        <span>
+          {nothingRequested
+            ? 'This product has no camera angles, so there is nothing to render.'
+            : 'Previews could not be rendered for this product.'}
+        </span>
+        {isOwner && (
+          <span className={styles.hint}>
+            {nothingRequested
+              ? 'Capture at least one camera angle to get server-rendered previews.'
+              : product.preview_error}
+          </span>
         )}
       </div>
     );

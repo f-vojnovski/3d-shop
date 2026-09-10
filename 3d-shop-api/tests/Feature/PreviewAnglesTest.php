@@ -151,4 +151,44 @@ class PreviewAnglesTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_attested_stills_cannot_be_published_without_an_angle(): void
+    {
+        $this->seller();
+
+        $this->postJson('/api/products', $this->payload([
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_the_angles_cannot_be_emptied_on_an_attested_product(): void
+    {
+        $this->seller();
+
+        $id = $this->postJson('/api/products', $this->payload([
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+            'preview_angles' => json_encode([self::ANGLE]),
+        ]))->assertSuccessful()->json('id');
+
+        $this->putJson("/api/products/{$id}", ['preview_angles' => []])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('preview_angles');
+
+        $this->assertCount(1, Product::findOrFail($id)->preview_angles);
+    }
+
+    public function test_switching_to_attested_stills_requires_angles(): void
+    {
+        $this->seller();
+
+        $id = $this->postJson('/api/products', $this->payload())
+            ->assertSuccessful()->json('id');
+
+        $this->putJson("/api/products/{$id}", [
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+        ])->assertStatus(422)->assertJsonValidationErrors('preview_angles');
+
+        $this->assertSame(Product::PREVIEW_INTERACTIVE, Product::findOrFail($id)->preview_mode);
+    }
 }

@@ -4,6 +4,8 @@ import { postLoginData } from '../../../service/features/authSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import SubmitButton from '../../common/submit-button/SubmitButton';
+import { firstErrors, required } from '../../../service/util/validate';
 
 const LoginPage = () => {
   const authStatus = useSelector((state) => state.auth.status);
@@ -11,6 +13,7 @@ const LoginPage = () => {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({});
 
   const dispatch = useDispatch();
 
@@ -29,12 +32,19 @@ const LoginPage = () => {
     }
   }, [authStatus, error]);
 
-  let onLoginClicked = () => {
-    let body = {
-      name: username,
-      password: password,
-    };
-    dispatch(postLoginData(body));
+  const onLoginClicked = () => {
+    const found = firstErrors({
+      username: required(username, 'A username'),
+      password: required(password, 'A password'),
+    });
+
+    setErrors(found);
+
+    if (Object.keys(found).length > 0) {
+      return;
+    }
+
+    dispatch(postLoginData({ name: username, password }));
   };
 
   let content;
@@ -56,6 +66,7 @@ const LoginPage = () => {
               value={username}
               onInput={(e) => setUsername(e.target.value)}
             />
+            {errors.username && <div className="field-error">{errors.username}</div>}
           </div>
         </div>
 
@@ -68,20 +79,15 @@ const LoginPage = () => {
               value={password}
               onInput={(e) => setPassword(e.target.value)}
             />
+            {errors.password && <div className="field-error">{errors.password}</div>}
           </div>
         </div>
 
         <div className="row mt-3">
           <div className="col">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                onLoginClicked();
-              }}
-            >
+            <SubmitButton pending={authStatus === 'loading'} onClick={() => onLoginClicked()}>
               Login
-            </button>
+            </SubmitButton>
           </div>
         </div>
 

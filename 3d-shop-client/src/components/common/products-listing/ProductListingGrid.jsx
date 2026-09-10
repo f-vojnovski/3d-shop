@@ -4,13 +4,9 @@ import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
-import ReactPaginateModule from 'react-paginate';
+import Pagination from '../pagination/Pagination';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearProductsStatus } from '../../../service/features/productsSlice';
-
-// react-paginate is CJS-only, so under ESM its default arrives as
-// { default: fn } and React would render an object.
-const ReactPaginate = ReactPaginateModule.default ?? ReactPaginateModule;
 
 const ProductListingGrid = (props) => {
   const { fetchFunction } = props;
@@ -41,10 +37,7 @@ const ProductListingGrid = (props) => {
 
   let navigate = useNavigate();
 
-  const handlePageClick = (event) => {
-    let requestedPage = event.selected + 1;
-    navigate(`${props.url}${requestedPage}`);
-  };
+  const handlePageChange = (requestedPage) => navigate(`${props.url}${requestedPage}`);
 
   if (productsStatus === 'loading') {
     content = (
@@ -75,27 +68,11 @@ const ProductListingGrid = (props) => {
       <>
         <div className="row">{renderedProducts}</div>
         <div className="row mt-3 mb-3">
-          <div className="col d-flex justify-content-center">
-            <ReactPaginate
-              breakLabel="..."
-              nextLabel="next >"
-              initialPage={parseInt(pageNumber) - 1}
-              disableInitialCallback={true}
-              onPageChange={handlePageClick}
-              pageRangeDisplayed={5}
+          <div className="col">
+            <Pagination
               pageCount={products.pageCount}
-              previousLabel="< previous"
-              renderOnZeroPageCount={null}
-              breakClassName={'page-item'}
-              breakLinkClassName={'page-link'}
-              containerClassName={'pagination'}
-              pageClassName={'page-item'}
-              pageLinkClassName={'page-link'}
-              previousClassName={'page-item'}
-              previousLinkClassName={'page-link'}
-              nextClassName={'page-item'}
-              nextLinkClassName={'page-link'}
-              activeClassName={'active'}
+              currentPage={Number(pageNumber)}
+              onPageChange={handlePageChange}
             />
           </div>
         </div>

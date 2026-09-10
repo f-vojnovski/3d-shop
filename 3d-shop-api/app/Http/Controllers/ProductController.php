@@ -13,6 +13,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends BaseController
@@ -49,6 +50,11 @@ class ProductController extends BaseController
             'thumbnail' => 'required|file|image|max:5120',
             ...self::ANGLE_RULES,
         ]);
+
+        $this->guardAnglesForMode(
+            $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
+            $request->input('preview_angles') ?? []
+        );
 
         $models = array_filter([
             'obj' => $request->file('objModel'),
@@ -107,6 +113,13 @@ class ProductController extends BaseController
             ...self::ANGLE_RULES,
         ]);
 
+        $this->guardAnglesForMode(
+            $fields['preview_mode'] ?? $product->preview_mode,
+            array_key_exists('preview_angles', $fields)
+                ? ($fields['preview_angles'] ?? [])
+                : ($product->preview_angles ?? [])
+        );
+
         if (array_key_exists('price', $fields)) {
             $fields['price_cents'] = (int) round($fields['price'] * 100);
             unset($fields['price']);
@@ -121,9 +134,6 @@ class ProductController extends BaseController
         return new ProductResource($product->load('files'));
     }
 
-    /**
-     * Public, but only while the seller has chosen to expose the geometry.
-     */
     public function previewModel($id, string $format): StreamedResponse
     {
         $product = Product::with('files')->findOrFail($id);
@@ -135,9 +145,6 @@ class ProductController extends BaseController
         return $this->streamDeliverable($product, $format, inline: true);
     }
 
-    /**
-     * The gate: geometry leaves the server only for an owner or a buyer.
-     */
     public function download(Request $request, $id, string $format): StreamedResponse
     {
         $product = Product::with('files')->findOrFail($id);
@@ -191,6 +198,15 @@ class ProductController extends BaseController
                 ->orderBy('id')
                 ->paginate(16)
         );
+    }
+
+    private function guardAnglesForMode(string $mode, array $angles): void
+    {
+        if ($mode === Product::PREVIEW_ATTESTED_STILLS && $angles === []) {
+            throw ValidationException::withMessages([
+                'preview_angles' => 'Capture at least one camera angle for server-rendered previews.',
+            ]);
+        }
     }
 
     private function decodeAngles(Request $request): void
