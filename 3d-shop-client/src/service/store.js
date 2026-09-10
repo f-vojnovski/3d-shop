@@ -5,6 +5,7 @@ import authReducer from './features/authSlice';
 import cartReducer from './features/cartSlice';
 import productUpload from './features/productUploadSlice';
 import salesReducer from './features/salesSlice';
+import uploadDraftReducer from './features/uploadDraftSlice';
 import {
   persistStore,
   persistReducer,
@@ -37,6 +38,7 @@ const reducers = combineReducers({
   products: productsReducer,
   product: productReducer,
   productUpload: productUpload,
+  uploadDraft: uploadDraftReducer,
   auth: persistReducer(authPersistConfig, authReducer),
   cart: cartReducer,
   sales: salesReducer,
@@ -50,6 +52,9 @@ const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        // The upload draft holds the chosen File objects until submit.
+        ignoredPaths: ['uploadDraft.models', 'uploadDraft.thumbnail'],
+        ignoredActionPaths: ['payload.file'],
       },
     }),
 });

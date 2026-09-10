@@ -1,0 +1,279 @@
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 60vh;
+  background: var(--clr-surface);
+  border: 2px dashed var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  cursor: pointer;
+}
+
+.dropCompact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 34px;
+  padding: 0;
+  line-height: 1;
+  background: var(--clr-surface);
+  border: 1px dashed var(--clr-line);
+  border-radius: 8px;
+  color: var(--clr-text-dim);
+  cursor: pointer;
+}
+
+.drop:hover,
+.dropCompact:hover,
+.dropOver {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
+.plus {
+  font-size: 3.4rem;
+  line-height: 1;
+  font-weight: 200;
+}
+
+.dropCompact .plus {
+  font-size: 1.4rem;
+}
+
+.dropHint {
+  font-size: 0.9rem;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab,
+.tabOn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tabOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
+.tabCount {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--clr-surface-raised);
+  font-size: 0.75rem;
+}
+
+.tabOn .tabCount {
+  background: var(--clr-accent);
+  color: #06232e;
+  font-weight: 700;
+}
+
+.drop_ {
+  margin-left: auto;
+  padding: 6px 10px;
+  background: none;
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text-dim);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.drop_:hover {
+  border-color: var(--clr-danger);
+  color: var(--clr-danger);
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.shutter {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--clr-accent);
+  color: #06232e;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.shutter:hover {
+  background: var(--clr-accent-hover);
+}
+
+.roll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.shot {
+  position: relative;
+  flex: 0 0 auto;
+  width: 150px;
+  margin: 0;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.shotAngle {
+  padding: 4px 6px;
+  color: var(--clr-text-dim);
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.shot:hover .shotAngle {
+  opacity: 1;
+}
+
+.shotTools {
+  position: absolute;
+  inset: auto 0 22px 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.shot:hover .shotTools {
+  opacity: 1;
+}
+
+.shotTools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(14, 17, 19, 0.86);
+  color: var(--clr-text);
+  cursor: pointer;
+}
+
+.shotTools button:hover {
+  background: var(--clr-accent);
+  color: #06232e;
+}
+
+.thumbnailFlag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--clr-accent);
+  color: #06232e;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--clr-line);
+}
+
+.field,
+.fieldNarrow {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field > span,
+.fieldNarrow > span,
+.thumbnailSlot > span {
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.fieldNarrow {
+  min-width: 170px;
+}
+
+.thumbnailSlot {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-basis: 100%;
+}
+
+.thumbnailSlot img {
+  width: 120px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--clr-line);
+  border-radius: 8px;
+}

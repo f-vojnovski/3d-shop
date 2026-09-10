@@ -1,419 +1,311 @@
-import { useEffect, useRef, useState } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  clearUploadState,
-  uploadProduct,
-} from '../../../service/features/productUploadSlice';
-import { fileToDataUri } from '../../../service/util/fileToDataUri';
-import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '../../common/toast/toastStore';
-import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
-import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
-import PreviewAnglePicker from './PreviewAnglePicker';
-import SubmitButton from '../../common/submit-button/SubmitButton';
+import { clearUploadState, uploadProduct } from '../../../service/features/productUploadSlice';
+import {
+  addShot,
+  attachModel,
+  dropModel,
+  moveShot,
+  removeShot,
+  resetDraft,
+  retakeShot,
+  selectActiveShots,
+  selectAttachedFormats,
+  setActive,
+  setDetails,
+  setErrors,
+  setPreviewMode,
+  setThumbnail,
+} from '../../../service/features/uploadDraftSlice';
+import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import { firstErrors, price as validatePrice, required } from '../../../service/util/validate';
+import { toast } from '../../common/toast/toastStore';
+import SubmitButton from '../../common/submit-button/SubmitButton';
+import CameraRoll from './CameraRoll';
+import CaptureStage from './CaptureStage';
+import DropZone from './DropZone';
+import {
+  FORMATS,
+  MAX_IMAGE_BYTES,
+  MAX_MODEL_BYTES,
+  formatOf,
+  isImage,
+  labelFor,
+  megabytes,
+} from './formats';
+import styles from './ProductUpload.module.css';
+
+const ATTESTED = 'attested_stills';
+const INTERACTIVE = 'interactive';
+
+const dataUriToFile = async (uri, name) => {
+  const blob = await (await fetch(uri)).blob();
+
+  return new File([blob], name, { type: blob.type });
+};
 
 const ProductUploadPage = () => {
-  const [productName, setProductName] = useState('');
-  const [productDescription, setProductDescription] = useState('');
-  const [productPrice, setProductPrice] = useState('');
+  const { active, details, errors, models, previewMode, shots, thumbnail } = useSelector(
+    (state) => state.uploadDraft
+  );
+  const attached = useSelector(selectAttachedFormats);
+  const activeShots = useSelector(selectActiveShots);
 
-  const [gltfProductFile, setGltfProductFile] = useState('');
-  const [gltfModelUri, setGltfModelUri] = useState('');
+  const uploaded = useSelector((state) => state.productUpload.uploadedProduct);
+  const status = useSelector((state) => state.productUpload.status);
+  const error = useSelector((state) => state.productUpload.error);
+  const fieldErrors = useSelector((state) => state.productUpload.fieldErrors);
 
-  const [objProductFile, setObjProductFile] = useState('');
-  const [objModelUri, setObjModelUri] = useState('');
-
-  const [productThumbnail, setProductThumbnail] = useState('');
-  const [thumbnailUri, setThumbnailUri] = useState('');
-
-  const [previewMode, setPreviewMode] = useState('interactive');
-  const [angles, setAngles] = useState([]);
-
-  const [errors, setErrors] = useState({});
-
-  // Filled in by CameraProbe from inside whichever preview canvas is showing.
-  const probeRef = useRef(null);
-  const gltfInputRef = useRef(null);
-  const objInputRef = useRef(null);
-  const thumbnailInputRef = useRef(null);
+  // A handle into the live canvas, not state.
+  const probe = useRef(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const uploadedProduct = useSelector((state) => state.productUpload.uploadedProduct);
-  const status = useSelector((state) => state.productUpload.status);
-  const error = useSelector((state) => state.productUpload.error);
-
   useEffect(() => {
-    if (status === 'succeeded' && uploadedProduct) {
+    if (status === 'succeeded' && uploaded) {
       dispatch(clearUploadState());
-      toast.success('Your new product has been uploaded!');
-      navigate(`/product/${uploadedProduct.id}`);
+      dispatch(resetDraft());
+      toast.success('Your product is live.');
+      navigate(`/product/${uploaded.id}`);
     }
-  }, [status, uploadedProduct, dispatch, navigate]);
+  }, [status, uploaded, dispatch, navigate]);
 
   useEffect(() => {
     if (status === 'failed') {
-      toast.error(error || 'Upload failed. Please check the files and try again.');
+      toast.error(error || 'Upload failed. Check the files and try again.');
     }
   }, [status, error]);
 
-  const validate = () => {
+  const accept = async (files) => {
+    for (const file of files) {
+      const format = formatOf(file);
+
+      if (format) {
+        if (file.size > MAX_MODEL_BYTES) {
+          toast.error(
+            `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_MODEL_BYTES)}.`
+          );
+          continue;
+        }
+
+        dispatch(attachModel({ format, file, uri: await fileToDataUri(file) }));
+        continue;
+      }
+
+      if (isImage(file)) {
+        if (file.size > MAX_IMAGE_BYTES) {
+          toast.error(
+            `${file.name} is ${megabytes(file.size)}; the limit is ${megabytes(MAX_IMAGE_BYTES)}.`
+          );
+          continue;
+        }
+
+        dispatch(setThumbnail({ file, uri: await fileToDataUri(file), from: 'upload' }));
+        continue;
+      }
+
+      toast.error(`${file.name} is not a model or an image.`);
+    }
+  };
+
+  const capture = () => {
+    const taken = probe.current?.();
+
+    if (taken) {
+      dispatch(addShot({ format: active, ...taken }));
+    }
+  };
+
+  const retake = (index) => {
+    const taken = probe.current?.();
+
+    if (taken) {
+      dispatch(retakeShot({ format: active, index, ...taken }));
+    }
+  };
+
+  const useAsThumbnail = async (index) => {
+    const shot = activeShots[index];
+
+    dispatch(
+      setThumbnail({
+        file: await dataUriToFile(shot.snapshot, `${active}-thumbnail.jpg`),
+        uri: shot.snapshot,
+        from: active,
+        index,
+      })
+    );
+  };
+
+  const submit = () => {
+    const missing = previewMode === ATTESTED
+      ? attached.filter((format) => (shots[format] ?? []).length === 0)
+      : [];
+
     const found = firstErrors({
-      name: required(productName, 'A product name'),
-      price: validatePrice(productPrice),
-      model:
-        gltfProductFile || objProductFile ? null : 'Attach at least one model file (.obj or .gltf).',
-      thumbnail: productThumbnail ? null : 'A thumbnail image is required.',
-      angles:
-        previewMode === 'attested_stills' && angles.length === 0
-          ? 'Capture at least one camera angle for server-rendered previews.'
-          : null,
+      name: required(details.name, 'A name'),
+      price: validatePrice(details.price),
+      thumbnail: thumbnail ? null : 'Pick a thumbnail: capture one or drop an image.',
+      angles: missing.length === 0
+        ? null
+        : `Capture at least one view of ${missing.map(labelFor).join(' and ')}.`,
     });
 
-    setErrors(found);
+    dispatch(setErrors(found));
 
-    return Object.keys(found).length === 0;
-  };
-
-  const onUploadClicked = () => {
-    if (!validate()) {
+    if (Object.keys(found).length > 0) {
       return;
     }
 
-    const formData = new FormData();
+    const form = new FormData();
 
-    if (gltfProductFile) {
-      formData.append('gltfModel', gltfProductFile);
-    }
-    if (objProductFile) {
-      formData.append('objModel', objProductFile);
-    }
-    formData.append('thumbnail', productThumbnail);
-    formData.append('name', productName);
-    formData.append('price', productPrice);
-    formData.append('description', productDescription);
-    formData.append('preview_mode', previewMode);
+    FORMATS.filter((format) => models[format.key]).forEach((format) => {
+      form.append(format.field, models[format.key].file);
+    });
 
-    if (previewMode === 'attested_stills') {
-      formData.append('preview_angles', JSON.stringify(angles));
+    form.append('thumbnail', thumbnail.file);
+    form.append('name', details.name);
+    form.append('description', details.description);
+    form.append('price', details.price);
+    form.append('preview_mode', previewMode);
+
+    if (previewMode === ATTESTED) {
+      // Only the camera numbers travel; the roll images stay in the browser.
+      form.append(
+        'preview_angles',
+        JSON.stringify(
+          Object.fromEntries(
+            attached.map((format) => [format, (shots[format] ?? []).map((shot) => shot.camera)])
+          )
+        )
+      );
     }
 
-    dispatch(uploadProduct(formData));
+    dispatch(uploadProduct(form));
   };
 
-  const attach =
-    ({ extensions, label, setFile, setUri }) =>
-    (event) => {
-      const file = event.target.files[0];
-
-      if (!file) {
-        return;
-      }
-
-      const name = file.name.toLowerCase();
-
-      // Rejected here so a wrong file never reaches the model viewer.
-      if (!extensions.some((extension) => name.endsWith(extension))) {
-        toast.error(`${label} must be ${extensions.join(' or ')}.`);
-        event.target.value = '';
-        return;
-      }
-
-      setFile(file);
-
-      fileToDataUri(file)
-        .then(setUri)
-        .catch(() => {
-          toast.error(`Could not read ${label}. Please pick the file again.`);
-        });
-    };
-
-  const detach = ({ input, setFile, setUri }) => {
-    setFile('');
-    setUri('');
-
-    if (input.current) {
-      input.current.value = '';
-    }
-  };
-
-  let gltfProductPreview;
-
-  if (!gltfModelUri) {
-    gltfProductPreview = <></>;
-  } else {
-    gltfProductPreview = (
-      <div className="preview-square">
-        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <GltfModelDisplayer fileUrl={gltfModelUri} isLocalFile={true} probeRef={probeRef} />
-        </ErrorBoundary>
+  if (attached.length === 0) {
+    return (
+      <div className={styles.page}>
+        <DropZone onFiles={accept} />
       </div>
     );
   }
-
-  let objProductPreview;
-
-  if (!objModelUri) {
-    objProductPreview = <></>;
-  } else {
-    objProductPreview = (
-      <div className="preview-square">
-        <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
-          <ObjModelDisplayer fileUrl={objModelUri} isLocalFile={true} probeRef={probeRef} />
-        </ErrorBoundary>
-      </div>
-    );
-  }
-
-
-  const captureAngle = () => {
-    const camera = probeRef.current?.();
-
-    if (!camera) {
-      toast.error('The preview is not ready yet.');
-      return;
-    }
-
-    setAngles((current) => [...current, camera]);
-  };
-
-  const removeAngle = (index) =>
-    setAngles((current) => current.filter((_, i) => i !== index));
 
   return (
-    <div className="form-shell">
-      <div className="row mt-1">
-        <div className="col">
-          <h1>Upload your product!</h1>
-        </div>
+    <div className={styles.page}>
+      <div className={styles.tabs}>
+        {attached.map((format) => (
+          <button
+            key={format}
+            type="button"
+            className={format === active ? styles.tabOn : styles.tab}
+            onClick={() => dispatch(setActive(format))}
+          >
+            {labelFor(format)}
+            <span className={styles.tabCount}>{(shots[format] ?? []).length}</span>
+          </button>
+        ))}
+
+        <DropZone onFiles={accept} compact />
+
+        <button
+          type="button"
+          className={styles.drop_}
+          onClick={() => dispatch(dropModel(active))}
+        >
+          Remove {labelFor(active)}
+        </button>
       </div>
 
-      <div className="row mt-1">
-        <div className="col">
-          <label>Name of your product</label>
+      <CaptureStage format={active} uri={models[active].uri} probe={probe} onCapture={capture} />
+
+      {activeShots.length > 0 && (
+        <CameraRoll
+          shots={activeShots}
+          thumbnailIndex={thumbnail?.from === active ? thumbnail.index : -1}
+          onRemove={(index) => dispatch(removeShot({ format: active, index }))}
+          onRetake={retake}
+          onMove={(index, by) => dispatch(moveShot({ format: active, index, by }))}
+          onThumbnail={useAsThumbnail}
+        />
+      )}
+
+      {errors.angles && <div className="field-error">{errors.angles}</div>}
+
+      {Object.entries(fieldErrors).map(([field, messages]) => (
+        <div key={field} className="field-error">
+          {[].concat(messages).join(' ')}
+        </div>
+      ))}
+
+      <div className={styles.details}>
+        <label className={styles.field}>
+          <span>Name</span>
           <input
-            type="default"
             className="form-control"
-            value={productName}
-            onInput={(e) => setProductName(e.target.value)}
+            value={details.name}
+            onInput={(event) => dispatch(setDetails({ name: event.target.value }))}
           />
           {errors.name && <div className="field-error">{errors.name}</div>}
-        </div>
-      </div>
+        </label>
 
-      <div className="row mt-1">
-        <div className="col">
-          <label>Describe your product</label>
+        <label className={styles.field}>
+          <span>Description</span>
           <textarea
-            rows="5"
-            type="default"
-            className="form-control span6"
-            value={productDescription}
-            onInput={(e) => setProductDescription(e.target.value)}
+            className="form-control"
+            rows="3"
+            value={details.description}
+            onInput={(event) => dispatch(setDetails({ description: event.target.value }))}
           />
-        </div>
-      </div>
+        </label>
 
-      <div className="row mt-1">
-        <div className="col">
-          <label>Pricing of your product</label>
-          <div className="input-group w-25">
-            <div className="input-group-prepend">
-              <div className="input-group-text">$</div>
-            </div>
-            <input
-              type="default"
-              className="form-control"
-              value={productPrice}
-              onInput={(e) => setProductPrice(e.target.value)}
-            />
-          </div>
-          {errors.price && <div className="field-error">{errors.price}</div>}
-        </div>
-
-        <div className="row mt-4 mb-2">
-          <div className="col">
-            <h5>Your model files</h5>
-            <div className="form-text">
-              At least one of .obj or .gltf is required. You can provide both.
-            </div>
-            {errors.model && <div className="field-error">{errors.model}</div>}
-          </div>
-        </div>
-
-        <div className="row mt-1 mb-3">
-          <div className="col">
-            <label className="form-label">Your model (.gltf or .glb file)</label>
-            <div className="d-flex gap-2">
+        <div className={styles.row}>
+          <label className={styles.fieldNarrow}>
+            <span>Price</span>
+            <div className="input-group">
+              <span className="input-group-text">$</span>
               <input
-                ref={gltfInputRef}
                 className="form-control"
-                type="file"
-                accept=".gltf,.glb"
-                onChange={attach({
-                  extensions: ['.gltf', '.glb'],
-                  label: 'The model',
-                  setFile: setGltfProductFile,
-                  setUri: setGltfModelUri,
-                })}
+                value={details.price}
+                onInput={(event) => dispatch(setDetails({ price: event.target.value }))}
               />
-              {gltfProductFile && (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary text-nowrap"
-                  onClick={() =>
-                    detach({
-                      input: gltfInputRef,
-                      setFile: setGltfProductFile,
-                      setUri: setGltfModelUri,
-                    })
-                  }
-                >
-                  Remove
-                </button>
-              )}
             </div>
-          </div>
-        </div>
+            {errors.price && <div className="field-error">{errors.price}</div>}
+          </label>
 
-        <div className="row mt-1 mb-3">
-          <div className="col">
-            <label className="form-label">Your model (.obj file)</label>
-            <div className="d-flex gap-2">
-              <input
-                ref={objInputRef}
-                className="form-control"
-                type="file"
-                accept=".obj"
-                onChange={attach({
-                  extensions: ['.obj'],
-                  label: 'The model',
-                  setFile: setObjProductFile,
-                  setUri: setObjModelUri,
-                })}
-              />
-              {objProductFile && (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary text-nowrap"
-                  onClick={() =>
-                    detach({
-                      input: objInputRef,
-                      setFile: setObjProductFile,
-                      setUri: setObjModelUri,
-                    })
-                  }
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+          <label className={styles.fieldNarrow}>
+            <span>Buyers see</span>
+            <select
+              className="form-select"
+              value={previewMode}
+              onChange={(event) => dispatch(setPreviewMode(event.target.value))}
+            >
+              <option value={ATTESTED}>Images we render</option>
+              <option value={INTERACTIVE}>The model itself</option>
+            </select>
+          </label>
 
-        <div className="row mt-1 mb-3">
-          <div className="col">
-            <label className="form-label">Thumbnail image (required)</label>
-            <div className="d-flex gap-2">
-              <input
-                ref={thumbnailInputRef}
-                className="form-control"
-                type="file"
-                accept="image/*"
-                onChange={attach({
-                  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
-                  label: 'The thumbnail',
-                  setFile: setProductThumbnail,
-                  setUri: setThumbnailUri,
-                })}
-              />
-              {productThumbnail && (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary text-nowrap"
-                  onClick={() =>
-                    detach({
-                      input: thumbnailInputRef,
-                      setFile: setProductThumbnail,
-                      setUri: setThumbnailUri,
-                    })
-                  }
-                >
-                  Remove
-                </button>
-              )}
-            </div>
+          <div className={styles.thumbnailSlot}>
+            <span>Thumbnail</span>
+            {thumbnail ? (
+              <img src={thumbnail.uri} alt="Thumbnail" />
+            ) : (
+              <DropZone onFiles={accept} compact />
+            )}
             {errors.thumbnail && <div className="field-error">{errors.thumbnail}</div>}
           </div>
         </div>
 
-        <div className="row mt-1">
-          <div className="col">
-            <p>GLTF:</p>
-          </div>
-        </div>
-
-        <div className="row mt-1">
-          <div className="col d-flex justify-content-center">{gltfProductPreview}</div>
-        </div>
-
-        <div className="row mt-1">
-          <div className="col">
-            <p>Obj:</p>
-          </div>
-        </div>
-
-        <div className="row mt-1">
-          <div className="col d-flex justify-content-center">{objProductPreview}</div>
-        </div>
-
-        <div className="row mt-1">
-          <div className="col d-flex justify-content-center">
-            {thumbnailUri && (
-              <img className="product-thumbnail" src={thumbnailUri} alt="Thumbnail preview" />
-            )}
-          </div>
-        </div>
-
-        <PreviewAnglePicker
-          previewMode={previewMode}
-          onPreviewModeChange={setPreviewMode}
-          angles={angles}
-          onCapture={captureAngle}
-          onRemove={removeAngle}
-          canCapture={Boolean(objModelUri || gltfModelUri)}
-        />
-
-        {errors.angles && (
-          <div className="row mt-1">
-            <div className="col">
-              <div className="field-error">{errors.angles}</div>
-            </div>
-          </div>
-        )}
-
-        <div className="row mt-1">
-          <div className="col">
-            Please make sure that the product previews <strong>work</strong> before
-            uploading your model.
-          </div>
-        </div>
-
-        <div className="row mt-3 mb-5">
-          <div className="col">
-            <SubmitButton
-              className="btn btn-primary w-100"
-              pending={status === 'loading'}
-              onClick={() => onUploadClicked()}
-            >
-              Upload product!
-            </SubmitButton>
-          </div>
-        </div>
+        <SubmitButton
+          className="btn btn-primary w-100"
+          pending={status === 'loading'}
+          onClick={submit}
+        >
+          Publish product
+        </SubmitButton>
       </div>
     </div>
   );

@@ -33,12 +33,11 @@ class RenderInput
                 'bytes' => $scan->bytes,
                 'triangles' => $scan->triangles,
             ],
-            'angles' => $product->preview_angles,
+            'angles' => $source->angles(),
             'output' => ['width' => 1200, 'height' => 900],
         ];
     }
 
-    /** Streams the model to the worker's own scratch disk; returns bytes written. */
     public static function fetch(ProductFile $source, string $target): int
     {
         $read = Storage::disk($source->disk)->readStream($source->path);
