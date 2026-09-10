@@ -1,4 +1,4 @@
-import reducer, { addToCart, clearCart } from './cartSlice';
+import reducer, { addToCart, clearCart, removeFromCart } from './cartSlice';
 
 const product = (id, priceCents) => ({ id, price_cents: priceCents, name: `Product ${id}` });
 
@@ -48,5 +48,29 @@ describe('cart reducer', () => {
     state = reducer(state, clearCart());
 
     expect(state).toMatchObject({ products: [], total: 0 });
+  });
+
+  it('removes a product and takes its price back off the total', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = reducer(state, addToCart(product(2, 300)));
+
+    state = reducer(state, removeFromCart(1));
+
+    expect(state.products.map((p) => p.id)).toEqual([2]);
+    expect(state.total).toBe(300);
+  });
+
+  it('ignores a removal for something not in the cart', () => {
+    const state = reducer(undefined, addToCart(product(1, 4000)));
+
+    expect(reducer(state, removeFromCart(99))).toEqual(state);
+  });
+
+  it('empties the total when the last product is removed', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = reducer(state, removeFromCart(1));
+
+    expect(state.products).toEqual([]);
+    expect(state.total).toBe(0);
   });
 });

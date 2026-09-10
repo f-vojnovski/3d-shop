@@ -24,6 +24,19 @@ export const cartSlice = createSlice({
         total: state.total + action.payload.price_cents,
       };
     },
+    removeFromCart: (state, action) => {
+      const product = state.products.find((x) => x.id == action.payload);
+
+      if (!product) {
+        return state;
+      }
+
+      return {
+        ...state,
+        products: state.products.filter((x) => x.id != action.payload),
+        total: state.total - product.price_cents,
+      };
+    },
     clearCart: (state, action) => {
       return initialState;
     },
@@ -48,7 +61,7 @@ export const cartSlice = createSlice({
 
 export default cartSlice.reducer;
 
-export const { addToCart, clearCart } = cartSlice.actions;
+export const { addToCart, removeFromCart, clearCart } = cartSlice.actions;
 
 export const checkoutCart = createAsyncThunk(
   'cart/checkout',

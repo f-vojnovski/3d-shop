@@ -2,8 +2,9 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { checkoutCart, clearCart } from '../../../service/features/cartSlice';
+import { checkoutCart, clearCart, removeFromCart } from '../../../service/features/cartSlice';
 import ProductOverview from '../../common/product-preview/ProductOverview';
+import { formatPrice } from '../../../service/util/formatPrice';
 
 const CheckoutPage = () => {
   const products = useSelector((state) => state.cart.products);
@@ -40,7 +41,14 @@ const CheckoutPage = () => {
           id={product.id}
           name={product.name}
           priceCents={product.price_cents}
+          thumbnailUrl={product.thumbnail_url}
         ></ProductOverview>
+        <button
+          className="btn btn-sm btn-outline-danger mt-1"
+          onClick={() => dispatch(removeFromCart(product.id))}
+        >
+          Remove
+        </button>
       </div>
     </div>
   ));
@@ -54,7 +62,8 @@ const CheckoutPage = () => {
           <div>{renderedProducts}</div>
         </div>
         <div className="row mb-2">
-          <div className="col d-flex justify-content-end">
+          <div className="col d-flex justify-content-end align-items-center gap-3">
+            <span className="bolded-label">Total: ${formatPrice(total)}</span>
             <button className="btn btn-success" onClick={() => onCheckoutButtonClick()}>
               Proceed to payment
             </button>
