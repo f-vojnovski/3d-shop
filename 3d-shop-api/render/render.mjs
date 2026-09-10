@@ -51,7 +51,7 @@ function rendererIdentity() {
 
 const MIN_COVERAGE = 0.001;
 
-const state = { images: new Map(), failed: null, triangles: 0, done: false };
+const state = { images: new Map(), failed: null, triangles: 0, wireframes: true, done: false };
 let settle;
 const finished = new Promise((resolve) => { settle = resolve; });
 
@@ -111,6 +111,7 @@ const server = createServer(async (request, response) => {
       state.triangles = body.triangles ?? 0;
     } else if (path === '/done') {
       state.done = true;
+      state.wireframes = body.wireframes ?? true;
       settle();
     } else if (path === '/failed') {
       state.failed = body.reason ?? 'unknown';
@@ -228,6 +229,7 @@ async function main() {
     images,
     blank,
     triangles: state.triangles,
+    wireframes: state.wireframes,
     seconds,
     renderer: rendererIdentity(),
   });

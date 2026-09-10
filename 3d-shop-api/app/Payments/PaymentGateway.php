@@ -26,4 +26,7 @@ interface PaymentGateway
 
     /** What the provider currently believes about a session we may have lost. */
     public function sessionStatus(string $sessionId): ?string;
+
+    /** The smallest amount this provider will accept. Zero means no floor. */
+    public function minimumChargeCents(): int;
 }

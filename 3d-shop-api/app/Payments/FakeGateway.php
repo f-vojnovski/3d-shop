@@ -45,6 +45,11 @@ class FakeGateway implements PaymentGateway
         return $this->events->parse($payload, $headers);
     }
 
+    public function minimumChargeCents(): int
+    {
+        return 0;
+    }
+
     public function capture(string $sessionId): bool
     {
         $this->captured[] = $sessionId;

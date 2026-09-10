@@ -154,6 +154,18 @@ class VerifyRenderCommand extends Command
 
         $this->table(['format', 'angle', 'pass', 'attested', 're-rendered', ''], $rows);
 
+        // Every hash it did produce would still match, so count as well.
+        $missing = $stored->count() + $outlines->count() - $checked;
+
+        if ($missing > 0) {
+            $this->error(sprintf(
+                '.%s: %d attested image(s) were not re-produced at all.',
+                $source->format,
+                $missing
+            ));
+            $failures += $missing;
+        }
+
         // A swapped model leaves the stills intact but no longer depicting what
         // is for sale, which the pixel hashes alone would not reveal.
         $attestedSource = $stored->first()->meta['source_checksum'] ?? null;

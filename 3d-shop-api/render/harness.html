@@ -81,6 +81,10 @@ async function main() {
   outer.add(inner);
   scene.add(outer);
 
+  // Past this the lines cover the model solid.
+  const WIREFRAME_MAX_TRIANGLES = 750000;
+  const wireframes = triangles <= WIREFRAME_MAX_TRIANGLES;
+
   // Filled first so the lines behind the model are occluded, offset back so the
   // fill does not z-fight the lines on its own surface.
   const matte = new THREE.MeshBasicMaterial({
@@ -112,6 +116,10 @@ async function main() {
       png: renderer.domElement.toDataURL('image/png'),
     });
 
+    if (! wireframes) {
+      continue;
+    }
+
     scene.overrideMaterial = matte;
     renderer.render(scene, camera);
     scene.overrideMaterial = wire;
@@ -129,7 +137,11 @@ async function main() {
     });
   }
 
-  await post('/done', { triangles: Math.round(triangles), count: job.angles.length });
+  await post('/done', {
+    triangles: Math.round(triangles),
+    count: job.angles.length,
+    wireframes,
+  });
 }
 
 // Background is transparent, so any alpha is geometry.

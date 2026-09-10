@@ -16,6 +16,7 @@ class ProductResource extends JsonResource
         $viewerId = $request->user()?->getAuthIdentifier();
         $status = $this->statusFor($viewerId);
         $formats = $this->availableFormats();
+        $entitled = $this->isDownloadableBy($viewerId);
 
         return [
             'id' => $this->id,
@@ -25,7 +26,7 @@ class ProductResource extends JsonResource
             'currency' => $this->currency,
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
-            'previews' => $this->previewsByFormat(),
+            'previews' => $this->previewsByFormat($entitled ? $viewerId : null),
             'seller_images' => $this->sellerImageList(),
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
@@ -45,7 +46,7 @@ class ProductResource extends JsonResource
      * One entry per model file: its angles, its own render status and its
      * stills. The seller's tabs and the buyer's format switch both read this.
      */
-    private function previewsByFormat(): array
+    private function previewsByFormat(?int $entitledViewerId): array
     {
         return $this->files
             ->where('kind', ProductFile::KIND_DELIVERABLE)
@@ -59,14 +60,14 @@ class ProductResource extends JsonResource
                 'facts' => $file->facts(),
                 'bytes' => $file->bytes,
                 'images' => $this->stillsFrom($file),
-                'replaced' => $this->replacementsOf($file->format),
+                'replaced' => $this->replacementsOf($file->format, $entitledViewerId),
             ])
             ->values()
             ->all();
     }
 
     /** What this format used to be. Public, not owner-only. */
-    private function replacementsOf(?string $format): array
+    private function replacementsOf(?string $format, ?int $entitledViewerId): array
     {
         return $this->files
             ->where('kind', ProductFile::KIND_DELIVERABLE)
@@ -79,6 +80,9 @@ class ProductResource extends JsonResource
                 'note' => $file->replacement_note,
                 'sha256' => $file->checksum,
                 'facts' => $file->facts(),
+                'download_url' => $entitledViewerId === null
+                    ? null
+                    : $this->versionUrl($file, $entitledViewerId),
                 'images' => $this->files
                     ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
                     ->where('source_file_id', $file->id)
@@ -148,6 +152,16 @@ class ProductResource extends JsonResource
                 'attestation_url' => "/api/previews/{$outline->id}/attestation",
             ],
         ];
+    }
+
+    private function versionUrl(ProductFile $file, int $viewerId): string
+    {
+        return URL::temporarySignedRoute(
+            'products.download-version',
+            now()->addMinutes(15),
+            ['id' => $this->id, 'file' => $file->getKey(), 'user' => $viewerId],
+            absolute: false
+        );
     }
 
     private function thumbnailUrl(): ?string

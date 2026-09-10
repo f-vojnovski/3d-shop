@@ -95,6 +95,11 @@ class PayPalGateway implements PaymentGateway
         return PayPalEvents::translate($event);
     }
 
+    public function minimumChargeCents(): int
+    {
+        return 1;
+    }
+
     public function capture(string $sessionId): bool
     {
         $response = $this->request()

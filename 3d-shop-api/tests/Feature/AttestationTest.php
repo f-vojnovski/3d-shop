@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
+use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -126,6 +128,46 @@ class AttestationTest extends TestCase
         $product->previewImages()->delete();
 
         $this->artisan('render:verify', ['product' => $product->id])->assertExitCode(1);
+    }
+
+    /** Comparing only what came back would pass every hash and miss the gap. */
+    public function test_verifying_fails_when_the_re_render_produces_fewer_images(): void
+    {
+        $fixture = $this->attestedProduct();
+        $fixture['product']->files()->create([
+            'source_file_id' => $fixture['source']->id,
+            'kind' => ProductFile::KIND_PREVIEW_IMAGE,
+            'format' => 'png',
+            'disk' => 'public',
+            'path' => 'preview_images/b.png',
+            'sort' => 1,
+            'bytes' => 100,
+            'checksum' => str_repeat('e', 64),
+            'meta' => $fixture['preview']->meta,
+        ]);
+
+        Storage::disk('models')->put($fixture['source']->path, 'model bytes');
+        $fixture['source']->update(['checksum' => hash('sha256', 'model bytes')]);
+
+        $this->app->instance(RenderRunner::class, new class extends RenderRunner
+        {
+            public function run(array $request, string $modelPath, string $scratchDir): array
+            {
+                $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
+                File::makeDirectory($out, 0775, true, true);
+                file_put_contents($out.DIRECTORY_SEPARATOR.'angle-0.png', 'only one');
+
+                return [
+                    'status' => 'ok',
+                    'images' => [['index' => 0, 'file' => 'angle-0.png', 'coverage' => 0.4]],
+                    'blank' => [],
+                ];
+            }
+        });
+
+        $this->artisan('render:verify', ['product' => $fixture['product']->id])
+            ->expectsOutputToContain('were not re-produced at all')
+            ->assertExitCode(1);
     }
 
     public function test_verifying_an_unknown_product_fails(): void

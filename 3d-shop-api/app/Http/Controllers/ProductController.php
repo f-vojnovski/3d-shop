@@ -302,6 +302,27 @@ class ProductController extends BaseController
         return $this->streamDeliverable($product, $format, inline: false);
     }
 
+    /** Whoever may download the current file may fetch what it replaced. */
+    public function downloadVersion(Request $request, $id, $file): StreamedResponse
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if (! $product->isDownloadableBy((int) $request->query('user'))) {
+            abort(403, 'You have not purchased this product.');
+        }
+
+        $version = $product->files->first(
+            fn (ProductFile $candidate) => (int) $candidate->getKey() === (int) $file
+                && $candidate->kind === ProductFile::KIND_DELIVERABLE
+        );
+
+        if ($version === null) {
+            abort(404, 'That version does not belong to this product.');
+        }
+
+        return $this->streamFile($version, inline: false);
+    }
+
     public function search($name)
     {
         return ProductResource::collection(
@@ -480,6 +501,11 @@ class ProductController extends BaseController
             abort(404, 'That format is not available for this product.');
         }
 
+        return $this->streamFile($file, $inline);
+    }
+
+    private function streamFile(ProductFile $file, bool $inline): StreamedResponse
+    {
         return Storage::disk($file->disk)->response(
             $file->path,
             basename($file->path),

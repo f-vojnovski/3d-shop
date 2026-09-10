@@ -31,6 +31,10 @@ Route::get('/products/{id}/download/{format}', [ProductController::class, 'downl
     ->middleware('signed:relative')
     ->name('products.download')
     ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
+Route::get('/products/{id}/versions/{file}/download', [ProductController::class, 'downloadVersion'])
+    ->middleware('signed:relative')
+    ->name('products.download-version')
+    ->where(['id' => '[0-9]+', 'file' => '[0-9]+']);
 Route::get('/products-by-user/{userId}', [ProductController::class, 'getProductsForUser']);
 Route::get('/previews/{preview}/attestation', [AttestationController::class, 'show'])
     ->name('previews.attestation');

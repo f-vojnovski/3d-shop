@@ -145,6 +145,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             'images' => count($result['images']),
             'blank' => $result['blank'] ?? [],
             'triangles' => $result['triangles'] ?? null,
+            'wireframes' => $result['wireframes'] ?? null,
         ]);
 
         $this->removeDirectory($scratch);

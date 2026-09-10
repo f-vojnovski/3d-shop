@@ -149,6 +149,46 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, Sale::where('product_id', $free->id)->count());
     }
 
+    /**
+     * Free is handled above; the sliver between free and the provider's floor
+     * used to reach the provider and come back as an API error.
+     */
+    public function test_a_price_below_the_provider_minimum_is_refused_cleanly(): void
+    {
+        $this->app->instance(PaymentGateway::class, new class extends FakeGateway
+        {
+            public function minimumChargeCents(): int
+            {
+                return 50;
+            }
+        });
+
+        $cheap = $this->productFor($this->seller, 30);
+
+        $this->postJson('/api/checkout/session', ['products' => [['id' => $cheap->id]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('products');
+
+        $this->assertSame(0, Sale::where('product_id', $cheap->id)->count());
+        $this->assertSame(Order::FAILED, Order::latest('id')->first()->status);
+    }
+
+    public function test_a_price_on_the_minimum_is_accepted(): void
+    {
+        $this->app->instance(PaymentGateway::class, new class extends FakeGateway
+        {
+            public function minimumChargeCents(): int
+            {
+                return 50;
+            }
+        });
+
+        $product = $this->productFor($this->seller, 50);
+
+        $this->postJson('/api/checkout/session', ['products' => [['id' => $product->id]]])
+            ->assertSuccessful();
+    }
+
     public function test_with_payments_switched_off_checkout_grants_immediately(): void
     {
         config(['services.payments.enabled' => false]);

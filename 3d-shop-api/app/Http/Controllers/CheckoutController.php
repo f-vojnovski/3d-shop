@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Payments\Checkout;
+use App\Payments\Money;
 use App\Payments\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends BaseController
 {
@@ -33,6 +35,22 @@ class CheckoutController extends BaseController
             $this->checkout->fulfil($order);
 
             return $this->describe($order->fresh(['items']));
+        }
+
+        $minimum = $this->gateway->minimumChargeCents();
+
+        if ($order->subtotal_cents < $minimum) {
+            $order->update(['status' => Order::FAILED, 'failure_reason' => 'Below the payment provider minimum.']);
+
+            throw ValidationException::withMessages([
+                'products' => sprintf(
+                    'This order comes to %s %s, and payments cannot be taken below %s %s.',
+                    Money::toDecimal($order->subtotal_cents),
+                    $order->currency,
+                    Money::toDecimal($minimum),
+                    $order->currency
+                ),
+            ]);
         }
 
         $session = $this->gateway->createSession(

@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -132,6 +133,60 @@ class ReplaceFileTest extends TestCase
             $this->getJson("/api/products/{$this->product->id}")
                 ->json('previews.0.images.0.wireframe')
         );
+    }
+
+    public function test_the_file_a_replacement_pushed_out_can_still_be_fetched(): void
+    {
+        $original = $this->product->deliverableFor('obj')->checksum;
+
+        $this->replace()->assertSuccessful();
+
+        $url = $this->getJson("/api/products/{$this->product->id}")
+            ->assertSuccessful()
+            ->json('previews.0.replaced.0.download_url');
+
+        $this->assertNotNull($url, 'An entitled viewer should be offered the old file.');
+
+        $bytes = $this->get($url)->assertSuccessful()->streamedContent();
+        $this->assertSame($original, hash('sha256', $bytes));
+    }
+
+    public function test_nobody_without_the_product_is_offered_an_old_file(): void
+    {
+        $this->replace()->assertSuccessful();
+
+        Sanctum::actingAs(User::create([
+            'name' => 'stranger',
+            'email' => 'stranger@example.com',
+            'password' => 'password123',
+        ]));
+
+        $this->assertNull(
+            $this->getJson("/api/products/{$this->product->id}")
+                ->assertSuccessful()
+                ->json('previews.0.replaced.0.download_url')
+        );
+    }
+
+    /** A signature for this product must not reach another product's file. */
+    public function test_a_version_id_from_another_product_is_refused(): void
+    {
+        $other = $this->postJson('/api/products', [
+            'name' => 'Other car',
+            'price' => '20.00',
+            'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
+            'objModel' => UploadedFile::fake()->createWithContent('other.obj', "v 2 2 2\nf 1 1 1\n"),
+            'standard_views' => ['obj'],
+        ])->assertSuccessful()->json('id');
+
+        $theirs = Product::with('files')->findOrFail($other)->deliverableFor('obj');
+
+        $this->get(URL::temporarySignedRoute(
+            'products.download-version',
+            now()->addMinutes(15),
+            ['id' => $this->product->id, 'file' => $theirs->getKey(), 'user' => $this->seller->id],
+            absolute: false
+        ))->assertNotFound();
     }
 
     public function test_a_stranger_cannot_replace_anything(): void

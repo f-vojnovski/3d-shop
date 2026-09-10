@@ -43,6 +43,11 @@ class StripeGateway implements PaymentGateway
     }
 
     /** Stripe captures on its own checkout page. */
+    public function minimumChargeCents(): int
+    {
+        return 50;
+    }
+
     public function capture(string $sessionId): bool
     {
         return true;
