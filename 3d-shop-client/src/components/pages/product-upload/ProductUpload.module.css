@@ -293,3 +293,30 @@
   border: 1px solid var(--clr-line);
   border-radius: 8px;
 }
+
+.sellerImages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sellerImages button {
+  padding: 0;
+  border: 1px solid var(--clr-line);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.sellerImages button:hover {
+  border-color: var(--clr-danger);
+}
+
+.sellerImages img {
+  display: block;
+  width: 84px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}

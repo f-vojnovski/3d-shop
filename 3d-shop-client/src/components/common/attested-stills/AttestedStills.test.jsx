@@ -2,83 +2,146 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AttestedStills from './AttestedStills';
 
-const still = (index) => ({
-  url: `https://example.test/still-${index}.png`,
+const still = (format, index) => ({
+  id: `${format}-${index}`,
+  url: `https://example.test/${format}-${index}.png`,
   sort: index,
-  camera: { position: [3.2, 1.8, 4.1], target: [0, 0, 0], fov: 75 },
-  attestation_url: `/api/previews/${index + 1}/attestation`,
+  source_format: format,
+  attestation_url: `/api/previews/${format}${index}/attestation`,
 });
 
-const product = (overrides = {}) => ({
-  name: 'Half-track',
-  preview_mode: 'attested_stills',
-  preview_status: 'ready',
-  preview_error: null,
-  product_status: 'not-purchased',
-  preview_images: [still(0), still(1)],
+const preview = (format, count, overrides = {}) => ({
+  format,
+  angles: Array.from({ length: count }, () => ({ fov: 75 })),
+  status: 'ready',
+  error: null,
+  images: Array.from({ length: count }, (_, index) => still(format, index)),
   ...overrides,
 });
 
+const product = (previews, sellerImages = []) => ({
+  name: 'Half-track',
+  preview_mode: 'attested_stills',
+  product_status: 'not-purchased',
+  previews,
+  seller_images: sellerImages,
+});
+
+const sellerImage = (index) => ({
+  id: `seller-${index}`,
+  url: `https://example.test/seller-${index}.jpg`,
+  sort: index,
+});
+
 describe('AttestedStills', () => {
-  it('shows the first still and a thumbnail per angle', () => {
-    render(<AttestedStills product={product()} />);
+  it('shows the first still of the first format that has any', () => {
+    render(<AttestedStills product={product([preview('obj', 2)])} />);
 
-    expect(screen.getByAltText('Half-track, view 1')).toHaveAttribute(
+    expect(screen.getByAltText('Half-track, .obj view 1')).toHaveAttribute(
       'src',
-      'https://example.test/still-0.png'
-    );
-    expect(screen.getAllByRole('button', { name: /^View \d$/ })).toHaveLength(2);
-  });
-
-  it('switches the shown still when another angle is picked', async () => {
-    render(<AttestedStills product={product()} />);
-
-    await userEvent.click(screen.getByRole('button', { name: 'View 2' }));
-
-    expect(screen.getByAltText('Half-track, view 2')).toHaveAttribute(
-      'src',
-      'https://example.test/still-1.png'
+      'https://example.test/obj-0.png'
     );
   });
 
-  it('states the guarantee alongside the stills', () => {
-    render(<AttestedStills product={product()} />);
+  it('offers no format switch when there is only one format', () => {
+    render(<AttestedStills product={product([preview('obj', 2)])} />);
 
-    expect(screen.getByText(/rendered by our server from the model on sale/i)).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
+  // Each format renders separately, so one model can look different as .obj and as .glb.
+  it('switches the gallery between formats', async () => {
+    render(<AttestedStills product={product([preview('obj', 1), preview('gltf', 2)])} />);
+
+    await userEvent.click(screen.getByRole('tab', { name: '.gltf' }));
+
+    expect(screen.getByAltText('Half-track, .gltf view 1')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '.gltf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '.obj' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('starts from the first view again after switching format', async () => {
+    render(<AttestedStills product={product([preview('obj', 3), preview('gltf', 2)])} />);
+    await userEvent.click(screen.getByRole('button', { name: 'View 3' }));
+
+    await userEvent.click(screen.getByRole('tab', { name: '.gltf' }));
+
+    expect(screen.getByAltText('Half-track, .gltf view 1')).toBeInTheDocument();
+  });
+
+  it('names the format the stills came from', () => {
+    render(<AttestedStills product={product([preview('gltf', 1)])} />);
+
+    expect(screen.getByText(/from the \.gltf file on sale/)).toBeInTheDocument();
   });
 
   it('says a render is under way rather than showing an empty frame', () => {
     render(
-      <AttestedStills product={product({ preview_status: 'rendering', preview_images: [] })} />
+      <AttestedStills product={product([preview('obj', 0, { status: 'rendering' })])} />
     );
 
     expect(screen.getByText(/rendering previews/i)).toBeInTheDocument();
   });
 
-  it('keeps the failure reason from buyers but shows it to the owner', () => {
-    const failed = {
-      preview_status: 'failed',
-      preview_images: [],
-      preview_error: 'Every rendered image was blank.',
-    };
+  it('prefers a format that has stills over one still rendering', () => {
+    render(
+      <AttestedStills
+        product={product([preview('obj', 0, { status: 'rendering' }), preview('gltf', 1)])}
+      />
+    );
 
-    const { unmount } = render(<AttestedStills product={product(failed)} />);
-    expect(screen.getByText(/could not be rendered/i)).toBeInTheDocument();
-    expect(screen.queryByText(failed.preview_error)).not.toBeInTheDocument();
-    unmount();
-
-    render(<AttestedStills product={product({ ...failed, product_status: 'owner' })} />);
-    expect(screen.getByText(failed.preview_error)).toBeInTheDocument();
+    expect(screen.getByAltText('Half-track, .gltf view 1')).toBeInTheDocument();
   });
 
   it('separates having no angles from having tried and failed', () => {
-    const none = { preview_status: 'none', preview_images: [], product_status: 'owner' };
+    const none = preview('obj', 0, { status: 'none', angles: [] });
 
-    render(<AttestedStills product={product(none)} />);
+    render(<AttestedStills product={{ ...product([none]), product_status: 'owner' }} />);
 
-    expect(screen.getByText(/no camera angles/i)).toBeInTheDocument();
+    expect(screen.getByText(/\.obj file has no camera angles/)).toBeInTheDocument();
     expect(screen.getByText(/capture at least one camera angle/i)).toBeInTheDocument();
-    expect(screen.queryByText(/could not be rendered/i)).not.toBeInTheDocument();
   });
 
+  it('keeps the failure reason from buyers but shows it to the owner', () => {
+    const failed = preview('obj', 0, { status: 'failed', error: 'Every image was blank.' });
+
+    const { unmount } = render(<AttestedStills product={product([failed])} />);
+    expect(screen.getByText(/could not be rendered from the \.obj file/)).toBeInTheDocument();
+    expect(screen.queryByText('Every image was blank.')).not.toBeInTheDocument();
+    unmount();
+
+    render(<AttestedStills product={{ ...product([failed]), product_status: 'owner' }} />);
+    expect(screen.getByText('Every image was blank.')).toBeInTheDocument();
+  });
+
+  it("labels the seller's own images as not rendered", async () => {
+    render(<AttestedStills product={product([preview('obj', 1)], [sellerImage(0)])} />);
+
+    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+
+    expect(screen.getByText(/Supplied by the seller/)).toBeInTheDocument();
+    expect(screen.queryByText(/Rendered by our server/)).not.toBeInTheDocument();
+    expect(screen.getByAltText('Half-track, image 1 from the seller')).toBeInTheDocument();
+  });
+
+  it('offers no seller tab when there are no seller images', () => {
+    render(<AttestedStills product={product([preview('obj', 1), preview('gltf', 1)])} />);
+
+    expect(screen.queryByRole('tab', { name: 'From the seller' })).not.toBeInTheDocument();
+  });
+
+  it("shows the attested stills first, not the seller's images", () => {
+    render(<AttestedStills product={product([preview('obj', 1)], [sellerImage(0)])} />);
+
+    expect(screen.getByText(/Rendered by our server/)).toBeInTheDocument();
+  });
+
+  it('still offers the seller tab when a render failed', async () => {
+    const failed = preview('obj', 0, { status: 'failed', error: 'blank' });
+
+    render(<AttestedStills product={product([failed], [sellerImage(0)])} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+
+    expect(screen.getByAltText('Half-track, image 1 from the seller')).toBeInTheDocument();
+  });
 });

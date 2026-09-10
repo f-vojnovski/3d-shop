@@ -50,6 +50,8 @@ class ProductController extends BaseController
             'objModel' => 'nullable|file|max:51200',
             'gltfModel' => 'nullable|file|max:51200',
             'thumbnail' => 'required|file|image|max:5120',
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'file|image|max:5120',
             ...self::ANGLE_RULES,
         ]);
 
@@ -91,6 +93,16 @@ class ProductController extends BaseController
             }
 
             $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
+
+            foreach (array_values($request->file('images') ?? []) as $sort => $image) {
+                $this->storeFile(
+                    $product,
+                    $image,
+                    ProductFile::KIND_SELLER_IMAGE,
+                    'public',
+                    sort: $sort
+                );
+            }
 
             if ($product->preview_mode === Product::PREVIEW_ATTESTED_STILLS) {
                 foreach (array_keys($models) as $format) {
@@ -233,7 +245,7 @@ class ProductController extends BaseController
     private function refuseSettledFields(Request $request): void
     {
         $settled = array_values(array_filter(
-            ['preview_angles', 'preview_mode', 'objModel', 'gltfModel', 'thumbnail'],
+            ['preview_angles', 'preview_mode', 'objModel', 'gltfModel', 'thumbnail', 'images'],
             fn (string $field) => $request->has($field) || $request->hasFile($field)
         ));
 
@@ -261,10 +273,12 @@ class ProductController extends BaseController
         string $kind,
         string $disk,
         ?string $format = null,
-        array $angles = []
+        array $angles = [],
+        int $sort = 0
     ): ProductFile {
         $directory = match ($kind) {
             ProductFile::KIND_THUMBNAIL => 'thumbnails',
+            ProductFile::KIND_SELLER_IMAGE => 'seller_images',
             default => $format.'_files',
         };
 
@@ -285,6 +299,7 @@ class ProductController extends BaseController
             'format' => $format,
             'disk' => $disk,
             'path' => $path,
+            'sort' => $sort,
             'bytes' => $bytes,
             'checksum' => $checksum,
             'meta' => $scan === null ? null : [

@@ -23,6 +23,28 @@
   object-fit: contain;
 }
 
+.formats {
+  display: flex;
+  gap: 6px;
+  padding: 6px 6px 0;
+}
+
+.format,
+.formatOn {
+  padding: 3px 10px;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.formatOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
 .strip {
   display: flex;
   gap: 6px;
@@ -58,6 +80,14 @@
   border-top: 1px solid var(--clr-line);
   font-size: 0.78rem;
   color: var(--clr-text-dim);
+}
+
+.badgeSeller {
+  padding: 6px 10px;
+  border-top: 1px solid var(--clr-line);
+  border-left: 3px solid var(--clr-text-dim);
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
 }
 
 .notice {

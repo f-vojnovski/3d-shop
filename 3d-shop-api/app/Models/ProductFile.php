@@ -14,6 +14,8 @@ class ProductFile extends Model
 
     public const KIND_DELIVERABLE = 'deliverable';
     public const KIND_PREVIEW_IMAGE = 'preview_image';
+
+    public const KIND_SELLER_IMAGE = 'seller_image';
     public const KIND_THUMBNAIL = 'thumbnail';
 
     protected $fillable = [

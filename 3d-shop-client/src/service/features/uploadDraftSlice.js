@@ -5,6 +5,7 @@ const initialState = {
   shots: {},
   active: null,
   thumbnail: null,
+  sellerImages: [],
   previewMode: 'attested_stills',
   details: { name: '', description: '', price: '' },
   errors: {},
@@ -109,6 +110,14 @@ export const uploadDraftSlice = createSlice({
       state.thumbnail = action.payload;
     },
 
+    addSellerImage: (state, action) => {
+      state.sellerImages = [...state.sellerImages, action.payload];
+    },
+
+    removeSellerImage: (state, action) => {
+      state.sellerImages = state.sellerImages.filter((_, at) => at !== action.payload);
+    },
+
     setDetails: (state, action) => {
       state.details = { ...state.details, ...action.payload };
     },
@@ -126,12 +135,14 @@ export const uploadDraftSlice = createSlice({
 });
 
 export const {
+  addSellerImage,
   attachModel,
   dropModel,
   setActive,
   addShot,
   retakeShot,
   removeShot,
+  removeSellerImage,
   moveShot,
   setThumbnail,
   setDetails,

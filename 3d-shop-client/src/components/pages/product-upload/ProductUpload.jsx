@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { clearUploadState, uploadProduct } from '../../../service/features/productUploadSlice';
 import {
+  addSellerImage,
   addShot,
   attachModel,
   dropModel,
   moveShot,
+  removeSellerImage,
   removeShot,
   resetDraft,
   retakeShot,
@@ -48,9 +50,8 @@ const dataUriToFile = async (uri, name) => {
 };
 
 const ProductUploadPage = () => {
-  const { active, details, errors, models, previewMode, shots, thumbnail } = useSelector(
-    (state) => state.uploadDraft
-  );
+  const { active, details, errors, models, previewMode, sellerImages, shots, thumbnail } =
+    useSelector((state) => state.uploadDraft);
   const attached = useSelector(selectAttachedFormats);
   const activeShots = useSelector(selectActiveShots);
 
@@ -87,6 +88,9 @@ const ProductUploadPage = () => {
   }, [status, error, dispatch]);
 
   const accept = useCallback(async (files) => {
+    // One drop can carry several images; the `thumbnail` above stays stale until the next render.
+    let haveThumbnail = Boolean(thumbnail);
+
     for (const file of files) {
       const format = formatOf(file);
 
@@ -110,13 +114,21 @@ const ProductUploadPage = () => {
           continue;
         }
 
-        dispatch(setThumbnail({ file, uri: await fileToDataUri(file), from: 'upload' }));
+        const uri = await fileToDataUri(file);
+
+        if (haveThumbnail) {
+          dispatch(addSellerImage({ file, uri }));
+        } else {
+          dispatch(setThumbnail({ file, uri, from: 'upload' }));
+          haveThumbnail = true;
+        }
+
         continue;
       }
 
       toast.error(`${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`);
     }
-  }, [dispatch]);
+  }, [dispatch, thumbnail]);
 
   // A drop that misses the zone would otherwise be handled by the browser,
   // which opens the file and looks like the page silently ignoring it.
@@ -205,6 +217,10 @@ const ProductUploadPage = () => {
     });
 
     form.append('thumbnail', thumbnail.file);
+
+    sellerImages.forEach((image, index) => {
+      form.append(`images[${index}]`, image.file);
+    });
     form.append('name', details.name);
     form.append('description', details.description);
     form.append('price', details.price);
@@ -338,6 +354,23 @@ const ProductUploadPage = () => {
               <DropZone onFiles={accept} compact />
             )}
             {errors.thumbnail && <div className="field-error">{errors.thumbnail}</div>}
+          </div>
+
+          <div className={styles.thumbnailSlot}>
+            <span>Your own images (optional)</span>
+            <div className={styles.sellerImages}>
+              {sellerImages.map((image, index) => (
+                <button
+                  key={image.uri}
+                  type="button"
+                  title="Remove this image"
+                  onClick={() => dispatch(removeSellerImage(index))}
+                >
+                  <img src={image.uri} alt={`Your image ${index + 1}`} />
+                </button>
+              ))}
+              <DropZone onFiles={accept} compact />
+            </div>
           </div>
         </div>
 

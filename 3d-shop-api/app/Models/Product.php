@@ -67,6 +67,13 @@ class Product extends Model
             ->orderBy('sort');
     }
 
+    public function sellerImages(): HasMany
+    {
+        return $this->files()
+            ->where('kind', ProductFile::KIND_SELLER_IMAGE)
+            ->orderBy('sort');
+    }
+
     public function thumbnail(): ?ProductFile
     {
         return $this->files->firstWhere('kind', ProductFile::KIND_THUMBNAIL);

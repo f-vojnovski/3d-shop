@@ -67,7 +67,7 @@ class AttestationTest extends TestCase
         $this->getJson("/api/products/{$fixture['product']->id}")
             ->assertSuccessful()
             ->assertJsonPath(
-                'preview_images.0.attestation_url',
+                'previews.0.images.0.attestation_url',
                 "/api/previews/{$fixture['preview']->id}/attestation"
             );
     }
@@ -112,6 +112,7 @@ class AttestationTest extends TestCase
         ]);
 
         $preview = $product->files()->create([
+            'source_file_id' => $source->id,
             'kind' => ProductFile::KIND_PREVIEW_IMAGE,
             'format' => 'png',
             'disk' => 'public',

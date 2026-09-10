@@ -25,12 +25,12 @@ class ProductResource extends JsonResource
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
             'previews' => $this->previewsByFormat(),
+            'seller_images' => $this->sellerImageList(),
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
             'unlisted' => $this->unlisted,
             'created_at' => $this->created_at,
             'thumbnail_url' => $this->thumbnailUrl(),
-            'preview_images' => $this->previewImageList(),
             'formats' => $formats,
             'preview_urls' => $this->previewUrls($formats),
             'download_urls' => $this->isDownloadableBy($viewerId)
@@ -61,21 +61,26 @@ class ProductResource extends JsonResource
             ->all();
     }
 
+    /** Separate from `previews`: nothing here is attested. */
+    private function sellerImageList(): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_SELLER_IMAGE)
+            ->sortBy('sort')
+            ->map(fn (ProductFile $file) => [
+                'id' => $file->id,
+                'url' => Storage::disk($file->disk)->url($file->path),
+                'sort' => $file->sort,
+            ])
+            ->values()
+            ->all();
+    }
+
     private function stillsFrom(ProductFile $source): array
     {
         return $this->files
             ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
             ->where('source_file_id', $source->id)
-            ->sortBy('sort')
-            ->map(fn (ProductFile $file) => $this->describeStill($file))
-            ->values()
-            ->all();
-    }
-
-    private function previewImageList(): array
-    {
-        return $this->files
-            ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
             ->sortBy('sort')
             ->map(fn (ProductFile $file) => $this->describeStill($file))
             ->values()
