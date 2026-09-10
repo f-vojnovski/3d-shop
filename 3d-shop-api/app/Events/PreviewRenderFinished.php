@@ -16,20 +16,24 @@ class PreviewRenderFinished implements ShouldBroadcastNow
         public int $sellerId,
         public int $productId,
         public string $productName,
+        public string $format,
         public string $status,
         public ?string $error,
         public int $images,
     ) {}
 
-    public static function for(Product $product): self
+    public static function for(Product $product, string $format): self
     {
+        $source = $product->deliverables()->where('format', $format)->first();
+
         return new self(
             sellerId: (int) $product->user_id,
             productId: (int) $product->id,
             productName: (string) $product->name,
-            status: (string) $product->preview_status,
-            error: $product->preview_error,
-            images: $product->previewImages()->count(),
+            format: $format,
+            status: $source?->renderStatus() ?? 'none',
+            error: $source?->renderError(),
+            images: $source?->stills()->count() ?? 0,
         );
     }
 

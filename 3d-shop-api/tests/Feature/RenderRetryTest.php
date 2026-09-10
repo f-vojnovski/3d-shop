@@ -80,22 +80,24 @@ class RenderRetryTest extends TestCase
         $this->assertSame('Every rendered image was blank.', $product->preview_error);
     }
 
-    public function test_a_product_with_no_model_file_fails_without_running_the_renderer(): void
+    // A format that is no longer attached means the seller removed that file,
+    // so the job is stale rather than failed.
+    public function test_a_job_for_a_removed_format_does_nothing(): void
     {
         $product = $this->product();
         $runner = $this->runner(['retryable' => true]);
 
-        (new RenderProductPreviews($product->id))->handle($runner);
+        (new RenderProductPreviews($product->id, 'obj'))->handle($runner);
 
         $this->assertSame(0, $runner->calls);
-        $this->assertSame('failed', $product->fresh()->preview_status);
+        $this->assertSame('none', $product->fresh()->preview_status);
     }
 
     public function test_exhausting_the_attempts_leaves_a_readable_status(): void
     {
         $product = $this->renderableProduct();
 
-        (new RenderProductPreviews($product->id))->failed(new RuntimeException('worker died'));
+        (new RenderProductPreviews($product->id, 'obj'))->failed(new RuntimeException('worker died'));
 
         $product->refresh();
         $this->assertSame('failed', $product->preview_status);
@@ -108,7 +110,7 @@ class RenderRetryTest extends TestCase
      */
     public function test_the_queue_waits_longer_than_a_render_may_take(): void
     {
-        $job = new RenderProductPreviews(1);
+        $job = new RenderProductPreviews(1, 'obj');
 
         $this->assertGreaterThan($job->timeout, config('queue.connections.redis.retry_after'));
         $this->assertGreaterThan($job->timeout, $job->uniqueFor);
@@ -116,7 +118,7 @@ class RenderRetryTest extends TestCase
 
     private function runJob(Product $product, array $result, int $attempt): void
     {
-        $job = new RenderProductPreviews($product->id);
+        $job = new RenderProductPreviews($product->id, 'obj');
         $job->job = tap(new FakeJob(), fn (FakeJob $fake) => $fake->attempts = $attempt);
 
         $job->handle($this->runner($result));
@@ -157,7 +159,6 @@ class RenderRetryTest extends TestCase
             'name' => 'Half-track',
             'price_cents' => 2450,
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => [self::ANGLE],
             'user_id' => $user->id,
         ]);
     }
@@ -175,7 +176,12 @@ class RenderRetryTest extends TestCase
             'path' => 'obj_files/model.obj',
             'bytes' => 18,
             'checksum' => str_repeat('a', 64),
-            'meta' => ['sniffed_format' => 'obj', 'triangles' => 1],
+            'meta' => [
+                'sniffed_format' => 'obj',
+                'triangles' => 1,
+                'angles' => [self::ANGLE],
+                'render' => ['status' => 'queued', 'error' => null],
+            ],
         ]);
 
         return $product;
@@ -216,7 +222,7 @@ class RenderRetryTest extends TestCase
     {
         $product = $this->renderableProduct();
 
-        (new RenderProductPreviews($product->id))->failed(new RuntimeException('worker died'));
+        (new RenderProductPreviews($product->id, 'obj'))->failed(new RuntimeException('worker died'));
 
         Event::assertDispatched(
             PreviewRenderFinished::class,

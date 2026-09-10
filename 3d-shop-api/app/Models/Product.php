@@ -24,7 +24,6 @@ class Product extends Model
         'currency',
         'user_id',
         'preview_mode',
-        'preview_angles',
         'preview_status',
         'preview_error',
         'unlisted',
@@ -42,7 +41,6 @@ class Product extends Model
         return [
             'price_cents' => 'integer',
             'unlisted' => 'boolean',
-            'preview_angles' => 'array',
         ];
     }
 
@@ -118,5 +116,32 @@ class Product extends Model
     public function servesInteractivePreview(): bool
     {
         return $this->preview_mode === self::PREVIEW_INTERACTIVE;
+    }
+
+    /**
+     * Each deliverable renders on its own, so the product's status is the worst
+     * of them: a buyer should not be told previews are ready while one format
+     * is still rendering.
+     */
+    public function refreshPreviewStatus(): void
+    {
+        $statuses = $this->deliverables()->get()
+            ->map(fn (ProductFile $file) => $file->renderStatus());
+
+        $failed = $this->deliverables()->get()
+            ->first(fn (ProductFile $file) => $file->renderStatus() === 'failed');
+
+        $status = match (true) {
+            $statuses->isEmpty() => 'none',
+            $statuses->contains('rendering') || $statuses->contains('queued') => 'rendering',
+            $failed !== null => 'failed',
+            $statuses->every(fn (string $one) => $one === 'ready') => 'ready',
+            default => 'none',
+        };
+
+        $this->update([
+            'preview_status' => $status,
+            'preview_error' => $failed?->renderError(),
+        ]);
     }
 }

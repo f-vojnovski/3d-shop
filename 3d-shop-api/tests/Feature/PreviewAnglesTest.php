@@ -61,10 +61,10 @@ class PreviewAnglesTest extends TestCase
         // Multipart sends this as a JSON string, as the browser does.
         $id = $this->postJson('/api/products', $this->payload([
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => json_encode([self::ANGLE]),
+            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
         ]))->assertSuccessful()->json('id');
 
-        $angles = Product::findOrFail($id)->preview_angles;
+        $angles = Product::findOrFail($id)->deliverables()->first()->angles();
 
         $this->assertCount(1, $angles);
         $this->assertSame([3.2, 1.8, 4.1], $angles[0]['position']);
@@ -72,7 +72,7 @@ class PreviewAnglesTest extends TestCase
 
         $this->assertSame(
             [3.2, 1.8, 4.1],
-            $this->getJson("/api/products/{$id}")->json('preview_angles.0.position')
+            $this->getJson("/api/products/{$id}")->json('previews.0.angles.0.position')
         );
     }
 
@@ -83,7 +83,7 @@ class PreviewAnglesTest extends TestCase
         $id = $this->postJson('/api/products', $this->payload())
             ->assertSuccessful()->json('id');
 
-        $this->assertSame([], $this->getJson("/api/products/{$id}")->json('preview_angles'));
+        $this->assertSame([], $this->getJson("/api/products/{$id}")->json('previews.0.angles'));
     }
 
     public function test_a_malformed_angle_is_rejected(): void
@@ -91,8 +91,10 @@ class PreviewAnglesTest extends TestCase
         $this->seller();
 
         $this->postJson('/api/products', $this->payload([
-            'preview_angles' => json_encode([['position' => [1, 2], 'target' => [0, 0, 0], 'fov' => 75]]),
-        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.0.position');
+            'preview_angles' => json_encode([
+                'obj' => [['position' => [1, 2], 'target' => [0, 0, 0], 'fov' => 75]],
+            ]),
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj.0.position');
     }
 
     public function test_a_nonsense_field_of_view_is_rejected(): void
@@ -100,8 +102,8 @@ class PreviewAnglesTest extends TestCase
         $this->seller();
 
         $this->postJson('/api/products', $this->payload([
-            'preview_angles' => json_encode([array_merge(self::ANGLE, ['fov' => 400])]),
-        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.0.fov');
+            'preview_angles' => json_encode(['obj' => [array_merge(self::ANGLE, ['fov' => 400])]]),
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj.0.fov');
     }
 
     public function test_too_many_angles_are_rejected(): void
@@ -109,8 +111,8 @@ class PreviewAnglesTest extends TestCase
         $this->seller();
 
         $this->postJson('/api/products', $this->payload([
-            'preview_angles' => json_encode(array_fill(0, 9, self::ANGLE)),
-        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles');
+            'preview_angles' => json_encode(['obj' => array_fill(0, 9, self::ANGLE)]),
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj');
     }
 
     public function test_the_owner_can_replace_the_angles_later(): void
@@ -121,10 +123,10 @@ class PreviewAnglesTest extends TestCase
 
         $this->putJson("/api/products/{$id}", [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => [self::ANGLE, self::ANGLE],
+            'preview_angles' => ['obj' => [self::ANGLE, self::ANGLE]],
         ])->assertSuccessful();
 
-        $this->assertCount(2, Product::findOrFail($id)->preview_angles);
+        $this->assertCount(2, Product::findOrFail($id)->deliverables()->first()->angles());
     }
 
     public function test_uploading_attested_stills_queues_a_render(): void
@@ -133,12 +135,12 @@ class PreviewAnglesTest extends TestCase
 
         $id = $this->postJson('/api/products', $this->payload([
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => json_encode([self::ANGLE]),
+            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
         ]))->assertSuccessful()->json('id');
 
         Queue::assertPushed(
             RenderProductPreviews::class,
-            fn (RenderProductPreviews $job) => $job->productId === $id
+            fn (RenderProductPreviews $job) => $job->productId === $id && $job->format === 'obj'
         );
     }
 
@@ -157,7 +159,7 @@ class PreviewAnglesTest extends TestCase
 
         $this->postJson('/api/products', $this->payload([
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles');
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj');
 
         Queue::assertNothingPushed();
     }
@@ -168,14 +170,14 @@ class PreviewAnglesTest extends TestCase
 
         $id = $this->postJson('/api/products', $this->payload([
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'preview_angles' => json_encode([self::ANGLE]),
+            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
         ]))->assertSuccessful()->json('id');
 
-        $this->putJson("/api/products/{$id}", ['preview_angles' => []])
+        $this->putJson("/api/products/{$id}", ['preview_angles' => ['obj' => []]])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('preview_angles');
+            ->assertJsonValidationErrors('preview_angles.obj');
 
-        $this->assertCount(1, Product::findOrFail($id)->preview_angles);
+        $this->assertCount(1, Product::findOrFail($id)->deliverables()->first()->angles());
     }
 
     public function test_switching_to_attested_stills_requires_angles(): void
@@ -187,7 +189,7 @@ class PreviewAnglesTest extends TestCase
 
         $this->putJson("/api/products/{$id}", [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-        ])->assertStatus(422)->assertJsonValidationErrors('preview_angles');
+        ])->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj');
 
         $this->assertSame(Product::PREVIEW_INTERACTIVE, Product::findOrFail($id)->preview_mode);
     }

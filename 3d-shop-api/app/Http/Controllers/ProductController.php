@@ -20,13 +20,15 @@ class ProductController extends BaseController
 {
     private const DELIVERABLE_DISK = 'models';
 
+    // Angles arrive keyed by model format: {"obj": [...], "gltf": [...]}.
     private const ANGLE_RULES = [
-        'preview_angles' => 'sometimes|nullable|array|max:8',
-        'preview_angles.*.position' => 'required|array|size:3',
-        'preview_angles.*.position.*' => 'required|numeric',
-        'preview_angles.*.target' => 'required|array|size:3',
-        'preview_angles.*.target.*' => 'required|numeric',
-        'preview_angles.*.fov' => 'required|numeric|min:1|max:179',
+        'preview_angles' => 'sometimes|nullable|array',
+        'preview_angles.*' => 'array|max:8',
+        'preview_angles.*.*.position' => 'required|array|size:3',
+        'preview_angles.*.*.position.*' => 'required|numeric',
+        'preview_angles.*.*.target' => 'required|array|size:3',
+        'preview_angles.*.*.target.*' => 'required|numeric',
+        'preview_angles.*.*.fov' => 'required|numeric|min:1|max:179',
     ];
 
     public function index()
@@ -51,38 +53,49 @@ class ProductController extends BaseController
             ...self::ANGLE_RULES,
         ]);
 
-        $this->guardAnglesForMode(
-            $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
-            $request->input('preview_angles') ?? []
-        );
+        $angles = $request->input('preview_angles') ?? [];
 
         $models = array_filter([
             'obj' => $request->file('objModel'),
             'gltf' => $request->file('gltfModel'),
         ]);
 
-        if (empty($models)) {
+        if ($models === []) {
             abort(422, 'At least one model file is required.');
         }
 
-        return DB::transaction(function () use ($request, $models) {
+        $this->guardAnglesForMode(
+            $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
+            array_keys($models),
+            $angles
+        );
+
+        return DB::transaction(function () use ($request, $models, $angles) {
             $product = Product::create([
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
                 'price_cents' => (int) round($request->input('price') * 100),
                 'preview_mode' => $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
-                'preview_angles' => $request->input('preview_angles'),
                 'user_id' => Auth::user()->getAuthIdentifier(),
             ]);
 
             foreach ($models as $format => $file) {
-                $this->storeFile($product, $file, ProductFile::KIND_DELIVERABLE, self::DELIVERABLE_DISK, $format);
+                $this->storeFile(
+                    $product,
+                    $file,
+                    ProductFile::KIND_DELIVERABLE,
+                    self::DELIVERABLE_DISK,
+                    $format,
+                    $angles[$format] ?? []
+                );
             }
 
             $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
 
             if ($product->preview_mode === Product::PREVIEW_ATTESTED_STILLS) {
-                RenderProductPreviews::dispatch($product->id)->afterCommit();
+                foreach (array_keys($models) as $format) {
+                    RenderProductPreviews::dispatch($product->id, $format)->afterCommit();
+                }
             }
 
             return new ProductResource($product->load('files'));
@@ -113,22 +126,33 @@ class ProductController extends BaseController
             ...self::ANGLE_RULES,
         ]);
 
-        $this->guardAnglesForMode(
-            $fields['preview_mode'] ?? $product->preview_mode,
-            array_key_exists('preview_angles', $fields)
-                ? ($fields['preview_angles'] ?? [])
-                : ($product->preview_angles ?? [])
-        );
+        $angles = array_key_exists('preview_angles', $fields)
+            ? ($fields['preview_angles'] ?? [])
+            : null;
+
+        $mode = $fields['preview_mode'] ?? $product->preview_mode;
+        $formats = $product->deliverables()->pluck('format')->all();
+
+        $this->guardAnglesForMode($mode, $formats, $angles ?? $this->storedAngles($product));
 
         if (array_key_exists('price', $fields)) {
             $fields['price_cents'] = (int) round($fields['price'] * 100);
             unset($fields['price']);
         }
 
+        unset($fields['preview_angles']);
         $product->update($fields);
 
-        if (array_key_exists('preview_angles', $fields) || array_key_exists('preview_mode', $fields)) {
-            RenderProductPreviews::dispatch($product->id);
+        $changed = $angles === null ? [] : $this->applyAngles($product, $angles);
+
+        if ($mode === Product::PREVIEW_ATTESTED_STILLS) {
+            $reRender = $angles === null && array_key_exists('preview_mode', $fields)
+                ? $formats
+                : $changed;
+
+            foreach ($reRender as $format) {
+                RenderProductPreviews::dispatch($product->id, $format);
+            }
         }
 
         return new ProductResource($product->load('files'));
@@ -200,13 +224,49 @@ class ProductController extends BaseController
         );
     }
 
-    private function guardAnglesForMode(string $mode, array $angles): void
+    /**
+     * Every format a buyer can pick needs an angle, or that tab shows an empty
+     * gallery with nothing to explain it.
+     */
+    private function guardAnglesForMode(string $mode, array $formats, array $angles): void
     {
-        if ($mode === Product::PREVIEW_ATTESTED_STILLS && $angles === []) {
-            throw ValidationException::withMessages([
-                'preview_angles' => 'Capture at least one camera angle for server-rendered previews.',
-            ]);
+        if ($mode !== Product::PREVIEW_ATTESTED_STILLS) {
+            return;
         }
+
+        foreach ($formats as $format) {
+            if (($angles[$format] ?? []) === []) {
+                throw ValidationException::withMessages([
+                    "preview_angles.{$format}" => "Capture at least one camera angle for the .{$format} file.",
+                ]);
+            }
+        }
+    }
+
+    private function storedAngles(Product $product): array
+    {
+        return $product->deliverables()->get()
+            ->mapWithKeys(fn (ProductFile $file) => [$file->format => $file->angles()])
+            ->all();
+    }
+
+    /** Returns the formats whose angles changed, so only those re-render. */
+    private function applyAngles(Product $product, array $angles): array
+    {
+        $changed = [];
+
+        foreach ($product->deliverables()->get() as $file) {
+            $wanted = $angles[$file->format] ?? [];
+
+            if ($wanted === $file->angles()) {
+                continue;
+            }
+
+            $file->withMeta(['angles' => $wanted]);
+            $changed[] = $file->format;
+        }
+
+        return $changed;
     }
 
     private function decodeAngles(Request $request): void
@@ -223,7 +283,8 @@ class ProductController extends BaseController
         UploadedFile $file,
         string $kind,
         string $disk,
-        ?string $format = null
+        ?string $format = null,
+        array $angles = []
     ): ProductFile {
         $directory = match ($kind) {
             ProductFile::KIND_THUMBNAIL => 'thumbnails',
@@ -252,6 +313,8 @@ class ProductController extends BaseController
             'meta' => $scan === null ? null : [
                 'sniffed_format' => $scan->format,
                 'triangles' => $scan->triangles,
+                'angles' => $angles,
+                'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
             ],
         ]);
     }

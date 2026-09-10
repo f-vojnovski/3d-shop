@@ -24,7 +24,7 @@ class ProductResource extends JsonResource
             'currency' => $this->currency,
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
-            'preview_angles' => $this->preview_angles ?? [],
+            'previews' => $this->previewsByFormat(),
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
             'unlisted' => $this->unlisted,
@@ -41,21 +41,59 @@ class ProductResource extends JsonResource
     }
 
     // Server-rendered stills, each carrying the camera it was rendered from.
+    /**
+     * One entry per model file: its angles, its own render status and its
+     * stills. The seller's tabs and the buyer's format switch both read this.
+     */
+    private function previewsByFormat(): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->sortBy('format')
+            ->map(fn (ProductFile $file) => [
+                'format' => $file->format,
+                'angles' => $file->angles(),
+                'status' => $file->renderStatus(),
+                'error' => $file->renderError(),
+                'images' => $this->stillsFrom($file),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function stillsFrom(ProductFile $source): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
+            ->where('source_file_id', $source->id)
+            ->sortBy('sort')
+            ->map(fn (ProductFile $file) => $this->describeStill($file))
+            ->values()
+            ->all();
+    }
+
     private function previewImageList(): array
     {
         return $this->files
             ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
             ->sortBy('sort')
-            ->map(fn (ProductFile $file) => [
-                'url' => Storage::disk($file->disk)->url($file->path),
-                'sort' => $file->sort,
-                'camera' => $file->meta['camera'] ?? null,
-                'checksum' => $file->checksum,
-                'source_checksum' => $file->meta['source_checksum'] ?? null,
-                'attestation_url' => "/api/previews/{$file->id}/attestation",
-            ])
+            ->map(fn (ProductFile $file) => $this->describeStill($file))
             ->values()
             ->all();
+    }
+
+    private function describeStill(ProductFile $file): array
+    {
+        return [
+            'id' => $file->id,
+            'url' => Storage::disk($file->disk)->url($file->path),
+            'sort' => $file->sort,
+            'source_format' => $file->meta['source_format'] ?? null,
+            'camera' => $file->meta['camera'] ?? null,
+            'checksum' => $file->checksum,
+            'source_checksum' => $file->meta['source_checksum'] ?? null,
+            'attestation_url' => "/api/previews/{$file->id}/attestation",
+        ];
     }
 
     private function thumbnailUrl(): ?string

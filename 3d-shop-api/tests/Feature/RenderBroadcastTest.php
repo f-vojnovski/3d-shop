@@ -41,7 +41,7 @@ class RenderBroadcastTest extends TestCase
     {
         $product = $this->productFor($this->seller('seller'));
 
-        $event = PreviewRenderFinished::for($product);
+        $event = PreviewRenderFinished::for($product, 'obj');
 
         $this->assertSame($product->user_id, $event->sellerId);
         $this->assertSame('preview.render.finished', $event->broadcastAs());

@@ -28,11 +28,14 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
      */
     public int $uniqueFor = 700;
 
-    public function __construct(public int $productId) {}
+    public function __construct(
+        public int $productId,
+        public string $format,
+    ) {}
 
     public function uniqueId(): string
     {
-        return (string) $this->productId;
+        return $this->productId.':'.$this->format;
     }
 
     public function backoff(): array
@@ -50,21 +53,24 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         $log = Log::channel('render')->withContext([
             'product_id' => $product->id,
+            'format' => $this->format,
             'attempt' => $this->attempts(),
             'worker' => gethostname().'/'.getmypid(),
         ]);
 
-        if (($product->preview_angles ?? []) === []) {
-            $product->update(['preview_status' => 'none', 'preview_error' => null]);
-            $log->info('No angles requested, nothing to render.');
+        $source = $product->files
+            ->where('kind', ProductFile::KIND_DELIVERABLE)
+            ->firstWhere('format', $this->format);
+
+        if ($source === null) {
+            $log->info('That format is no longer attached, nothing to render.');
 
             return;
         }
 
-        $source = $product->files->firstWhere('kind', ProductFile::KIND_DELIVERABLE);
-
-        if ($source === null) {
-            $this->giveUp($product, $log, 'This product has no model file to render.');
+        if ($source->angles() === []) {
+            $this->settle($product, $source, 'none', null);
+            $log->info('No angles for this format, nothing to render.');
 
             return;
         }
@@ -84,9 +90,9 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $product->update(['preview_status' => 'rendering', 'preview_error' => null]);
+        $this->settle($product, $source, 'rendering', null);
 
-        $scratch = storage_path('app/private/render-scratch/'.$product->id);
+        $scratch = storage_path('app/private/render-scratch/'.$product->id.'-'.$this->format);
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
 
@@ -126,9 +132,10 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $this->storeImages($product, $scratch, $result);
+        $this->storeImages($product, $source, $scratch, $result);
+        $this->settle($product, $source, 'ready', $this->blankNotice($result));
 
-        event(PreviewRenderFinished::for($product->refresh()));
+        event(PreviewRenderFinished::for($product->refresh(), $this->format));
 
         $log->info('Render complete.', [
             'seconds' => $seconds,
@@ -148,16 +155,26 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             'exception' => $exception?->getMessage(),
         ]);
 
-        Product::whereKey($this->productId)->update([
-            'preview_status' => 'failed',
-            'preview_error' => 'Preview rendering did not complete after retrying.',
-        ]);
-
         $product = Product::find($this->productId);
 
-        if ($product !== null) {
-            event(PreviewRenderFinished::for($product));
+        if ($product === null) {
+            return;
         }
+
+        $source = $product->deliverables()->where('format', $this->format)->first();
+
+        if ($source !== null) {
+            $source->withMeta([
+                'render' => [
+                    'status' => 'failed',
+                    'error' => 'Preview rendering did not complete after retrying.',
+                ],
+            ]);
+        }
+
+        $product->refreshPreviewStatus();
+
+        event(PreviewRenderFinished::for($product->refresh(), $this->format));
     }
 
     private function failOrRetry(Product $product, $log, string $reason, bool $retryable): void
@@ -178,9 +195,32 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     private function giveUp(Product $product, $log, string $reason): void
     {
         $log->warning('Giving up on render.', ['reason' => $reason]);
-        $product->update(['preview_status' => 'failed', 'preview_error' => $reason]);
 
-        event(PreviewRenderFinished::for($product));
+        $source = $product->deliverables()->where('format', $this->format)->first();
+
+        if ($source !== null) {
+            $this->settle($product, $source, 'failed', $reason);
+        }
+
+        event(PreviewRenderFinished::for($product->refresh(), $this->format));
+    }
+
+    /** Records this format's outcome, then recomputes the product's own status. */
+    private function settle(Product $product, ProductFile $source, string $status, ?string $error): void
+    {
+        $source->withMeta(['render' => ['status' => $status, 'error' => $error]]);
+        $product->refreshPreviewStatus();
+    }
+
+    private function blankNotice(array $result): ?string
+    {
+        $blank = $result['blank'] ?? [];
+
+        return $blank === [] ? null : sprintf(
+            '%d of %d angles rendered blank and were discarded.',
+            count($blank),
+            count($blank) + count($result['images'])
+        );
     }
 
     private function fetchModel(ProductFile $source, string $scratch, $log): string
@@ -198,13 +238,14 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         return $target;
     }
 
-    private function storeImages(Product $product, string $scratch, array $result): void
-    {
+    private function storeImages(
+        Product $product,
+        ProductFile $source,
+        string $scratch,
+        array $result
+    ): void {
         $public = Storage::disk('public');
-        $product->previewImages()->delete();
-
-        $sourceChecksum = $product->files
-            ->firstWhere('kind', ProductFile::KIND_DELIVERABLE)?->checksum;
+        $source->stills()->each(fn (ProductFile $old) => $old->delete());
 
         foreach ($result['images'] as $image) {
             $bytes = (string) file_get_contents(
@@ -214,6 +255,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             $public->put($path, $bytes);
 
             $product->files()->create([
+                'source_file_id' => $source->id,
                 'kind' => ProductFile::KIND_PREVIEW_IMAGE,
                 'format' => 'png',
                 'disk' => 'public',
@@ -222,26 +264,14 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 'bytes' => strlen($bytes),
                 'checksum' => hash('sha256', $bytes),
                 'meta' => [
-                    'camera' => $product->preview_angles[$image['index']] ?? null,
+                    'source_format' => $source->format,
+                    'camera' => $source->angles()[$image['index']] ?? null,
                     'coverage' => $image['coverage'] ?? null,
                     'renderer' => $result['renderer'] ?? null,
-                    'source_checksum' => $sourceChecksum,
+                    'source_checksum' => $source->checksum,
                 ],
             ]);
         }
-
-        $blank = $result['blank'] ?? [];
-
-        $product->update([
-            'preview_status' => 'ready',
-            'preview_error' => $blank === []
-                ? null
-                : sprintf(
-                    '%d of %d angles rendered blank and were discarded.',
-                    count($blank),
-                    count($blank) + count($result['images'])
-                ),
-        ]);
     }
 
     private function removeDirectory(string $directory): void
