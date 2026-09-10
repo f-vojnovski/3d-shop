@@ -1,12 +1,11 @@
 import ProductOverview from '../../common/product-preview/ProductOverview';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
 import Pagination from '../pagination/Pagination';
 import { useNavigate, useParams } from 'react-router-dom';
-import { clearProductsStatus } from '../../../service/features/productsSlice';
 
 const ProductListingGrid = (props) => {
   const { fetchFunction } = props;
@@ -21,19 +20,13 @@ const ProductListingGrid = (props) => {
   const productsStatus = useSelector((state) => state.products.status);
   const error = useSelector((state) => state.products.error);
 
-  const dispatch = useDispatch();
-
   let content;
 
+  // Fetch when the page changes. Driving this by writing 'idle' back into the
+  // shared status meant two effects racing over one value.
   useEffect(() => {
-    if (productsStatus === 'idle') {
-      fetchFunction(pageNumber);
-    }
-  }, [productsStatus, fetchFunction, pageNumber]);
-
-  useEffect(() => {
-    dispatch(clearProductsStatus());
-  }, [dispatch, pageNumber]);
+    fetchFunction(pageNumber);
+  }, [fetchFunction, pageNumber]);
 
   let navigate = useNavigate();
 

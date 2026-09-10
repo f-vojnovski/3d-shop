@@ -10,10 +10,14 @@ afterEach(() => {
 });
 
 describe('Toasts', () => {
-  it('shows nothing until something is announced', () => {
-    const { container } = render(<Toasts />);
+  // The live region has to exist before the first message, or it is not
+  // announced when it appears.
+  it('is present but silent until something is announced', () => {
+    render(<Toasts />);
 
-    expect(container).toBeEmptyDOMElement();
+    const region = screen.getByRole('status');
+    expect(region).toBeInTheDocument();
+    expect(region).toBeEmptyDOMElement();
   });
 
   it('shows a message that arrives after mounting', async () => {

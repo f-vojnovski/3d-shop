@@ -1,4 +1,9 @@
-import reducer, { addToCart, clearCart, removeFromCart } from './cartSlice';
+import reducer, {
+  addToCart,
+  clearCart,
+  clearCheckoutError,
+  removeFromCart,
+} from './cartSlice';
 
 const product = (id, priceCents) => ({ id, price_cents: priceCents, name: `Product ${id}` });
 
@@ -72,5 +77,19 @@ describe('cart reducer', () => {
 
     expect(state.products).toEqual([]);
     expect(state.total).toBe(0);
+  });
+
+  // A failure used to sit in the slice forever, so a later visit to checkout
+  // reported a problem that had already been dealt with.
+  it('forgets a failed checkout without emptying the cart', () => {
+    let state = reducer(undefined, addToCart(product(1, 4000)));
+    state = { ...state, status: 'failed', error: 'Payment declined.' };
+
+    state = reducer(state, clearCheckoutError());
+
+    expect(state.status).toBe('idle');
+    expect(state.error).toBeNull();
+    expect(state.products).toHaveLength(1);
+    expect(state.total).toBe(4000);
   });
 });

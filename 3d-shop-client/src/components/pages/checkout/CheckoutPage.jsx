@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../../common/toast/toastStore';
-import { checkoutCart, clearCart, removeFromCart } from '../../../service/features/cartSlice';
+import {
+  checkoutCart,
+  clearCart,
+  clearCheckoutError,
+  removeFromCart,
+} from '../../../service/features/cartSlice';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';
 import styles from './CheckoutPage.module.css';
@@ -32,8 +37,9 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (cartStatus === 'failed') {
       toast.error(error || 'There was a problem completing your purchase.');
+      dispatch(clearCheckoutError());
     }
-  }, [cartStatus, error]);
+  }, [cartStatus, error, dispatch]);
 
   const renderedProducts = products.map((product) => (
     <div className={styles.line} key={product.id}>

@@ -26,7 +26,11 @@ function displayableMessage(error) {
     return data.message;
   }
 
-  return '';
+  if (error.response?.status) {
+    return `The server refused the request (${error.response.status}).`;
+  }
+
+  return error.message || 'Could not reach the server.';
 }
 
 axiosClient.interceptors.response.use(

@@ -40,6 +40,11 @@ export const cartSlice = createSlice({
     clearCart: (state, action) => {
       return initialState;
     },
+
+    clearCheckoutError: (state) => {
+      state.status = 'idle';
+      state.error = null;
+    },
   },
   extraReducers(builder) {
     builder
@@ -61,7 +66,8 @@ export const cartSlice = createSlice({
 
 export default cartSlice.reducer;
 
-export const { addToCart, removeFromCart, clearCart } = cartSlice.actions;
+export const { addToCart, removeFromCart, clearCart, clearCheckoutError } =
+  cartSlice.actions;
 
 export const checkoutCart = createAsyncThunk(
   'cart/checkout',

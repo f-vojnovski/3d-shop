@@ -7,6 +7,10 @@
   gap: 16px;
 }
 
+.dropWrap {
+  display: contents;
+}
+
 .drop {
   display: flex;
   flex-direction: column;
@@ -48,6 +52,15 @@
   font-size: 3.4rem;
   line-height: 1;
   font-weight: 200;
+}
+
+.dropCompact .plus {
+  font-size: 1.4rem;
+}
+
+/* The compact zone shows only the plus; the label is for screen readers. */
+.dropCompact {
+  font-size: 0;
 }
 
 .dropCompact .plus {
@@ -180,7 +193,8 @@
   transition: opacity 0.12s ease;
 }
 
-.shot:hover .shotAngle {
+.shot:hover .shotAngle,
+.shot:focus-within .shotAngle {
   opacity: 1;
 }
 
@@ -194,7 +208,8 @@
   transition: opacity 0.12s ease;
 }
 
-.shot:hover .shotTools {
+.shot:hover .shotTools,
+.shot:focus-within .shotTools {
   opacity: 1;
 }
 
@@ -211,7 +226,8 @@
   cursor: pointer;
 }
 
-.shotTools button:hover {
+.shotTools button:hover,
+.shotTools button:focus-visible {
   background: var(--clr-accent);
   color: #06232e;
 }

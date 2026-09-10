@@ -46,16 +46,16 @@ const SingleProductView = () => {
   const formats = product?.formats ?? [];
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';
 
-  if (productStatus === 'loading') {
+  if (productStatus === 'failed') {
+    return <LoadError message={error} fallback="Could not load this product." />;
+  }
+
+  if (productStatus !== 'succeeded' || product?.id !== Number(productId)) {
     return (
       <div className="d-flex justify-content-center align-items-center">
         <LoadingSpinner />
       </div>
     );
-  }
-
-  if (productStatus !== 'succeeded') {
-    return <LoadError message={error} fallback="Could not load this product." />;
   }
 
   const viewer = (Displayer, url) => (

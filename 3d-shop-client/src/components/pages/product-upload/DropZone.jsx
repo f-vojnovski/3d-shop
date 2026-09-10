@@ -19,25 +19,28 @@ const DropZone = ({ onFiles, compact }) => {
   };
 
   return (
-    <button
-      type="button"
-      className={`${compact ? styles.dropCompact : styles.drop} ${over ? styles.dropOver : ''}`}
-      onClick={() => input.current?.click()}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(event) => {
-        event.preventDefault();
-        setOver(false);
-        take(event.dataTransfer.files);
-      }}
-    >
-      <span className={styles.plus} aria-hidden="true">
-        +
-      </span>
-      {!compact && <span className={styles.dropHint}>Drop a model, or click to choose</span>}
+    <div className={styles.dropWrap}>
+      <button
+        type="button"
+        className={`${compact ? styles.dropCompact : styles.drop} ${over ? styles.dropOver : ''}`}
+        onClick={() => input.current?.click()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOver(false);
+          take(event.dataTransfer.files);
+        }}
+      >
+        <span className={styles.plus} aria-hidden="true">
+          +
+        </span>
+        {compact ? 'Add a file' : <span className={styles.dropHint}>Drop a model, or click to choose</span>}
+      </button>
 
       <input
         ref={input}
@@ -45,9 +48,10 @@ const DropZone = ({ onFiles, compact }) => {
         multiple
         accept={acceptAttribute}
         className={styles.hiddenInput}
+        tabIndex={-1}
         onChange={(event) => take(event.target.files)}
       />
-    </button>
+    </div>
   );
 };
 

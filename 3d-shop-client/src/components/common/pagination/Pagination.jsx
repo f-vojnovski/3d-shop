@@ -24,7 +24,12 @@ const Pagination = ({ pageCount, currentPage, onPageChange }) => {
     <nav className="d-flex justify-content-center" aria-label="Pages">
       <ul className="pagination mb-0">
         <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
-          <button type="button" className="page-link" onClick={step(page - 1)}>
+          <button
+            type="button"
+            className="page-link"
+            disabled={page === 1}
+            onClick={step(page - 1)}
+          >
             Previous
           </button>
         </li>
@@ -43,7 +48,12 @@ const Pagination = ({ pageCount, currentPage, onPageChange }) => {
         ))}
 
         <li className={`page-item ${page === pageCount ? 'disabled' : ''}`}>
-          <button type="button" className="page-link" onClick={step(page + 1)}>
+          <button
+            type="button"
+            className="page-link"
+            disabled={page === pageCount}
+            onClick={step(page + 1)}
+          >
             Next
           </button>
         </li>

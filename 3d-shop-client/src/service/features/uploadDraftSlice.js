@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   models: {},
@@ -142,6 +142,12 @@ export const {
 
 export default uploadDraftSlice.reducer;
 
-export const selectAttachedFormats = (state) => Object.keys(state.uploadDraft.models);
+const EMPTY = [];
+
+export const selectAttachedFormats = createSelector(
+  (state) => state.uploadDraft.models,
+  (models) => Object.keys(models)
+);
+
 export const selectActiveShots = (state) =>
-  state.uploadDraft.shots[state.uploadDraft.active] ?? [];
+  state.uploadDraft.shots[state.uploadDraft.active] ?? EMPTY;

@@ -5,10 +5,8 @@ import styles from './Toasts.module.css';
 const Toasts = () => {
   const toasts = useSyncExternalStore(subscribe, getToasts, getToasts);
 
-  if (toasts.length === 0) {
-    return null;
-  }
-
+  // Mounted even when empty: a live region that appears with its text is not
+  // announced, because there was no region to observe a change in.
   return (
     <div className={styles.stack} role="status" aria-live="polite">
       {toasts.map((item) => (

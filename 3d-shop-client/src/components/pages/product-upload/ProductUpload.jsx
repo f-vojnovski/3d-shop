@@ -82,8 +82,9 @@ const ProductUploadPage = () => {
   useEffect(() => {
     if (status === 'failed') {
       toast.error(error || 'Upload failed. Check the files and try again.');
+      dispatch(clearUploadState());
     }
-  }, [status, error]);
+  }, [status, error, dispatch]);
 
   const accept = useCallback(async (files) => {
     for (const file of files) {

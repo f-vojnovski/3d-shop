@@ -1,4 +1,5 @@
 .stack {
+  pointer-events: none;
   position: fixed;
   left: 50%;
   bottom: 58px;
@@ -11,6 +12,7 @@
 }
 
 .toast {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 12px;
