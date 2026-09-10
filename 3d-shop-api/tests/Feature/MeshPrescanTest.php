@@ -53,6 +53,45 @@ class MeshPrescanTest extends TestCase
         $this->assertSame('gltf', $scan->format);
     }
 
+    public function test_it_identifies_a_binary_stl_by_its_length(): void
+    {
+        $facet = pack('g12', 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0).pack('v', 0);
+        $body = str_pad('binary', 80, "\0").pack('V', 1).$facet;
+
+        $this->assertSame('stl', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
+    /** Exporters put "solid" in a binary header, so only the length decides. */
+    public function test_a_binary_stl_claiming_solid_is_not_taken_for_ascii(): void
+    {
+        $facet = pack('g12', 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0).pack('v', 0);
+        $body = str_pad('solid exported by something', 80, "\0").pack('V', 1).$facet;
+
+        $this->assertSame('stl', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
+    public function test_it_identifies_an_ascii_stl(): void
+    {
+        $body = "solid demo\n facet normal 0 0 1\n  outer loop\n"
+            ."   vertex 0 0 0\n  endloop\n endfacet\nendsolid demo\n";
+
+        $this->assertSame('stl', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
+    public function test_it_identifies_a_binary_fbx(): void
+    {
+        $body = "Kaydara FBX Binary  \x00\x1a\x00".str_repeat("\x00", 40);
+
+        $this->assertSame('fbx', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
+    public function test_it_identifies_an_ascii_fbx(): void
+    {
+        $body = "; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tFBXVersion: 7400\n}\n";
+
+        $this->assertSame('fbx', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
     public function test_it_rejects_a_file_that_is_not_a_model(): void
     {
         $scan = MeshPrescan::of($this->tempFile("<?php echo 'pwned';"));

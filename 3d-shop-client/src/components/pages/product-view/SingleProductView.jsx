@@ -16,10 +16,17 @@ import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
+import StlModelDisplayer from '../../common/model-displayer/StlModelDisplayer';
 import AttestedStills from '../../common/attested-stills/AttestedStills';
 import ModelFacts from '../../common/model-facts/ModelFacts';
 import FileHistory from '../../common/file-history/FileHistory';
 import { BsPersonCircle } from 'react-icons/bs';
+
+const DISPLAYERS = {
+  gltf: GltfModelDisplayer,
+  obj: ObjModelDisplayer,
+  stl: StlModelDisplayer,
+};
 
 const SingleProductView = () => {
   const { productId } = useParams();
@@ -83,10 +90,14 @@ const SingleProductView = () => {
   let media;
   if (product.preview_mode === 'attested_stills') {
     media = <AttestedStills product={product} onFormat={setShownFormat} />;
-  } else if (selectedFileType === 'gltf' && product.preview_urls?.gltf) {
-    media = viewer(GltfModelDisplayer, product.preview_urls.gltf);
-  } else if (product.preview_urls?.obj) {
-    media = viewer(ObjModelDisplayer, product.preview_urls.obj);
+  } else {
+    const shown = product.preview_urls?.[selectedFileType]
+      ? selectedFileType
+      : Object.keys(DISPLAYERS).find((format) => product.preview_urls?.[format]);
+
+    if (shown) {
+      media = viewer(DISPLAYERS[shown], product.preview_urls[shown]);
+    }
   }
 
   const downloads = formats

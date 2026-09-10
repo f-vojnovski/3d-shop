@@ -143,11 +143,47 @@ class MeshPrescan
             return 'gltf';
         }
 
+        if (str_starts_with($head, 'Kaydara FBX Binary') || str_contains($head, 'FBXHeaderExtension')) {
+            return 'fbx';
+        }
+
+        // Checked before the ascii test: exporters write "solid" into the
+        // 80-byte header of binary files too, and only the length agrees.
+        if (self::looksLikeBinaryStl($path)) {
+            return 'stl';
+        }
+
+        if (preg_match('/^\s*solid/', $head) === 1 && str_contains($head, 'facet')) {
+            return 'stl';
+        }
+
         if (preg_match('/^\s*(#|v\s|vn\s|vt\s|o\s|g\s|mtllib\s|usemtl\s)/m', $head) === 1) {
             return 'obj';
         }
 
         return 'unknown';
+    }
+
+    private static function looksLikeBinaryStl(string $path): bool
+    {
+        $size = @filesize($path);
+
+        if ($size === false || $size < 84) {
+            return false;
+        }
+
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return false;
+        }
+
+        fseek($handle, 80);
+        $header = (string) fread($handle, 4);
+        fclose($handle);
+
+        return strlen($header) === 4
+            && 84 + ((int) (unpack('V', $header)[1] ?? 0)) * 50 === $size;
     }
 
     private static function countObjFaces(string $path): int

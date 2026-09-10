@@ -200,6 +200,48 @@ class UploadHardeningTest extends TestCase
         ], $extra), fn ($value) => $value !== null);
     }
 
+    public function test_an_stl_is_accepted_and_measured(): void
+    {
+        $id = $this->publish([
+            'objModel' => null,
+            'stlModel' => UploadedFile::fake()->createWithContent('part.stl', $this->binaryStl()),
+        ]);
+
+        $file = Product::with('files')->findOrFail($id)->deliverableFor('stl');
+
+        $this->assertNotNull($file, 'The .stl should have been stored as a deliverable.');
+        $this->assertSame('stl', $file->format);
+        $this->assertStringEndsWith('.stl', $file->path);
+        $this->assertSame(2, $file->facts()['faces']);
+        // json_encode drops the zero fraction, so these return as ints.
+        $this->assertEquals([2, 4, 3], $file->facts()['bounds']['size']);
+        $this->assertFalse($file->facts()['uvs']);
+    }
+
+    /** The extension is the uploader's word; the bytes are not. */
+    public function test_an_stl_field_holding_something_else_is_refused(): void
+    {
+        $this->postJson('/api/products', $this->payload([
+            'objModel' => null,
+            'stlModel' => UploadedFile::fake()->createWithContent('part.stl', "v 0 0 0\nf 1 1 1\n"),
+        ]))->assertStatus(422)->assertJsonValidationErrors('stlModel');
+    }
+
+    private function binaryStl(): string
+    {
+        $facets = [
+            [[0.0, 0.0, 1.0], [0, 0, 0], [2, 0, 0], [0, 4, 0]],
+            [[0.0, 0.0, 1.0], [0, 0, 0], [2, 0, 0], [0, 0, -3]],
+        ];
+        $bytes = str_pad('binary stl', 80, "\0").pack('V', count($facets));
+
+        foreach ($facets as [$normal, $a, $b, $c]) {
+            $bytes .= pack('g12', ...$normal, ...$a, ...$b, ...$c).pack('v', 0);
+        }
+
+        return $bytes;
+    }
+
     private function publish(array $extra = []): int
     {
         return $this->postJson('/api/products', $this->payload($extra))

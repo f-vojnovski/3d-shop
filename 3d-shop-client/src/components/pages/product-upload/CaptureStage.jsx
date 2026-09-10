@@ -2,11 +2,18 @@ import { MdPhotoCamera } from 'react-icons/md';
 import { ErrorBoundary } from 'react-error-boundary';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
+import StlModelDisplayer from '../../common/model-displayer/StlModelDisplayer';
 import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
 import styles from './ProductUpload.module.css';
 
+const DISPLAYERS = {
+  obj: ObjModelDisplayer,
+  gltf: GltfModelDisplayer,
+  stl: StlModelDisplayer,
+};
+
 const CaptureStage = ({ format, uri, probe, onCapture }) => {
-  const Displayer = format === 'obj' ? ObjModelDisplayer : GltfModelDisplayer;
+  const Displayer = DISPLAYERS[format] ?? GltfModelDisplayer;
 
   return (
     <div className={styles.stage}>

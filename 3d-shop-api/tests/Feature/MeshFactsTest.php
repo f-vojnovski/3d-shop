@@ -136,6 +136,82 @@ class MeshFactsTest extends TestCase
         $this->assertTrue($facts->animated);
     }
 
+    public function test_it_measures_a_binary_stl(): void
+    {
+        $facts = MeshFacts::of($this->binaryStl([
+            [[0.0, 0.0, 1.0], [0, 0, 0], [2, 0, 0], [0, 4, 0]],
+            [[0.0, 0.0, 1.0], [0, 0, 0], [2, 0, 0], [0, 0, -3]],
+        ]), 'stl');
+
+        $this->assertSame(2, $facts->faces);
+        // Unwelded by definition: three corners a triangle, shared or not.
+        $this->assertSame(6, $facts->vertices);
+        $this->assertSame(MeshFacts::TRIANGLES, $facts->topology);
+        $this->assertTrue($facts->normals);
+        $this->assertSame([2.0, 4.0, 3.0], $facts->bounds['size']);
+    }
+
+    /** The format cannot carry either, so absent is a fact and not a gap. */
+    public function test_an_stl_never_claims_uvs_or_materials(): void
+    {
+        $facts = MeshFacts::of($this->binaryStl([
+            [[0.0, 0.0, 1.0], [0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        ]), 'stl');
+
+        $this->assertFalse($facts->uvs);
+        $this->assertSame(0, $facts->materials);
+        $this->assertSame([], $facts->textures);
+        $this->assertFalse($facts->rigged);
+        $this->assertFalse($facts->animated);
+    }
+
+    public function test_zeroed_facet_normals_are_not_reported_as_normals(): void
+    {
+        $facts = MeshFacts::of($this->binaryStl([
+            [[0.0, 0.0, 0.0], [0, 0, 0], [1, 0, 0], [0, 1, 0]],
+        ]), 'stl');
+
+        $this->assertFalse($facts->normals);
+    }
+
+    public function test_it_measures_an_ascii_stl(): void
+    {
+        $path = $this->directory.'/model.stl';
+        File::put($path, <<<'STL'
+        solid demo
+          facet normal 0 0 1
+            outer loop
+              vertex 0 0 0
+              vertex 2 0 0
+              vertex 0 4 0
+            endloop
+          endfacet
+        endsolid demo
+        STL);
+
+        $facts = MeshFacts::of($path, 'stl');
+
+        $this->assertSame(1, $facts->faces);
+        $this->assertSame(3, $facts->vertices);
+        $this->assertTrue($facts->normals);
+        $this->assertSame([2.0, 4.0, 0.0], $facts->bounds['size']);
+    }
+
+    /**
+     * Exporters write "solid" into the 80-byte header of binary files, so the
+     * length has to be what decides, not the leading word.
+     */
+    public function test_a_binary_stl_whose_header_says_solid_is_still_read_as_binary(): void
+    {
+        $facts = MeshFacts::of($this->binaryStl(
+            [[[0.0, 0.0, 1.0], [0, 0, 0], [3, 0, 0], [0, 5, 0]]],
+            header: 'solid exported by something'
+        ), 'stl');
+
+        $this->assertSame(1, $facts->faces);
+        $this->assertSame([3.0, 5.0, 0.0], $facts->bounds['size']);
+    }
+
     public function test_an_unreadable_file_measures_to_nothing_rather_than_throwing(): void
     {
         $facts = MeshFacts::of($this->obj('not a model at all'), 'obj');
@@ -143,6 +219,23 @@ class MeshFactsTest extends TestCase
         $this->assertSame(0, $facts->vertices);
         $this->assertNull($facts->bounds);
         $this->assertSame(MeshFacts::UNKNOWN, $facts->topology);
+    }
+
+    /**
+     * @param  list<array{0: list<float>, 1: list<float>, 2: list<float>, 3: list<float>}>  $facets
+     */
+    private function binaryStl(array $facets, string $header = 'binary stl'): string
+    {
+        $bytes = str_pad(substr($header, 0, 80), 80, "\0").pack('V', count($facets));
+
+        foreach ($facets as [$normal, $a, $b, $c]) {
+            $bytes .= pack('g12', ...$normal, ...$a, ...$b, ...$c).pack('v', 0);
+        }
+
+        $path = $this->directory.'/model.stl';
+        File::put($path, $bytes);
+
+        return $path;
     }
 
     private function obj(string $contents): string

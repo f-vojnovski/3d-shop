@@ -41,6 +41,7 @@ class MeshFacts
         return match ($format) {
             'obj' => self::fromObj($absolutePath),
             'gltf', 'glb' => self::fromGltf($absolutePath, $format === 'glb'),
+            'stl' => self::fromStl($absolutePath),
             default => self::nothing(),
         };
     }
@@ -64,6 +65,161 @@ class MeshFacts
     private static function nothing(): self
     {
         return new self(null, null, self::UNKNOWN, false, false, null, [], null, false, false);
+    }
+
+    // ---------------------------------------------------------------- .stl
+
+    /**
+     * An .stl is a flat list of triangles and nothing else: no UVs, no
+     * materials, no scene graph. Every absence below is a fact about the
+     * format, not a measurement we failed to take.
+     */
+    private static function fromStl(string $path): self
+    {
+        $triangles = self::binaryStlCount($path);
+
+        return $triangles === null
+            ? self::fromAsciiStl($path)
+            : self::fromBinaryStl($path, $triangles);
+    }
+
+    /** The count the header claims, only if the file is exactly that long. */
+    private static function binaryStlCount(string $path): ?int
+    {
+        $size = @filesize($path);
+
+        if ($size === false || $size < 84) {
+            return null;
+        }
+
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return null;
+        }
+
+        fseek($handle, 80);
+        $header = (string) fread($handle, 4);
+        fclose($handle);
+
+        if (strlen($header) < 4) {
+            return null;
+        }
+
+        $count = (int) (unpack('V', $header)[1] ?? 0);
+
+        return 84 + $count * 50 === $size ? $count : null;
+    }
+
+    private static function fromBinaryStl(string $path, int $triangles): self
+    {
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return self::nothing();
+        }
+
+        fseek($handle, 84);
+
+        $min = [INF, INF, INF];
+        $max = [-INF, -INF, -INF];
+        $normals = false;
+        $read = 0;
+
+        // 50 bytes a triangle, taken a few thousand at a time so a million-
+        // triangle file costs the same memory as a small one.
+        while ($read < $triangles) {
+            $batch = min(4096, $triangles - $read);
+            $bytes = (string) fread($handle, $batch * 50);
+
+            if (strlen($bytes) < $batch * 50) {
+                break;
+            }
+
+            for ($i = 0; $i < $batch; $i++) {
+                $facet = unpack('f12', substr($bytes, $i * 50, 48));
+
+                if (! $normals && ($facet[1] !== 0.0 || $facet[2] !== 0.0 || $facet[3] !== 0.0)) {
+                    $normals = true;
+                }
+
+                for ($corner = 0; $corner < 3; $corner++) {
+                    for ($axis = 0; $axis < 3; $axis++) {
+                        $value = $facet[4 + $corner * 3 + $axis];
+                        $min[$axis] = min($min[$axis], $value);
+                        $max[$axis] = max($max[$axis], $value);
+                    }
+                }
+            }
+
+            $read += $batch;
+        }
+
+        fclose($handle);
+
+        return self::stlFacts($read, $normals, self::boundsOf($min, $max));
+    }
+
+    private static function fromAsciiStl(string $path): self
+    {
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return self::nothing();
+        }
+
+        $triangles = 0;
+        $normals = false;
+        $min = [INF, INF, INF];
+        $max = [-INF, -INF, -INF];
+
+        while (($line = fgets($handle)) !== false) {
+            $line = ltrim($line);
+
+            if (str_starts_with($line, 'vertex')) {
+                $point = sscanf($line, 'vertex %f %f %f');
+
+                for ($axis = 0; $axis < 3; $axis++) {
+                    $value = $point[$axis] ?? null;
+
+                    if ($value !== null) {
+                        $min[$axis] = min($min[$axis], $value);
+                        $max[$axis] = max($max[$axis], $value);
+                    }
+                }
+
+                continue;
+            }
+
+            if (str_starts_with($line, 'facet')) {
+                $triangles++;
+                $normal = sscanf($line, 'facet normal %f %f %f');
+
+                if ($normal !== null && ($normal[0] ?? 0.0) + ($normal[1] ?? 0.0) + ($normal[2] ?? 0.0) !== 0.0) {
+                    $normals = true;
+                }
+            }
+        }
+
+        fclose($handle);
+
+        return self::stlFacts($triangles, $normals, self::boundsOf($min, $max));
+    }
+
+    private static function stlFacts(int $triangles, bool $normals, ?array $bounds): self
+    {
+        return new self(
+            vertices: $triangles * 3,
+            faces: $triangles,
+            topology: $triangles === 0 ? self::UNKNOWN : self::TRIANGLES,
+            normals: $normals,
+            uvs: false,
+            materials: 0,
+            textures: [],
+            bounds: $bounds,
+            rigged: false,
+            animated: false,
+        );
     }
 
     // ---------------------------------------------------------------- .obj

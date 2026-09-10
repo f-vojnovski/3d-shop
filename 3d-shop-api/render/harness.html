@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { fitToView } from '/fitToView.js';
 
@@ -39,6 +40,12 @@ async function main() {
     const gltf = await new Promise((res, rej) =>
       new GLTFLoader().parse(buffer, '', res, rej));
     object = gltf.scene;
+  } else if (job.source.format === 'stl') {
+    // Geometry only: the format carries no material to light.
+    object = new THREE.Mesh(
+      new STLLoader().parse(buffer),
+      new THREE.MeshPhongMaterial({ color: 0xb9bec7, flatShading: false }),
+    );
   } else {
     object = new OBJLoader().parse(new TextDecoder().decode(buffer));
   }

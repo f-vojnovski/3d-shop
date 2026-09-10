@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
+use App\Support\ModelFormats;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PaymentWebhookController;
@@ -26,11 +27,11 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/products/search/{name}', [ProductController::class, 'search']);
 Route::get('/products/{id}/preview/{format}', [ProductController::class, 'previewModel'])
-    ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
+    ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
 Route::get('/products/{id}/download/{format}', [ProductController::class, 'download'])
     ->middleware('signed:relative')
     ->name('products.download')
-    ->where(['id' => '[0-9]+', 'format' => 'obj|gltf']);
+    ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
 Route::get('/products/{id}/versions/{file}/download', [ProductController::class, 'downloadVersion'])
     ->middleware('signed:relative')
     ->name('products.download-version')

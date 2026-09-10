@@ -3,6 +3,7 @@
 export const FORMATS = [
   { key: 'obj', label: '.obj', extensions: ['.obj'], field: 'objModel' },
   { key: 'gltf', label: '.glb', extensions: ['.gltf', '.glb'], field: 'gltfModel' },
+  { key: 'stl', label: '.stl', extensions: ['.stl'], field: 'stlModel' },
 ];
 
 // Mirrors the API's max:51200 and max:5120 (kilobytes).

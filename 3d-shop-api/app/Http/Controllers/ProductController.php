@@ -8,6 +8,7 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
+use App\Support\ModelFormats;
 use App\Support\StandardAngles;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -49,23 +50,22 @@ class ProductController extends BaseController
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
-            'objModel' => 'nullable|file|max:51200|extensions:obj',
-            'gltfModel' => 'nullable|file|max:51200|extensions:gltf,glb',
+            ...self::modelRules(),
             'thumbnail' => 'nullable|file|image|mimes:jpeg,png,webp|max:5120',
             'images' => 'sometimes|array|max:8',
             'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
             'standard_views' => 'sometimes|array',
-            'standard_views.*' => 'in:obj,gltf',
+            'standard_views.*' => 'in:'.ModelFormats::rule(),
             ...self::ANGLE_RULES,
         ]);
 
         $angles = $request->input('preview_angles') ?? [];
         $standard = $request->input('standard_views') ?? [];
 
-        $models = array_filter([
-            'obj' => $request->file('objModel'),
-            'gltf' => $request->file('gltfModel'),
-        ]);
+        $models = array_filter(array_map(
+            fn (string $field) => $request->file($field),
+            ModelFormats::fields()
+        ));
 
         if ($models === []) {
             abort(422, 'At least one model file is required.');
@@ -205,7 +205,7 @@ class ProductController extends BaseController
         }
 
         $fields = $request->validate([
-            'format' => 'required|in:obj,gltf',
+            'format' => 'required|in:'.ModelFormats::rule(),
             'model' => 'required|file|max:51200',
             'note' => 'nullable|string|max:200',
         ]);
@@ -393,10 +393,22 @@ class ProductController extends BaseController
      * @param  array<string, UploadedFile>  $models
      * @return array<string, MeshPrescan>
      */
+    /** @return array<string, string> */
+    private static function modelRules(): array
+    {
+        $rules = [];
+
+        foreach (ModelFormats::all() as $format) {
+            $rules[ModelFormats::field($format)] =
+                'nullable|file|max:51200|extensions:'.ModelFormats::extensionRule($format);
+        }
+
+        return $rules;
+    }
+
     private function scanModels(array $models): array
     {
-        $fields = ['obj' => 'objModel', 'gltf' => 'gltfModel'];
-        $accepted = ['obj' => ['obj'], 'gltf' => ['gltf', 'glb']];
+        $fields = ModelFormats::fields();
         $scans = [];
 
         foreach ($models as $format => $file) {
@@ -407,7 +419,7 @@ class ProductController extends BaseController
             }
 
             // The extension is the uploader's word; the magic bytes are not.
-            if (! in_array($scan->format, $accepted[$format], true)) {
+            if (! in_array($scan->format, ModelFormats::extensionsFor($format), true)) {
                 throw ValidationException::withMessages([
                     $fields[$format] => sprintf(
                         'That file is a .%s, not a .%s.',
@@ -426,7 +438,7 @@ class ProductController extends BaseController
     private function refuseSettledFields(Request $request): void
     {
         $settled = array_values(array_filter(
-            ['preview_angles', 'preview_mode', 'objModel', 'gltfModel', 'thumbnail', 'images'],
+            ['preview_angles', 'preview_mode', ...array_values(ModelFormats::fields()), 'thumbnail', 'images'],
             fn (string $field) => $request->has($field) || $request->hasFile($field)
         ));
 
