@@ -54,12 +54,12 @@ class VerifyRenderCommand extends Command
         }
 
         if ($verified === 0) {
-            $this->error('This product has no attested stills to verify.');
+            $this->error('This product has no attested images to verify.');
 
             return self::FAILURE;
         }
 
-        $this->info('Every still reproduces byte-for-byte from the current model.');
+        $this->info('Every attested image reproduces byte-for-byte from the current model.');
 
         return self::SUCCESS;
     }
@@ -110,28 +110,49 @@ class VerifyRenderCommand extends Command
             return ['failures' => 1, 'verified' => 0];
         }
 
+        $outlines = $source->wireframes()->get()->keyBy('sort');
         $rows = [];
         $failures = 0;
+        $checked = 0;
 
         foreach ($result['images'] as $image) {
-            $produced = hash_file(
-                'sha256',
-                $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$image['file']
-            );
-            $record = $stored->get($image['index']);
-            $matches = $record !== null && hash_equals($record->checksum, $produced);
-            $failures += $matches ? 0 : 1;
+            $passes = [['shaded', $stored->get($image['index']), $image['file']]];
 
-            $rows[] = [
-                ".{$source->format}",
-                $image['index'],
-                substr((string) $record?->checksum, 0, 16).'…',
-                substr($produced, 0, 16).'…',
-                $matches ? 'match' : 'MISMATCH',
-            ];
+            // A product rendered before this pass existed has nothing to compare.
+            if ($outlines->has($image['index'])) {
+                $passes[] = [
+                    'wireframe',
+                    $outlines->get($image['index']),
+                    $image['wireframe']['file'] ?? null,
+                ];
+            }
+
+            foreach ($passes as [$pass, $record, $file]) {
+                $produced = $file === null ? null : hash_file(
+                    'sha256',
+                    $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$file
+                );
+                $matches = $record !== null
+                    && $produced !== false
+                    && $produced !== null
+                    && hash_equals($record->checksum, $produced);
+                $failures += $matches ? 0 : 1;
+                $checked++;
+
+                $rows[] = [
+                    ".{$source->format}",
+                    $image['index'],
+                    $pass,
+                    substr((string) $record?->checksum, 0, 16).'…',
+                    $produced === null || $produced === false
+                        ? 'not drawn'
+                        : substr($produced, 0, 16).'…',
+                    $matches ? 'match' : 'MISMATCH',
+                ];
+            }
         }
 
-        $this->table(['format', 'angle', 'attested', 're-rendered', ''], $rows);
+        $this->table(['format', 'angle', 'pass', 'attested', 're-rendered', ''], $rows);
 
         // A swapped model leaves the stills intact but no longer depicting what
         // is for sale, which the pixel hashes alone would not reveal.
@@ -148,6 +169,6 @@ class VerifyRenderCommand extends Command
             File::deleteDirectory($scratch);
         }
 
-        return ['failures' => $failures, 'verified' => count($result['images'])];
+        return ['failures' => $failures, 'verified' => $checked];
     }
 }

@@ -242,10 +242,13 @@ class ProductController extends BaseController
                 facts: $facts
             );
 
-            $current->stills()->update([
+            $supersede = [
                 'superseded_at' => now(),
                 'superseded_by_id' => $replacement->id,
-            ]);
+            ];
+
+            $current->stills()->update($supersede);
+            $current->wireframes()->update($supersede);
 
             $current->update([
                 'superseded_at' => now(),

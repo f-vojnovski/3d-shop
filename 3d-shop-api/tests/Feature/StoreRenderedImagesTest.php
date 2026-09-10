@@ -22,6 +22,15 @@ class StoreRenderedImagesTest extends TestCase
         ['position' => [-3, 1, -4], 'target' => [0, 0, 0], 'fov' => 50],
     ];
 
+    private const BOTH_PASSES = ['angle-0.png' => 'shaded', 'wireframe-0.png' => 'lines'];
+
+    private const ONE_ANGLE = [[
+        'file' => 'angle-0.png',
+        'index' => 0,
+        'coverage' => 0.42,
+        'wireframe' => ['file' => 'wireframe-0.png', 'coverage' => 0.31],
+    ]];
+
     private const RENDERER = [
         'engine' => 'three.js',
         'three' => '0.186.0',
@@ -113,6 +122,71 @@ class StoreRenderedImagesTest extends TestCase
         $stills = $source->stills()->get();
         $this->assertCount(1, $stills);
         $this->assertSame(0, $stills->first()->sort);
+    }
+
+    public function test_a_wireframe_is_kept_beside_the_still_it_was_drawn_with(): void
+    {
+        $source = $this->deliverable();
+
+        $this->render($source, self::BOTH_PASSES, self::ONE_ANGLE);
+
+        $outline = $source->wireframes()->sole();
+        $still = $source->stills()->sole();
+
+        $this->assertSame(0, $outline->sort);
+        $this->assertSame('public', $outline->disk);
+        $this->assertSame($source->id, $outline->source_file_id);
+        $this->assertSame(hash('sha256', 'lines'), $outline->checksum);
+        Storage::disk('public')->assertExists($outline->path);
+
+        $this->assertSame($still->meta['camera'], $outline->meta['camera']);
+        $this->assertSame($source->checksum, $outline->meta['source_checksum']);
+        $this->assertSame(0.31, $outline->meta['coverage']);
+        $this->assertSame(0.42, $still->meta['coverage']);
+    }
+
+    public function test_re_rendering_replaces_the_wireframes_too(): void
+    {
+        $source = $this->deliverable();
+        $this->render($source, self::BOTH_PASSES, self::ONE_ANGLE);
+        $before = $source->wireframes()->pluck('id');
+
+        $this->render(
+            $source,
+            ['angle-0.png' => 'shaded again', 'wireframe-0.png' => 'redrawn'],
+            self::ONE_ANGLE
+        );
+
+        $after = $source->wireframes()->get();
+        $this->assertCount(1, $after);
+        $this->assertTrue($before->doesntContain($after->first()->id));
+        $this->assertSame(hash('sha256', 'redrawn'), $after->first()->checksum);
+    }
+
+    public function test_a_misnamed_wireframe_is_dropped_and_the_still_kept(): void
+    {
+        $source = $this->deliverable();
+
+        $this->render($source, ['angle-0.png' => 'shaded'], [[
+            'file' => 'angle-0.png',
+            'index' => 0,
+            'coverage' => 0.42,
+            'wireframe' => ['file' => '../../../../secret.png', 'coverage' => 0.31],
+        ]]);
+
+        $this->assertCount(1, $source->stills()->get());
+        $this->assertCount(0, $source->wireframes()->get());
+    }
+
+    /** A wireframe is a diagnostic, not the picture that sells the listing. */
+    public function test_the_thumbnail_is_never_taken_from_a_wireframe(): void
+    {
+        $source = $this->deliverable();
+
+        $this->render($source, self::BOTH_PASSES, self::ONE_ANGLE);
+
+        $thumbnail = Product::with('files')->find($source->product_id)->thumbnail();
+        $this->assertSame(hash('sha256', 'shaded'), $thumbnail->checksum);
     }
 
     public function test_blank_angles_are_reported_to_the_seller(): void

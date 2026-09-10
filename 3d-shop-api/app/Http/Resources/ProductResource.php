@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\ProductFile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -112,17 +113,24 @@ class ProductResource extends JsonResource
 
     private function stillsFrom(ProductFile $source): array
     {
-        return $this->files
-            ->where('kind', ProductFile::KIND_PREVIEW_IMAGE)
-            ->where('source_file_id', $source->id)
-            ->reject(fn (ProductFile $file) => $file->isSuperseded())
+        $outlines = $this->currentFiles(ProductFile::KIND_WIREFRAME, $source)->keyBy('sort');
+
+        return $this->currentFiles(ProductFile::KIND_PREVIEW_IMAGE, $source)
             ->sortBy('sort')
-            ->map(fn (ProductFile $file) => $this->describeStill($file))
+            ->map(fn (ProductFile $file) => $this->describeStill($file, $outlines->get($file->sort)))
             ->values()
             ->all();
     }
 
-    private function describeStill(ProductFile $file): array
+    private function currentFiles(string $kind, ProductFile $source): Collection
+    {
+        return $this->files
+            ->where('kind', $kind)
+            ->where('source_file_id', $source->id)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded());
+    }
+
+    private function describeStill(ProductFile $file, ?ProductFile $outline): array
     {
         return [
             'id' => $file->id,
@@ -133,6 +141,12 @@ class ProductResource extends JsonResource
             'checksum' => $file->checksum,
             'source_checksum' => $file->meta['source_checksum'] ?? null,
             'attestation_url' => "/api/previews/{$file->id}/attestation",
+            'wireframe' => $outline === null ? null : [
+                'id' => $outline->id,
+                'url' => Storage::disk($outline->disk)->url($outline->path),
+                'checksum' => $outline->checksum,
+                'attestation_url' => "/api/previews/{$outline->id}/attestation",
+            ],
         ];
     }
 

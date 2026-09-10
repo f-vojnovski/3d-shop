@@ -8,13 +8,18 @@ use Illuminate\Support\Facades\Storage;
 
 class AttestationController extends BaseController
 {
+    private const ATTESTED = [
+        ProductFile::KIND_PREVIEW_IMAGE,
+        ProductFile::KIND_WIREFRAME,
+    ];
+
     /**
-     * What a buyer can check about a server-rendered still: which model it came
+     * What a buyer can check about a server-rendered image: which model it came
      * from, the camera it was taken with, and the exact renderer that drew it.
      */
     public function show(ProductFile $preview): array
     {
-        abort_unless($preview->kind === ProductFile::KIND_PREVIEW_IMAGE, 404);
+        abort_unless(in_array($preview->kind, self::ATTESTED, true), 404);
 
         $attestedSource = $preview->meta['source_checksum'] ?? null;
         $current = $preview->product->deliverables()->pluck('checksum')->all();
@@ -26,6 +31,7 @@ class AttestationController extends BaseController
                 'sha256' => $preview->checksum,
                 'bytes' => $preview->bytes,
                 'angle' => $preview->sort,
+                'pass' => $preview->kind === ProductFile::KIND_WIREFRAME ? 'wireframe' : 'shaded',
                 'coverage' => $preview->meta['coverage'] ?? null,
                 'rendered_at' => $preview->created_at,
             ],

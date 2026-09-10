@@ -100,7 +100,11 @@ const server = createServer(async (request, response) => {
     const body = JSON.parse((await readBody(request)).toString() || '{}');
 
     if (path === '/image') {
-      state.images.set(body.index, {
+      const pass = body.pass ?? 'shaded';
+
+      state.images.set(`${pass}:${body.index}`, {
+        pass,
+        index: body.index,
         png: Buffer.from(body.png.split(',')[1], 'base64'),
         coverage: body.coverage ?? 0,
       });
@@ -183,9 +187,11 @@ async function main() {
   const images = [];
   const blank = [];
 
-  for (const index of [...state.images.keys()].sort((a, b) => a - b)) {
-    const { png, coverage } = state.images.get(index);
+  const shaded = [...state.images.values()]
+    .filter((image) => image.pass === 'shaded')
+    .sort((a, b) => a.index - b.index);
 
+  for (const { index, png, coverage } of shaded) {
     if (coverage < MIN_COVERAGE) {
       blank.push(index);
       continue;
@@ -193,7 +199,23 @@ async function main() {
 
     const file = `angle-${index}.png`;
     await writeFile(join(OUT, file), png);
-    images.push({ index, file, bytes: png.length, coverage: Number(coverage.toFixed(5)) });
+
+    const entry = { index, file, bytes: png.length, coverage: Number(coverage.toFixed(5)) };
+    // Nested so a discarded angle takes its wireframe with it, and `blank`
+    // keeps counting angles rather than images.
+    const outline = state.images.get(`wireframe:${index}`);
+
+    if (outline !== undefined && outline.coverage >= MIN_COVERAGE) {
+      const wireframeFile = `wireframe-${index}.png`;
+      await writeFile(join(OUT, wireframeFile), outline.png);
+      entry.wireframe = {
+        file: wireframeFile,
+        bytes: outline.png.length,
+        coverage: Number(outline.coverage.toFixed(5)),
+      };
+    }
+
+    images.push(entry);
   }
 
   if (images.length === 0) {

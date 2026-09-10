@@ -72,6 +72,54 @@ class AttestationTest extends TestCase
             );
     }
 
+    public function test_a_wireframe_carries_the_same_record_as_its_still(): void
+    {
+        $fixture = $this->attestedProduct();
+        $outline = $this->wireframeFor($fixture);
+
+        $body = $this->getJson("/api/previews/{$outline->id}/attestation")
+            ->assertSuccessful()
+            ->json();
+
+        $this->assertSame('wireframe', $body['image']['pass']);
+        $this->assertSame(75, $body['camera']['fov']);
+        $this->assertSame(self::SOURCE_HASH, $body['source_model']['sha256']);
+        $this->assertTrue($body['source_model']['still_on_sale']);
+    }
+
+    public function test_a_still_says_which_pass_drew_it(): void
+    {
+        $preview = $this->attestedProduct()['preview'];
+
+        $this->getJson("/api/previews/{$preview->id}/attestation")
+            ->assertSuccessful()
+            ->assertJsonPath('image.pass', 'shaded');
+    }
+
+    public function test_the_payload_pairs_each_still_with_its_wireframe(): void
+    {
+        $fixture = $this->attestedProduct();
+        $outline = $this->wireframeFor($fixture);
+
+        $this->getJson("/api/products/{$fixture['product']->id}")
+            ->assertSuccessful()
+            ->assertJsonPath('previews.0.images.0.wireframe.id', $outline->id)
+            ->assertJsonPath(
+                'previews.0.images.0.wireframe.attestation_url',
+                "/api/previews/{$outline->id}/attestation"
+            );
+    }
+
+    /** Products rendered before the pass existed have stills and nothing else. */
+    public function test_a_still_with_no_wireframe_reports_none(): void
+    {
+        $fixture = $this->attestedProduct();
+
+        $this->getJson("/api/products/{$fixture['product']->id}")
+            ->assertSuccessful()
+            ->assertJsonPath('previews.0.images.0.wireframe', null);
+    }
+
     public function test_verifying_a_product_with_no_stills_fails_without_rendering(): void
     {
         $product = $this->attestedProduct()['product'];
@@ -83,6 +131,21 @@ class AttestationTest extends TestCase
     public function test_verifying_an_unknown_product_fails(): void
     {
         $this->artisan('render:verify', ['product' => 999999])->assertExitCode(1);
+    }
+
+    private function wireframeFor(array $fixture): ProductFile
+    {
+        return $fixture['product']->files()->create([
+            'source_file_id' => $fixture['source']->id,
+            'kind' => ProductFile::KIND_WIREFRAME,
+            'format' => 'png',
+            'disk' => 'public',
+            'path' => 'preview_images/a-wireframe.png',
+            'sort' => 0,
+            'bytes' => 24110,
+            'checksum' => str_repeat('d', 64),
+            'meta' => $fixture['preview']->meta,
+        ]);
     }
 
     private function attestedProduct(): array

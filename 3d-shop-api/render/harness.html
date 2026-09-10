@@ -81,6 +81,17 @@ async function main() {
   outer.add(inner);
   scene.add(outer);
 
+  // Filled first so the lines behind the model are occluded, offset back so the
+  // fill does not z-fight the lines on its own surface.
+  const matte = new THREE.MeshBasicMaterial({
+    color: 0xdfe3e8,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+  });
+  const wire = new THREE.MeshBasicMaterial({ color: 0x141821, wireframe: true });
+
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
 
   for (let i = 0; i < job.angles.length; i += 1) {
@@ -94,6 +105,23 @@ async function main() {
     renderer.render(scene, camera);
 
     await post('/image', {
+      pass: 'shaded',
+      index: i,
+      triangles: Math.round(triangles),
+      coverage: coverageOf(renderer),
+      png: renderer.domElement.toDataURL('image/png'),
+    });
+
+    scene.overrideMaterial = matte;
+    renderer.render(scene, camera);
+    scene.overrideMaterial = wire;
+    renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.autoClear = true;
+    scene.overrideMaterial = null;
+
+    await post('/image', {
+      pass: 'wireframe',
       index: i,
       triangles: Math.round(triangles),
       coverage: coverageOf(renderer),

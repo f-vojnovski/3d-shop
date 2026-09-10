@@ -118,6 +118,22 @@ class ReplaceFileTest extends TestCase
             ->assertJsonPath('source_model.replacement_note', 'Reworked the wheels.');
     }
 
+    /** Left behind, a wireframe would show the topology of a file that is gone. */
+    public function test_the_old_wireframes_leave_the_listing_with_their_stills(): void
+    {
+        $source = $this->product->deliverableFor('obj');
+        $this->stillFor($source);
+        $outline = $this->stillFor($source, ProductFile::KIND_WIREFRAME);
+
+        $this->replace()->assertSuccessful();
+
+        $this->assertNotNull($outline->fresh()->superseded_at);
+        $this->assertNull(
+            $this->getJson("/api/products/{$this->product->id}")
+                ->json('previews.0.images.0.wireframe')
+        );
+    }
+
     public function test_a_stranger_cannot_replace_anything(): void
     {
         Sanctum::actingAs(User::create([
@@ -194,11 +210,13 @@ class ReplaceFileTest extends TestCase
         $this->product->refresh()->load('files');
     }
 
-    private function stillFor(ProductFile $source): ProductFile
-    {
+    private function stillFor(
+        ProductFile $source,
+        string $kind = ProductFile::KIND_PREVIEW_IMAGE
+    ): ProductFile {
         return $this->product->files()->create([
             'source_file_id' => $source->id,
-            'kind' => ProductFile::KIND_PREVIEW_IMAGE,
+            'kind' => $kind,
             'format' => 'png',
             'disk' => 'public',
             'path' => 'preview_images/'.uniqid().'.png',

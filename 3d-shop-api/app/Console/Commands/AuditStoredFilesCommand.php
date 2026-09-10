@@ -11,7 +11,7 @@ class AuditStoredFilesCommand extends Command
 {
     protected $signature = 'files:audit
         {--product= : Limit the audit to one product}
-        {--kind= : Limit to deliverable, preview_image, thumbnail or seller_image}';
+        {--kind= : Limit to deliverable, preview_image, wireframe, thumbnail or seller_image}';
 
     protected $description = 'Re-hash every stored file and compare it to the checksum recorded for it';
 

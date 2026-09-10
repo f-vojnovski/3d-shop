@@ -2,13 +2,26 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AttestedStills from './AttestedStills';
 
-const still = (format, index) => ({
+const still = (format, index, wireframe = null) => ({
   id: `${format}-${index}`,
   url: `https://example.test/${format}-${index}.png`,
   sort: index,
   source_format: format,
   attestation_url: `/api/previews/${format}${index}/attestation`,
+  wireframe,
 });
+
+const wireframeOf = (format, index) => ({
+  id: `${format}-${index}-wire`,
+  url: `https://example.test/${format}-${index}-wire.png`,
+  attestation_url: `/api/previews/${format}${index}wire/attestation`,
+});
+
+const withWireframes = (format, count) =>
+  preview(format, count, {
+    images: Array.from({ length: count }, (_, index) =>
+      still(format, index, wireframeOf(format, index))),
+  });
 
 const preview = (format, count, overrides = {}) => ({
   format,
@@ -41,6 +54,58 @@ describe('AttestedStills', () => {
       'src',
       'https://example.test/obj-0.png'
     );
+  });
+
+  it('swaps in the wireframe drawn at the same camera', async () => {
+    render(<AttestedStills product={product([withWireframes('obj', 2)])} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wireframe' }));
+
+    expect(screen.getByAltText('Half-track, .obj view 1 wireframe')).toHaveAttribute(
+      'src',
+      'https://example.test/obj-0-wire.png'
+    );
+    expect(screen.getByRole('button', { name: 'Wireframe' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('goes back to the shaded view', async () => {
+    render(<AttestedStills product={product([withWireframes('obj', 1)])} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Wireframe' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wireframe' }));
+
+    expect(screen.getByAltText('Half-track, .obj view 1')).toHaveAttribute(
+      'src',
+      'https://example.test/obj-0.png'
+    );
+  });
+
+  // Stills rendered before the wireframe pass existed have none to show.
+  it('offers no toggle when the still has no wireframe', () => {
+    render(<AttestedStills product={product([preview('obj', 2)])} />);
+
+    expect(screen.queryByRole('button', { name: 'Wireframe' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the wireframe on while moving between views', async () => {
+    render(<AttestedStills product={product([withWireframes('obj', 2)])} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Wireframe' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'View 2' }));
+
+    expect(screen.getByAltText('Half-track, .obj view 2 wireframe')).toHaveAttribute(
+      'src',
+      'https://example.test/obj-1-wire.png'
+    );
+  });
+
+  it("offers no wireframe of the seller's own images", async () => {
+    render(<AttestedStills product={product([withWireframes('obj', 1)], [sellerImage(0)])} />);
+
+    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+
+    expect(screen.queryByRole('button', { name: 'Wireframe' })).not.toBeInTheDocument();
   });
 
   it('offers no format switch when there is only one format', () => {

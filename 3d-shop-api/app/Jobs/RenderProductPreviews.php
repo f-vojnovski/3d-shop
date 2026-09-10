@@ -261,50 +261,100 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         string $scratch,
         array $result
     ): void {
-        $public = Storage::disk('public');
         $source->stills()->each(fn (ProductFile $old) => $old->delete());
+        $source->wireframes()->each(fn (ProductFile $old) => $old->delete());
 
         foreach ($result['images'] as $image) {
-            // The container parses untrusted geometry, so what it names its
-            // output is input: only files it was supposed to write are read.
             $index = $image['index'] ?? null;
 
-            if (! is_int($index) || ! preg_match('/^angle-\d+\.png$/', (string) ($image['file'] ?? ''))) {
-                Log::channel('render')->warning('Renderer named an unexpected file.', [
-                    'product_id' => $product->id,
-                    'file' => $image['file'] ?? null,
-                    'index' => $index,
-                ]);
-
+            if (! is_int($index) || ! $this->wasAskedFor($product, $image['file'] ?? null, 'angle', $index)) {
                 continue;
             }
 
-            $bytes = (string) file_get_contents(
-                $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$image['file']
-            );
-            $path = 'preview_images/'.uniqid().'.png';
-            $public->put($path, $bytes);
+            $meta = [
+                'source_format' => $source->format,
+                'camera' => $source->angles()[$index] ?? null,
+                'coverage' => $image['coverage'] ?? null,
+                'renderer' => $result['renderer'] ?? null,
+                'source_checksum' => $source->checksum,
+            ];
 
-            $product->files()->create([
-                'source_file_id' => $source->id,
-                'kind' => ProductFile::KIND_PREVIEW_IMAGE,
-                'format' => 'png',
-                'disk' => 'public',
-                'path' => $path,
-                'sort' => $index,
-                'bytes' => strlen($bytes),
-                'checksum' => hash('sha256', $bytes),
-                'meta' => [
-                    'source_format' => $source->format,
-                    'camera' => $source->angles()[$index] ?? null,
-                    'coverage' => $image['coverage'] ?? null,
-                    'renderer' => $result['renderer'] ?? null,
-                    'source_checksum' => $source->checksum,
-                ],
-            ]);
+            $this->storeImage(
+                $product,
+                $source,
+                $scratch,
+                $image['file'],
+                ProductFile::KIND_PREVIEW_IMAGE,
+                $index,
+                $meta
+            );
+
+            $outline = $image['wireframe'] ?? null;
+
+            if (! is_array($outline)
+                || ! $this->wasAskedFor($product, $outline['file'] ?? null, 'wireframe', $index)) {
+                continue;
+            }
+
+            $this->storeImage(
+                $product,
+                $source,
+                $scratch,
+                $outline['file'],
+                ProductFile::KIND_WIREFRAME,
+                $index,
+                array_replace($meta, ['coverage' => $outline['coverage'] ?? null])
+            );
         }
 
         $this->adoptThumbnail($product);
+    }
+
+    /**
+     * The container parses untrusted geometry, so what it names its output is
+     * input: only files it was supposed to write are read.
+     */
+    private function wasAskedFor(Product $product, mixed $file, string $prefix, int $index): bool
+    {
+        if ($file === "{$prefix}-{$index}.png") {
+            return true;
+        }
+
+        Log::channel('render')->warning('Renderer named an unexpected file.', [
+            'product_id' => $product->id,
+            'file' => $file,
+            'expected' => "{$prefix}-{$index}.png",
+        ]);
+
+        return false;
+    }
+
+    private function storeImage(
+        Product $product,
+        ProductFile $source,
+        string $scratch,
+        string $file,
+        string $kind,
+        int $index,
+        array $meta
+    ): void {
+        $bytes = (string) file_get_contents(
+            $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$file
+        );
+        $path = 'preview_images/'.uniqid().'.png';
+        Storage::disk('public')->put($path, $bytes);
+
+        $product->files()->create([
+            'source_file_id' => $source->id,
+            'kind' => $kind,
+            'format' => 'png',
+            'disk' => 'public',
+            'path' => $path,
+            'sort' => $index,
+            'bytes' => strlen($bytes),
+            'checksum' => hash('sha256', $bytes),
+            'meta' => $meta,
+        ]);
     }
 
     /**

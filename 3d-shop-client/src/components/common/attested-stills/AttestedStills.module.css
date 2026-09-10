@@ -23,6 +23,25 @@
   object-fit: contain;
 }
 
+.outline,
+.outlineOn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 10px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.outlineOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
 .formats {
   display: flex;
   gap: 6px;

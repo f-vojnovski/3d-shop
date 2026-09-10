@@ -15,6 +15,7 @@ class ProductFile extends Model
 
     public const KIND_DELIVERABLE = 'deliverable';
     public const KIND_PREVIEW_IMAGE = 'preview_image';
+    public const KIND_WIREFRAME = 'wireframe';
 
     public const KIND_SELLER_IMAGE = 'seller_image';
     public const KIND_THUMBNAIL = 'thumbnail';
@@ -59,6 +60,13 @@ class ProductFile extends Model
     {
         return $this->hasMany(self::class, 'source_file_id')
             ->where('kind', self::KIND_PREVIEW_IMAGE)
+            ->orderBy('sort');
+    }
+
+    public function wireframes(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_file_id')
+            ->where('kind', self::KIND_WIREFRAME)
             ->orderBy('sort');
     }
 

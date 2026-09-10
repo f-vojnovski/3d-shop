@@ -8,6 +8,7 @@ const SELLER = 'seller';
 const AttestedStills = ({ product, onFormat }) => {
   const [tab, setTab] = useState(null);
   const [selected, setSelected] = useState(0);
+  const [wireframe, setWireframe] = useState(false);
 
   const previews = product.previews ?? [];
   const sellerImages = product.seller_images ?? [];
@@ -97,14 +98,28 @@ const AttestedStills = ({ product, onFormat }) => {
   }
 
   const image = images[Math.min(selected, images.length - 1)];
+  const outline = fromSeller ? null : image.wireframe;
+  const showOutline = wireframe && outline != null;
   const alt = fromSeller
     ? `${product.name}, image ${image.sort + 1} from the seller`
-    : `${product.name}, .${shown.preview.format} view ${image.sort + 1}`;
+    : `${product.name}, .${shown.preview.format} view ${image.sort + 1}`
+      + (showOutline ? ' wireframe' : '');
 
   return (
     <div className={styles.stills}>
       <div className={styles.stage}>
-        <img src={image.url} alt={alt} />
+        <img src={showOutline ? outline.url : image.url} alt={alt} />
+
+        {outline && (
+          <button
+            type="button"
+            className={showOutline ? styles.outlineOn : styles.outline}
+            aria-pressed={showOutline}
+            onClick={() => setWireframe(!wireframe)}
+          >
+            Wireframe
+          </button>
+        )}
       </div>
 
       {switcher}
