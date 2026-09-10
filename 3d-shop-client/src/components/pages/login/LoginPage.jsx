@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
-import { toast } from 'react-toastify';
+import { toast } from '../../common/toast/toastStore';
 import { useNavigate } from 'react-router-dom';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import { firstErrors, required } from '../../../service/util/validate';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { postRegisterData } from '../../../service/features/authSlice';
-import { toast } from 'react-toastify';
+import { toast } from '../../common/toast/toastStore';
 import { useEffect } from 'react';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import {

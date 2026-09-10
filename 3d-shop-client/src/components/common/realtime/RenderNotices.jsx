@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
+import { toast } from '../toast/toastStore';
 import { fetchProductById } from '../../../service/features/productSlice';
 import { createEcho } from '../../../service/realtime/echo';
 

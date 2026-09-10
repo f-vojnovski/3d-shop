@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../common/toast/toastStore';
 import { checkoutCart, clearCart, removeFromCart } from '../../../service/features/cartSlice';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';

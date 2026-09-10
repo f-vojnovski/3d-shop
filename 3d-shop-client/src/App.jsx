@@ -3,8 +3,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { Suspense } from 'react';
 import LoadingSpinner from './components/common/spinner/LoadingSpinner';
 import CookiesConsentWrapper from './components/common/cookies-popup/CookiesConsentWrapper';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import Toasts from './components/common/toast/Toasts';
 import RoutesWrapper from './routes/RouterWrapper';
 import RenderNotices from './components/common/realtime/RenderNotices';
 
@@ -17,7 +16,7 @@ const App = () => {
           <RoutesWrapper />
           <RenderNotices />
           <CookiesConsentWrapper />
-          <ToastContainer closeButton={true} position="bottom-center" />
+          <Toasts />
         </div>
       </Router>
     </Suspense>

@@ -1,6 +1,6 @@
 import { MdAddShoppingCart } from 'react-icons/md';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
+import { toast } from '../../../common/toast/toastStore';
 import { addToCart } from '../../../../service/features/cartSlice';
 
 const AddToCartButton = (props) => {

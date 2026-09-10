@@ -8,7 +8,7 @@ import {
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
 import ModelLoaderErrorFallback from '../product-view/ModelLoaderErrorFallback';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast } from '../../common/toast/toastStore';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import PreviewAnglePicker from './PreviewAnglePicker';
