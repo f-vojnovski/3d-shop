@@ -13,6 +13,7 @@ import DownloadButton from '../../common/download-button/DownloadButton';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import AttestedStills from '../../common/attested-stills/AttestedStills';
+import ModelFacts from '../../common/model-facts/ModelFacts';
 import { BsPersonCircle } from 'react-icons/bs';
 
 const SingleProductView = () => {
@@ -25,6 +26,7 @@ const SingleProductView = () => {
 
   const [chosenFileType, setChosenFileType] = useState(null);
   const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
+  const [shownFormat, setShownFormat] = useState(null);
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -47,6 +49,12 @@ const SingleProductView = () => {
   const formats = product?.formats ?? [];
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';
 
+  // The stills gallery owns the format the buyer is looking at; the viewer's
+  // own picker owns it in interactive mode.
+  const measuredFormat =
+    product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType;
+  const measured = (product?.previews ?? []).find((one) => one.format === measuredFormat);
+
   if (productStatus === 'failed') {
     return <LoadError message={error} fallback="Could not load this product." />;
   }
@@ -67,7 +75,7 @@ const SingleProductView = () => {
 
   let media;
   if (product.preview_mode === 'attested_stills') {
-    media = <AttestedStills product={product} />;
+    media = <AttestedStills product={product} onFormat={setShownFormat} />;
   } else if (selectedFileType === 'gltf' && product.preview_urls?.gltf) {
     media = viewer(GltfModelDisplayer, product.preview_urls.gltf);
   } else if (product.preview_urls?.obj) {
@@ -100,6 +108,12 @@ const SingleProductView = () => {
           <AddToCartButton product={product} />
 
           {product.description && <p className={styles.description}>{product.description}</p>}
+
+          {measured?.facts && (
+            <div className={styles.section}>
+              <ModelFacts facts={measured.facts} format={measured.format} />
+            </div>
+          )}
 
           {formats.length > 0 && (
             <div className={styles.section}>

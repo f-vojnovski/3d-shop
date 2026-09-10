@@ -62,6 +62,12 @@ class ProductFile extends Model
         return $this->meta['angles'] ?? [];
     }
 
+    /** Measured from the file at upload, never supplied by the seller. */
+    public function facts(): ?array
+    {
+        return $this->meta['facts'] ?? null;
+    }
+
     public function renderStatus(): string
     {
         return $this->meta['render']['status'] ?? 'none';

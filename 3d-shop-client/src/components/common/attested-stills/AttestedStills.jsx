@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LoadingSpinner from '../spinner/LoadingSpinner';
 import styles from './AttestedStills.module.css';
 
 const IN_PROGRESS = ['queued', 'rendering'];
 const SELLER = 'seller';
 
-const AttestedStills = ({ product }) => {
+const AttestedStills = ({ product, onFormat }) => {
   const [tab, setTab] = useState(null);
   const [selected, setSelected] = useState(0);
 
@@ -28,6 +28,12 @@ const AttestedStills = ({ product }) => {
     setTab(next);
     setSelected(0);
   };
+
+  // The page shows measurements for whichever file is on screen, and the
+  // gallery is what decides that.
+  useEffect(() => {
+    onFormat?.(shown?.preview?.format ?? null);
+  }, [onFormat, shown?.preview?.format]);
 
   const switcher = tabs.length > 1 && (
     <div className={styles.formats} role="tablist" aria-label="Images">

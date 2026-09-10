@@ -54,6 +54,8 @@ class ProductResource extends JsonResource
                 'angles' => $file->angles(),
                 'status' => $file->renderStatus(),
                 'error' => $file->renderError(),
+                'facts' => $file->facts(),
+                'bytes' => $file->bytes,
                 'images' => $this->stillsFrom($file),
             ])
             ->values()

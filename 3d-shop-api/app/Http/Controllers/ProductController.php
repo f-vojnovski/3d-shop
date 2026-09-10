@@ -6,6 +6,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Jobs\RenderProductPreviews;
 use App\Models\ProductFile;
+use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -74,7 +75,16 @@ class ProductController extends BaseController
 
         $scans = $this->scanModels($models);
 
-        return DB::transaction(function () use ($request, $models, $angles, $scans) {
+        // Outside the transaction: this reads every byte of every model, and a
+        // 25 MB .obj takes about a fifth of a second.
+        $facts = array_map(
+            fn (UploadedFile $file, string $format) => MeshFacts::of($file->getRealPath(), $scans[$format]->format),
+            $models,
+            array_keys($models)
+        );
+        $facts = array_combine(array_keys($models), $facts);
+
+        return DB::transaction(function () use ($request, $models, $angles, $scans, $facts) {
             $product = Product::create([
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
@@ -91,7 +101,8 @@ class ProductController extends BaseController
                     self::DELIVERABLE_DISK,
                     $format,
                     $angles[$format] ?? [],
-                    scan: $scans[$format]
+                    scan: $scans[$format],
+                    facts: $facts[$format]
                 );
             }
 
@@ -329,7 +340,8 @@ class ProductController extends BaseController
         ?string $format = null,
         array $angles = [],
         int $sort = 0,
-        ?MeshPrescan $scan = null
+        ?MeshPrescan $scan = null,
+        ?MeshFacts $facts = null
     ): ProductFile {
         $directory = match ($kind) {
             ProductFile::KIND_THUMBNAIL => 'thumbnails',
@@ -358,6 +370,7 @@ class ProductController extends BaseController
             'meta' => $scan === null ? null : [
                 'sniffed_format' => $scan->format,
                 'faces' => $scan->faces,
+                'facts' => $facts?->toArray(),
                 'angles' => $angles,
                 'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
             ],
