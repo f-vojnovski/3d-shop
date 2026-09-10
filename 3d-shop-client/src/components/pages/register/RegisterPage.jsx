@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Button } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { postRegisterData } from '../../../service/features/authSlice';
@@ -51,7 +50,7 @@ const RegisterPage = () => {
 
   return (
     <div>
-      <div className="container-fluid my-auto form_max_width">
+      <div className="form-shell">
         <div className="row mt-1">
           <div className="col">
             <h1>Registration Form</h1>
@@ -105,7 +104,9 @@ const RegisterPage = () => {
 
         <div className="row mt-3">
           <div className="col">
-            <Button onClick={() => onRegisterButtonClick()}>Register</Button>
+            <button type="button" className="btn btn-primary" onClick={() => onRegisterButtonClick()}>
+              Register
+            </button>
           </div>
         </div>
       </div>

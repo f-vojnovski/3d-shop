@@ -103,7 +103,7 @@ const ProductListingGrid = (props) => {
     );
   }
 
-  return <div className="container-fluid max-width-1600">{content}</div>;
+  return <div className="page-shell">{content}</div>;
 };
 
 export default ProductListingGrid;

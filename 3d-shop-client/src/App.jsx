@@ -1,6 +1,4 @@
-import './App.css';
 import Header from './components/common/header/Header';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Suspense } from 'react';
 import CookiesConsentWrapper from './components/common/cookies-popup/CookiesConsentWrapper';
@@ -12,7 +10,7 @@ const App = () => {
   return (
     <Suspense fallback={<div>Loading</div>}>
       <Router>
-        <div className="App">
+        <div>
           <Header></Header>
           <RoutesWrapper />
           <CookiesConsentWrapper />

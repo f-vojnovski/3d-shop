@@ -1,4 +1,3 @@
-import { Button } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
@@ -42,7 +41,7 @@ const LoginPage = () => {
 
   let defaultState = (
     <div>
-      <div className="container-fluid my-auto form_max_width">
+      <div className="form-shell">
         <div className="row mt-1">
           <div className="col">
             <h1>Login Form</h1>
@@ -74,13 +73,15 @@ const LoginPage = () => {
 
         <div className="row mt-3">
           <div className="col">
-            <Button
+            <button
+              type="button"
+              className="btn btn-primary"
               onClick={() => {
                 onLoginClicked();
               }}
             >
               Login
-            </Button>
+            </button>
           </div>
         </div>
 

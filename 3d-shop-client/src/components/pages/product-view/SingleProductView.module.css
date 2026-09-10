@@ -1,43 +1,102 @@
-.view_container {
-  border: 1px solid black;
-  width: 60%;
-  margin: auto;
-  background: var(--clr-4);
-  padding: 5px;
+.page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Positioned and aspect-sized: both the R3F canvas and the stills gallery
+   fill it absolutely. */
+.media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.rail {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+}
+
+.seller {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--clr-text-dim);
+  font-size: 0.85rem;
 }
 
 .title {
-  font-size: larger;
-  padding-left: 5px;
-  text-align: left;
-  margin-bottom: 5px;
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
-.model_details_container {
+.price {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--clr-accent);
+}
+
+.description {
+  margin: 0;
+  color: var(--clr-text-dim);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.section {
+  padding-top: 14px;
+  border-top: 1px solid var(--clr-line);
+}
+
+.sectionLabel {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--clr-text-dim);
+}
+
+.formats {
   display: flex;
+  gap: 6px;
 }
 
-.model_container {
-  align-self: flex-start;
-  position: relative;
-  display: block;
-  width: 60%;
-  border: 1px solid black;
+.format {
+  padding: 3px 9px;
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  background: var(--clr-surface-raised);
+  font-size: 0.78rem;
+  color: var(--clr-text-dim);
 }
 
-.model_container_dummy {
-  margin-top: 100%;
-}
-
-.model {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-}
-
-.model_info_container {
-  position: relative;
-  width: 40%;
+.downloads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

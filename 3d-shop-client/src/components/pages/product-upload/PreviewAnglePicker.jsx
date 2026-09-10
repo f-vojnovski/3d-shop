@@ -1,4 +1,3 @@
-import { Button } from 'react-bootstrap';
 
 const MAX_ANGLES = 8;
 
@@ -41,13 +40,14 @@ const PreviewAnglePicker = ({
             images buyers see are provably of this model.
           </p>
 
-          <Button
-            variant="outline-primary"
+          <button
+            type="button"
+            className="btn btn-outline-primary"
             disabled={!canCapture || angles.length >= MAX_ANGLES}
             onClick={onCapture}
           >
             Capture this angle
-          </Button>
+          </button>
 
           {!canCapture && (
             <div className="form-text">Attach a model first.</div>
@@ -76,13 +76,13 @@ const PreviewAnglePicker = ({
                       {angle.position.map((n) => n.toFixed(1)).join(', ')}
                     </span>
                   </span>
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
                     onClick={() => onRemove(index)}
                   >
                     Remove
-                  </Button>
+                  </button>
                 </li>
               ))}
             </ul>

@@ -3,7 +3,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--clr-4);
+  background: var(--clr-surface);
 }
 
 .stage {
@@ -13,7 +13,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  /* The renders are transparent PNGs, so the stage colour is the backdrop. */
+  background: var(--clr-surface-raised);
 }
 
 .stage img {
@@ -24,18 +25,20 @@
 
 .strip {
   display: flex;
-  gap: 4px;
-  padding: 4px;
+  gap: 6px;
+  padding: 6px;
   overflow-x: auto;
-  border-top: 1px solid black;
+  border-top: 1px solid var(--clr-line);
 }
 
 .strip button {
   padding: 0;
   border: 1px solid transparent;
+  border-radius: 6px;
   background: none;
   cursor: pointer;
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .strip img {
@@ -43,17 +46,18 @@
   width: 64px;
   height: 48px;
   object-fit: cover;
+  background: var(--clr-surface-raised);
 }
 
-.selected {
-  border-color: black !important;
+.strip .selected {
+  border-color: var(--clr-accent);
 }
 
 .badge {
-  padding: 4px 8px;
-  border-top: 1px solid black;
-  font-size: 0.8rem;
-  text-align: left;
+  padding: 6px 10px;
+  border-top: 1px solid var(--clr-line);
+  font-size: 0.78rem;
+  color: var(--clr-text-dim);
 }
 
 .notice {
@@ -66,4 +70,5 @@
   gap: 10px;
   padding: 16px;
   text-align: center;
+  color: var(--clr-text-dim);
 }

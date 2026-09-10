@@ -1,33 +1,21 @@
 import { Link } from 'react-router-dom';
-import { API_URL } from '../../../consts';
 import { formatPrice } from '../../../service/util/formatPrice';
+import styles from './ProductOverview.module.css';
 
-const ProductOverview = (product) => {
-  let thumbnailPath = `${API_URL}${product.thumbnailUrl}`;
-
-  return (
-    <div>
-      <div className="card max-width-350">
-        <div className="d-flex justify-content-center m-1">
-          <img
-            src={thumbnailPath}
-            className="product-thumbnail"
-            alt={`${product.name} thumbnail`}
-          ></img>
-        </div>
-        <div className="row">
-          <div className="col-6">
-            <div className="ms-2">
-              <Link to={`/product/${product.id}`} className="link-dark">
-                <div>{product.name}</div>
-              </Link>
-              <div className="bolded-label">${formatPrice(product.priceCents)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
+const ProductOverview = ({ id, name, priceCents, thumbnailUrl }) => (
+  <Link to={`/product/${id}`} className={styles.card}>
+    <div className={styles.thumb}>
+      {thumbnailUrl ? (
+        <img src={thumbnailUrl} alt={`${name} thumbnail`} />
+      ) : (
+        <div className={styles.empty}>No preview</div>
+      )}
     </div>
-  );
-};
+    <div className={styles.body}>
+      <div className={styles.name}>{name}</div>
+      <div className={styles.price}>${formatPrice(priceCents)}</div>
+    </div>
+  </Link>
+);
 
 export default ProductOverview;

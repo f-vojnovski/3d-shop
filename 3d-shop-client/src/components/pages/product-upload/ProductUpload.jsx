@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from 'react-bootstrap';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -124,7 +123,7 @@ const ProductUploadPage = () => {
     gltfProductPreview = <></>;
   } else {
     gltfProductPreview = (
-      <div className="square">
+      <div className="preview-square">
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
           <GltfModelDisplayer fileUrl={gltfModelUri} isLocalFile={true} probeRef={probeRef} />
         </ErrorBoundary>
@@ -138,7 +137,7 @@ const ProductUploadPage = () => {
     objProductPreview = <></>;
   } else {
     objProductPreview = (
-      <div className="square">
+      <div className="preview-square">
         <ErrorBoundary FallbackComponent={ModelLoaderErrorFallback}>
           <ObjModelDisplayer fileUrl={objModelUri} isLocalFile={true} probeRef={probeRef} />
         </ErrorBoundary>
@@ -162,7 +161,7 @@ const ProductUploadPage = () => {
     setAngles((current) => current.filter((_, i) => i !== index));
 
   return (
-    <div className="container-fluid my-auto form_max_width">
+    <div className="form-shell">
       <div className="row mt-1">
         <div className="col">
           <h1>Upload your product!</h1>
@@ -299,14 +298,15 @@ const ProductUploadPage = () => {
 
         <div className="row mt-3 mb-5">
           <div className="col">
-            <Button
-              className="w-100"
+            <button
+              type="button"
+              className="btn btn-primary w-100"
               onClick={() => {
                 onUploadClicked();
               }}
             >
               Upload product!
-            </Button>
+            </button>
           </div>
         </div>
       </div>

@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { checkoutCart, clearCart, removeFromCart } from '../../../service/features/cartSlice';
-import ProductOverview from '../../common/product-preview/ProductOverview';
+import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';
+import styles from './CheckoutPage.module.css';
 
 const CheckoutPage = () => {
   const products = useSelector((state) => state.cart.products);
@@ -35,21 +36,28 @@ const CheckoutPage = () => {
   }, [cartStatus, error]);
 
   const renderedProducts = products.map((product) => (
-    <div className="row d-flex justify-content-center" key={product.id}>
-      <div className="col-12 mb-2">
-        <ProductOverview
-          id={product.id}
-          name={product.name}
-          priceCents={product.price_cents}
-          thumbnailUrl={product.thumbnail_url}
-        ></ProductOverview>
-        <button
-          className="btn btn-sm btn-outline-danger mt-1"
-          onClick={() => dispatch(removeFromCart(product.id))}
-        >
-          Remove
-        </button>
+    <div className={styles.line} key={product.id}>
+      {product.thumbnail_url ? (
+        <img
+          className={styles.thumb}
+          src={product.thumbnail_url}
+          alt={`${product.name} thumbnail`}
+        />
+      ) : (
+        <div className={styles.thumb} />
+      )}
+      <div>
+        <Link className={styles.name} to={`/product/${product.id}`}>
+          {product.name}
+        </Link>
+        <div className={styles.price}>${formatPrice(product.price_cents)}</div>
       </div>
+      <button
+        className="btn btn-sm btn-outline-danger"
+        onClick={() => dispatch(removeFromCart(product.id))}
+      >
+        Remove
+      </button>
     </div>
   ));
 
@@ -57,29 +65,21 @@ const CheckoutPage = () => {
 
   if (products.length > 0) {
     content = (
-      <div>
-        <div className="d-flex justify-content-center">
-          <div>{renderedProducts}</div>
+      <>
+        <div className={styles.list}>{renderedProducts}</div>
+        <div className={styles.summary}>
+          <span className={styles.total}>Total: ${formatPrice(total)}</span>
+          <button className="btn btn-success" onClick={() => onCheckoutButtonClick()}>
+            Proceed to payment
+          </button>
         </div>
-        <div className="row mb-2">
-          <div className="col d-flex justify-content-end align-items-center gap-3">
-            <span className="bolded-label">Total: ${formatPrice(total)}</span>
-            <button className="btn btn-success" onClick={() => onCheckoutButtonClick()}>
-              Proceed to payment
-            </button>
-          </div>
-        </div>
-      </div>
+      </>
     );
   } else {
-    content = (
-      <div className="col">
-        <h4>Shopping cart is empty.</h4>
-      </div>
-    );
+    content = <div className={styles.empty}>Shopping cart is empty.</div>;
   }
 
-  return <div className="container-fluid max-width-1600">{content}</div>;
+  return <div className="page-shell">{content}</div>;
 };
 
 export default CheckoutPage;

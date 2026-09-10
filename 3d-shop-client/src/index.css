@@ -1,10 +1,35 @@
 :root {
-  /* color palette */
-  --clr-1: #6ccff6;
-  --clr-2: #001011;
-  --clr-3: #757780;
-  --clr-4: #fffffc;
-  --clr-5: #98ce00;
+  color-scheme: dark;
+
+  --clr-accent: #6ccff6;
+  --clr-accent-hover: #8fdcf9;
+  --clr-bg: #0e1113;
+  --clr-surface: #171b1e;
+  --clr-surface-raised: #1f2428;
+  --clr-line: #2b3237;
+  --clr-text: #e9edf0;
+  --clr-text-dim: #98a3ab;
+  --clr-danger: #ff6b6b;
+
+  --radius: 10px;
+  --shell-max: 1600px;
+}
+
+/* Bootstrap 5.3 reads its palette from these at runtime, so its components
+   inherit the theme instead of being overridden one at a time. Scoped to
+   :root[data-bs-theme] to outrank Bootstrap's own dark block. */
+:root[data-bs-theme='dark'] {
+  --bs-body-bg: var(--clr-bg);
+  --bs-body-color: var(--clr-text);
+  --bs-emphasis-color: #ffffff;
+  --bs-secondary-color: var(--clr-text-dim);
+  --bs-border-color: var(--clr-line);
+  --bs-border-radius: var(--radius);
+  --bs-link-color: var(--clr-accent);
+  --bs-link-hover-color: var(--clr-accent-hover);
+  --bs-card-bg: var(--clr-surface);
+  --bs-card-border-color: var(--clr-line);
+  --bs-tertiary-bg: var(--clr-surface-raised);
 }
 
 body {
@@ -19,9 +44,130 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Buttons are CSS-variable driven in 5.3, so the accent lands without
+   restyling the component. */
+.btn-primary {
+  --bs-btn-bg: var(--clr-accent);
+  --bs-btn-border-color: var(--clr-accent);
+  --bs-btn-color: #06232e;
+  --bs-btn-hover-bg: var(--clr-accent-hover);
+  --bs-btn-hover-border-color: var(--clr-accent-hover);
+  --bs-btn-hover-color: #06232e;
+  --bs-btn-active-bg: var(--clr-accent-hover);
+  --bs-btn-active-color: #06232e;
+  --bs-btn-disabled-bg: var(--clr-surface-raised);
+  --bs-btn-disabled-border-color: var(--clr-line);
+  --bs-btn-disabled-color: var(--clr-text-dim);
+  font-weight: 600;
+}
+
+.btn-success {
+  --bs-btn-bg: var(--clr-accent);
+  --bs-btn-border-color: var(--clr-accent);
+  --bs-btn-color: #06232e;
+  --bs-btn-hover-bg: var(--clr-accent-hover);
+  --bs-btn-hover-border-color: var(--clr-accent-hover);
+  --bs-btn-hover-color: #06232e;
+  font-weight: 600;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--clr-accent);
+  --bs-btn-border-color: var(--clr-accent);
+  --bs-btn-hover-bg: var(--clr-accent);
+  --bs-btn-hover-border-color: var(--clr-accent);
+  --bs-btn-hover-color: #06232e;
+  --bs-btn-disabled-color: #5b666e;
+  --bs-btn-disabled-border-color: var(--clr-line);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--clr-text-dim);
+  --bs-btn-border-color: var(--clr-line);
+  --bs-btn-hover-bg: var(--clr-surface-raised);
+  --bs-btn-hover-border-color: var(--clr-text-dim);
+  --bs-btn-hover-color: var(--clr-text);
+}
+
+.btn-outline-dark {
+  --bs-btn-color: var(--clr-text);
+  --bs-btn-border-color: var(--clr-line);
+  --bs-btn-hover-bg: var(--clr-surface-raised);
+  --bs-btn-hover-border-color: var(--clr-text-dim);
+  --bs-btn-hover-color: var(--clr-text);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--clr-danger);
+  --bs-btn-border-color: var(--clr-line);
+  --bs-btn-hover-bg: rgba(255, 107, 107, 0.14);
+  --bs-btn-hover-border-color: var(--clr-danger);
+  --bs-btn-hover-color: var(--clr-danger);
+}
+
+.form-control,
+.form-select {
+  background-color: var(--clr-surface-raised);
+  border-color: var(--clr-line);
+  color: var(--clr-text);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--clr-surface-raised);
+  border-color: var(--clr-accent);
+  box-shadow: 0 0 0 3px rgba(108, 207, 246, 0.18);
+  color: var(--clr-text);
+}
+
+.pagination {
+  --bs-pagination-bg: var(--clr-surface);
+  --bs-pagination-border-color: var(--clr-line);
+  --bs-pagination-color: var(--clr-text-dim);
+  --bs-pagination-hover-bg: var(--clr-surface-raised);
+  --bs-pagination-hover-border-color: var(--clr-line);
+  --bs-pagination-hover-color: var(--clr-text);
+  --bs-pagination-focus-bg: var(--clr-surface-raised);
+  --bs-pagination-focus-color: var(--clr-text);
+  --bs-pagination-active-bg: var(--clr-accent);
+  --bs-pagination-active-border-color: var(--clr-accent);
+  --bs-pagination-active-color: #06232e;
+  --bs-pagination-disabled-bg: var(--clr-surface);
+  --bs-pagination-disabled-border-color: var(--clr-line);
+  --bs-pagination-disabled-color: #5b666e;
+}
+
+.page-shell {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 18px 24px 40px;
+}
+
+.form-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 22px 20px 44px;
+}
+
+/* The upload page's local model preview; the displayers fill it. */
+.preview-square {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
 .bolded-label {
-  font-weight: 500;
-  color: black;
+  font-weight: 600;
+  color: var(--clr-text);
+}
+
+.large-font {
+  font-size: 1.3rem;
 }
 
 .max-width-350 {
@@ -29,17 +175,13 @@ code {
 }
 
 .max-width-1600 {
-  max-width: 1600px;
+  max-width: var(--shell-max);
 }
 
 .centered-item {
   position: absolute;
   top: 50%;
   left: 50%;
-}
-
-.large-font {
-  font-size: 1.3rem;
 }
 
 .text-link {
@@ -50,19 +192,25 @@ code {
 }
 
 .text-link:hover {
-  color: inherit;
+  color: var(--clr-accent);
 }
 
 .table-container {
-  border: 1px solid black;
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .table {
-  margin-bottom: 0 !important;
+  margin-bottom: 0;
 }
 
+/* Was 300px !important with a remote placeholder background, which forced
+   square cards and fetched an image from placeholder.pics on every render. */
 .product-thumbnail {
-  width: 300px !important;
-  height: 300px !important;
-  background-image:url('https://placeholder.pics/svg/300/E8E8E8/000000/X');
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--clr-surface-raised);
+  border-radius: var(--radius);
 }
