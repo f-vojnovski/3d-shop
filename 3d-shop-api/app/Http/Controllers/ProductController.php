@@ -8,14 +8,15 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
+use App\Support\ModelConverter;
 use App\Support\ModelFormats;
 use App\Support\ModelUpload;
-use App\Support\StandardAngles;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -58,13 +59,10 @@ class ProductController extends BaseController
             'thumbnail' => 'nullable|file|image|mimes:jpeg,png,webp|max:5120',
             'images' => 'sometimes|array|max:8',
             'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
-            'standard_views' => 'sometimes|array',
-            'standard_views.*' => 'in:'.ModelFormats::rule(),
             ...self::ANGLE_RULES,
         ]);
 
         $angles = $request->input('preview_angles') ?? [];
-        $standard = $request->input('standard_views') ?? [];
 
         $models = array_filter(array_map(
             fn (string $field) => $request->file($field),
@@ -78,23 +76,14 @@ class ProductController extends BaseController
         $this->guardAnglesForMode(
             $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
             array_keys($models),
-            $angles,
-            $standard
+            $angles
         );
-
-        // The seller's own shots come first: they chose those, and view 1 is
-        // what a buyer sees before touching anything.
-        foreach ($standard as $format) {
-            if (isset($models[$format])) {
-                $angles[$format] = array_merge($angles[$format] ?? [], StandardAngles::set());
-            }
-        }
 
         // Only a render can stand in for a missing thumbnail, so a listing that
         // will not produce one has to arrive with its own.
-        if ($request->file('thumbnail') === null && $standard === []) {
+        if ($request->file('thumbnail') === null && $angles === []) {
             throw ValidationException::withMessages([
-                'thumbnail' => 'Pick a thumbnail, or turn on the standard views and the first one will be used.',
+                'thumbnail' => 'Pick a thumbnail, or frame a camera angle and the first render will be used.',
             ]);
         }
 
@@ -145,6 +134,51 @@ class ProductController extends BaseController
 
             return new ProductResource($product->load('files'));
         });
+    }
+
+    /**
+     * Hands back a browser-readable copy of a format no browser can open, so
+     * the seller can frame their own angles instead of being given eight.
+     *
+     * The copy is the one the renderer will make for itself later: the
+     * conversion is deterministic for a given file and image, so the camera the
+     * seller aims here lands where they aimed it.
+     */
+    public function convert(Request $request, ModelConverter $converter)
+    {
+        $request->validate(['model' => 'required|file|max:51200']);
+
+        $scan = MeshPrescan::of($request->file('model')->getRealPath());
+
+        if (! ModelConverter::needsConverting($scan->format)) {
+            throw ValidationException::withMessages([
+                'model' => "A .{$scan->format} opens in the browser as it is.",
+            ]);
+        }
+
+        if ($refusal = $scan->rejection()) {
+            throw ValidationException::withMessages(['model' => $refusal]);
+        }
+
+        $scratch = storage_path('app/private/convert/'.bin2hex(random_bytes(8)));
+
+        try {
+            File::ensureDirectoryExists($scratch, 0775, true);
+            $result = $converter->toGlb($request->file('model')->getRealPath(), $scratch);
+
+            if (($result['status'] ?? 'failed') !== 'ok') {
+                throw ValidationException::withMessages([
+                    'model' => $result['reason'] ?? 'That file could not be converted.',
+                ]);
+            }
+
+            return response((string) file_get_contents($result['path']), 200, [
+                'Content-Type' => 'model/gltf-binary',
+                'Cache-Control' => 'no-store',
+            ]);
+        } finally {
+            File::deleteDirectory($scratch);
+        }
     }
 
     public function show($id)
@@ -369,16 +403,21 @@ class ProductController extends BaseController
      * Every format a buyer can pick needs an angle, or that tab shows an empty
      * gallery with nothing to explain it.
      */
-    private function guardAnglesForMode(string $mode, array $formats, array $angles, array $standard): void
+    /**
+     * A listing with no angle has nothing to show and no way to get anything,
+     * so the seller frames at least one. What a buyer cannot see from those is
+     * what the request-a-view button is for.
+     */
+    private function guardAnglesForMode(string $mode, array $formats, array $angles): void
     {
         if ($mode !== Product::PREVIEW_ATTESTED_STILLS) {
             return;
         }
 
         foreach ($formats as $format) {
-            if (($angles[$format] ?? []) === [] && ! in_array($format, $standard, true)) {
+            if (($angles[$format] ?? []) === []) {
                 throw ValidationException::withMessages([
-                    "preview_angles.{$format}" => "Capture at least one camera angle for the .{$format} file, or ask for the standard views.",
+                    "preview_angles.{$format}" => "Frame at least one camera angle for the .{$format} file.",
                 ]);
             }
         }

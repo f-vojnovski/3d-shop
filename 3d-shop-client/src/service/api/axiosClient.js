@@ -83,6 +83,20 @@ export function postRequestWithToken(URL, payload, token) {
     .then((response) => response);
 }
 
+/**
+ * A conversion starts a container, so it outlives the default timeout, and the
+ * reply is a model file rather than JSON.
+ */
+export function postForBinary(URL, payload, token) {
+  return axiosClient
+    .post(`/${URL}`, payload, {
+      responseType: 'arraybuffer',
+      timeout: 120000,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    .then((response) => response.data);
+}
+
 export function patchRequest(URL, payload) {
   return axiosClient.patch(`/${URL}`, payload).then((response) => response);
 }

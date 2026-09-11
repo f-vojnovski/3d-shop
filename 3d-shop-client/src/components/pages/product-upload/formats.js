@@ -4,9 +4,8 @@ export const FORMATS = [
   { key: 'obj', label: '.obj', extensions: ['.obj'], field: 'objModel' },
   { key: 'gltf', label: '.glb', extensions: ['.gltf', '.glb'], field: 'gltfModel' },
   { key: 'stl', label: '.stl', extensions: ['.stl'], field: 'stlModel' },
-  // No browser loader, and the server renders a converted copy, so a
-  // hand-framed camera would not point where the seller aimed it.
-  { key: 'fbx', label: '.fbx', extensions: ['.fbx'], field: 'fbxModel', framing: false },
+  // No browser loader, so the server hands back a .glb to frame instead.
+  { key: 'fbx', label: '.fbx', extensions: ['.fbx'], field: 'fbxModel', convert: true },
 ];
 
 // Mirrors the API's max:51200 and max:5120 (kilobytes).
@@ -42,6 +41,6 @@ export const SUPPORTED_SUMMARY = `${FORMATS.flatMap((format) => format.extension
 
 export const labelFor = (key) => FORMATS.find((format) => format.key === key)?.label ?? key;
 
-export const canFrame = (key) => FORMATS.find((format) => format.key === key)?.framing !== false;
+export const needsConverting = (key) => FORMATS.find((format) => format.key === key)?.convert === true;
 
 export const megabytes = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;

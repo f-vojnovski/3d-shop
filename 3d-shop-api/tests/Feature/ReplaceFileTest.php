@@ -42,7 +42,9 @@ class ReplaceFileTest extends TestCase
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'objModel' => UploadedFile::fake()->createWithContent('car.obj', "v 0 0 0\nf 1 1 1\n"),
             'thumbnail' => UploadedFile::fake()->image('thumb.png'),
-            'standard_views' => ['obj'],
+            'preview_angles' => json_encode(['obj' => [[
+                'position' => [3, 2, 3], 'target' => [0, 0, 0], 'fov' => 75,
+            ]]]),
         ])->assertSuccessful()->json('id');
 
         $this->product = Product::with('files')->findOrFail($id);
@@ -176,7 +178,9 @@ class ReplaceFileTest extends TestCase
             'price' => '20.00',
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'objModel' => UploadedFile::fake()->createWithContent('other.obj', "v 2 2 2\nf 1 1 1\n"),
-            'standard_views' => ['obj'],
+            'preview_angles' => json_encode(['obj' => [[
+                'position' => [3, 2, 3], 'target' => [0, 0, 0], 'fov' => 75,
+            ]]]),
         ])->assertSuccessful()->json('id');
 
         $theirs = Product::with('files')->findOrFail($other)->deliverableFor('obj');

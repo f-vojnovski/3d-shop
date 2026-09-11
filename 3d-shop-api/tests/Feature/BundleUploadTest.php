@@ -199,7 +199,9 @@ class BundleUploadTest extends TestCase
             'price' => '49.00',
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'objModel' => $model,
-            'standard_views' => ['obj'],
+            'preview_angles' => json_encode(['obj' => [[
+                'position' => [3, 2, 3], 'target' => [0, 0, 0], 'fov' => 75,
+            ]]]),
         ];
     }
 }

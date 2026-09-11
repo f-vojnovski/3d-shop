@@ -7,7 +7,9 @@ import reducer, {
   resetDraft,
   retakeShot,
   setThumbnail,
-  toggleStandardViews,
+  convertingStarted,
+  convertedPreview,
+  conversionFailed,
 } from './uploadDraftSlice';
 
 const file = (name) => ({ name });
@@ -24,31 +26,37 @@ const withShots = (count) => {
 };
 
 describe('upload draft', () => {
-  it('turns standard views on for a format that cannot be framed', () => {
-    const state = reducer(
-      undefined,
-      attachModel({ format: 'fbx', file: file('t.fbx'), uri: 't' }),
-    );
+  it('keeps the converted copy beside the file that gets uploaded', () => {
+    let state = reducer(undefined, attachModel({ format: 'fbx', file: file('t.fbx'), uri: 'original' }));
 
-    expect(state.standardViews).toEqual({ fbx: true });
+    expect(state.converting).toEqual({});
+
+    state = reducer(state, convertingStarted('fbx'));
+    expect(state.converting.fbx).toBe(true);
+
+    state = reducer(state, convertedPreview({ format: 'fbx', previewUri: 'converted' }));
+
+    expect(state.converting).toEqual({});
+    expect(state.models.fbx.previewUri).toBe('converted');
+    // The .fbx is still what the buyer downloads.
+    expect(state.models.fbx.uri).toBe('original');
   });
 
-  // Opt-in per format: a seller who frames their own shots should never have a
-  // turntable appear underneath them.
-  it('asks for standard views per format, off by default', () => {
-    let state = reducer(undefined, attachModel({ format: 'obj', file: file('a.obj'), uri: 'a' }));
-    state = reducer(state, attachModel({ format: 'gltf', file: file('b.glb'), uri: 'b' }));
+  it('stops waiting when a conversion fails', () => {
+    let state = reducer(undefined, attachModel({ format: 'fbx', file: file('t.fbx'), uri: 't' }));
+    state = reducer(state, convertingStarted('fbx'));
+    state = reducer(state, conversionFailed('fbx'));
 
-    expect(state.standardViews).toEqual({});
+    expect(state.converting).toEqual({});
+    expect(state.models.fbx.previewUri).toBeUndefined();
+  });
 
-    state = reducer(state, toggleStandardViews('obj'));
+  it('forgets a conversion when the model is dropped', () => {
+    let state = reducer(undefined, attachModel({ format: 'fbx', file: file('t.fbx'), uri: 't' }));
+    state = reducer(state, convertingStarted('fbx'));
+    state = reducer(state, dropModel('fbx'));
 
-    expect(state.standardViews.obj).toBe(true);
-    expect(state.standardViews.gltf).toBeFalsy();
-
-    state = reducer(state, toggleStandardViews('obj'));
-
-    expect(state.standardViews.obj).toBe(false);
+    expect(state.converting).toEqual({});
   });
 
   it('starts empty', () => {

@@ -1,5 +1,4 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
-import { canFrame } from '../../components/pages/product-upload/formats';
 
 const initialState = {
   models: {},
@@ -8,7 +7,7 @@ const initialState = {
   thumbnail: null,
   sellerImages: [],
   previewMode: 'attested_stills',
-  standardViews: {},
+  converting: {},
   details: { name: '', description: '', price: '' },
   errors: {},
   nextShotId: 1,
@@ -26,10 +25,6 @@ export const uploadDraftSlice = createSlice({
       state.models[format] = { file, uri, name: file.name };
       state.shots[format] = state.shots[format] ?? [];
 
-      if (!canFrame(format)) {
-        state.standardViews[format] = true;
-      }
-
       // Focus what was just attached: it has no angles yet, and publishing is
       // blocked until every attached format has one.
       state.active = format;
@@ -40,7 +35,7 @@ export const uploadDraftSlice = createSlice({
 
       delete state.models[format];
       delete state.shots[format];
-      delete state.standardViews[format];
+      delete state.converting[format];
 
       if (state.thumbnail?.from === format) {
         state.thumbnail = null;
@@ -128,14 +123,26 @@ export const uploadDraftSlice = createSlice({
       state.sellerImages = state.sellerImages.filter((_, at) => at !== action.payload);
     },
 
-    setDetails: (state, action) => {
-      state.details = { ...state.details, ...action.payload };
+    convertingStarted: (state, action) => {
+      state.converting[action.payload] = true;
     },
 
-    toggleStandardViews: (state, action) => {
-      const format = action.payload;
+    convertedPreview: (state, action) => {
+      const { format, previewUri } = action.payload;
 
-      state.standardViews[format] = !state.standardViews[format];
+      delete state.converting[format];
+
+      if (state.models[format]) {
+        state.models[format].previewUri = previewUri;
+      }
+    },
+
+    conversionFailed: (state, action) => {
+      delete state.converting[action.payload];
+    },
+
+    setDetails: (state, action) => {
+      state.details = { ...state.details, ...action.payload };
     },
 
     setPreviewMode: (state, action) => {
@@ -161,7 +168,9 @@ export const {
   removeSellerImage,
   moveShot,
   setThumbnail,
-  toggleStandardViews,
+  convertingStarted,
+  convertedPreview,
+  conversionFailed,
   setDetails,
   setPreviewMode,
   setErrors,

@@ -329,15 +329,9 @@
   font-size: 0.85rem;
 }
 
-.standard {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
+.converted {
+  margin: 8px 0 0;
   color: var(--clr-text-dim);
-  cursor: pointer;
-}
-
-.standard input {
-  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1.5;
 }

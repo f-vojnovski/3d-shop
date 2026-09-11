@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { postForBinary } from '../../../service/api/axiosClient';
 import { clearUploadState, uploadProduct } from '../../../service/features/productUploadSlice';
 import {
   addSellerImage,
@@ -19,7 +20,9 @@ import {
   setErrors,
   setPreviewMode,
   setThumbnail,
-  toggleStandardViews,
+  convertingStarted,
+  convertedPreview,
+  conversionFailed,
 } from '../../../service/features/uploadDraftSlice';
 import { clearModelCache } from '../../common/model-displayer/modelCache';
 import { fileToDataUri } from '../../../service/util/fileToDataUri';
@@ -36,7 +39,7 @@ import {
   SUPPORTED_SUMMARY,
   formatOf,
   isImage,
-  canFrame,
+  needsConverting,
   labelFor,
   megabytes,
 } from './formats';
@@ -60,9 +63,10 @@ const ProductUploadPage = () => {
     previewMode,
     sellerImages,
     shots,
-    standardViews,
+    converting,
     thumbnail,
   } = useSelector((state) => state.uploadDraft);
+  const token = useSelector((state) => state.auth.token);
   const attached = useSelector(selectAttachedFormats);
   const activeShots = useSelector(selectActiveShots);
 
@@ -73,6 +77,9 @@ const ProductUploadPage = () => {
 
   // A handle into the live canvas, not state.
   const probe = useRef(null);
+  const framingUri = active
+    ? (needsConverting(active) ? models[active]?.previewUri : models[active]?.uri)
+    : null;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -98,6 +105,24 @@ const ProductUploadPage = () => {
     }
   }, [status, error, dispatch]);
 
+  // The original file is still what gets uploaded; this copy only aims a camera.
+  const convertForFraming = useCallback(async (format, file) => {
+    dispatch(convertingStarted(format));
+
+    const form = new FormData();
+    form.append('model', file);
+
+    try {
+      const bytes = await postForBinary('api/uploads/convert', form, token);
+      const previewUri = URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
+
+      dispatch(convertedPreview({ format, previewUri }));
+    } catch {
+      dispatch(conversionFailed(format));
+      dispatch(notify('error', `${labelFor(format)} could not be prepared for framing.`));
+    }
+  }, [dispatch, token]);
+
   const accept = useCallback(async (files) => {
     // One drop can carry several images; the `thumbnail` above stays stale until the next render.
     let haveThumbnail = Boolean(thumbnail);
@@ -114,6 +139,11 @@ const ProductUploadPage = () => {
         }
 
         dispatch(attachModel({ format, file, uri: URL.createObjectURL(file) }));
+
+        if (needsConverting(format)) {
+          convertForFraming(format, file);
+        }
+
         continue;
       }
 
@@ -139,7 +169,7 @@ const ProductUploadPage = () => {
 
       dispatch(notify('error', `${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`));
     }
-  }, [dispatch, thumbnail]);
+  }, [dispatch, thumbnail, convertForFraming]);
 
   // A drop that misses the zone would otherwise be handled by the browser,
   // which opens the file and looks like the page silently ignoring it.
@@ -204,10 +234,10 @@ const ProductUploadPage = () => {
   const submit = () => {
     // A render can stand in for a thumbnail the seller never framed.
     const rendersWillSupplyOne =
-      previewMode === ATTESTED && attached.some((format) => standardViews[format]);
+      previewMode === ATTESTED && attached.some((format) => (shots[format] ?? []).length > 0);
 
     const missing = previewMode === ATTESTED
-      ? attached.filter((format) => (shots[format] ?? []).length === 0 && !standardViews[format])
+      ? attached.filter((format) => (shots[format] ?? []).length === 0)
       : [];
 
     const found = firstErrors({
@@ -215,10 +245,10 @@ const ProductUploadPage = () => {
       price: validatePrice(details.price),
       thumbnail: thumbnail || rendersWillSupplyOne
         ? null
-        : 'Pick a thumbnail: capture one, drop an image, or turn on the standard views.',
+        : 'Pick a thumbnail: capture one, or drop an image.',
       angles: missing.length === 0
         ? null
-        : `Capture a view of ${missing.map(labelFor).join(' and ')}, or turn on the standard views.`,
+        : `Frame a view of ${missing.map(labelFor).join(' and ')}.`,
     });
 
     dispatch(setErrors(found));
@@ -244,12 +274,6 @@ const ProductUploadPage = () => {
     form.append('description', details.description);
     form.append('price', details.price);
     form.append('preview_mode', previewMode);
-
-    attached
-      .filter((format) => standardViews[format])
-      .forEach((format, index) => {
-        form.append(`standard_views[${index}]`, format);
-      });
 
     if (previewMode === ATTESTED) {
       // Only the camera numbers travel; the roll images stay in the browser.
@@ -303,23 +327,23 @@ const ProductUploadPage = () => {
         </button>
       </div>
 
-      {canFrame(active) ? (
-        <CaptureStage format={active} uri={models[active].uri} probe={probe} onCapture={capture} />
+      {framingUri ? (
+        <>
+          <CaptureStage format={active} uri={framingUri} probe={probe} onCapture={capture} />
+
+          {models[active].previewUri && (
+            <p className={styles.converted}>
+              No browser opens a {labelFor(active)}, so this is the .glb our server will render.
+              Frame it and the camera lands where you aimed it.
+            </p>
+          )}
+        </>
       ) : (
         <div className={styles.standardOnly}>
-          Our server takes 8 standard views of {labelFor(active)}.
+          {converting[active]
+            ? `Preparing a copy of ${labelFor(active)} you can frame...`
+            : `${labelFor(active)} could not be prepared for framing. Remove it and try again.`}
         </div>
-      )}
-
-      {canFrame(active) && (
-        <label className={styles.standard}>
-          <input
-            type="checkbox"
-            checked={Boolean(standardViews[active])}
-            onChange={() => dispatch(toggleStandardViews(active))}
-          />
-          <span>Add 8 standard views of {labelFor(active)}</span>
-        </label>
       )}
 
       {activeShots.length > 0 && (

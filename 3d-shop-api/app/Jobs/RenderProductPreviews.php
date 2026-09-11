@@ -471,10 +471,10 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * A seller who asked for the standard views may not have framed anything,
-     * so there was no shot to make a thumbnail from at publish time. The first
-     * rendered view stands in. Locked because the formats render concurrently
-     * and both would otherwise claim the slot.
+     * A seller who framed angles but uploaded no thumbnail has nothing to show
+     * on a listing card until something renders. The first rendered view stands
+     * in. Locked because the formats render concurrently and both would
+     * otherwise claim the slot.
      */
     private function adoptThumbnail(Product $product): void
     {

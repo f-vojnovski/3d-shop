@@ -62,6 +62,10 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::post('/products/{id}/replace', [ProductController::class, 'replace'])
         ->where('id', '[0-9]+');
+    // Starts a container per call, so it is rate limited more tightly than the
+    // rest of the upload flow.
+    Route::post('/uploads/convert', [ProductController::class, 'convert'])
+        ->middleware('throttle:10,1');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);
     Route::get('/owned-products', [ProductController::class, 'getPurchasedProductsForUser']);
     Route::get('/products-authenticated/{id}', [ProductController::class, 'show']);
