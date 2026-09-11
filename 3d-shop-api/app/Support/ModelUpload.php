@@ -115,13 +115,28 @@ class ModelUpload
         if ($matching === []) {
             $found = $unpacked->models();
 
-            return [$found === []
-                ? 'That archive holds no model file.'
-                : sprintf(
-                    'That archive holds no .%s file. It holds %s.',
-                    $format,
-                    implode(', ', array_map(fn (string $f) => basename($f), $found))
-                )];
+            if ($found === []) {
+                // A very common shape: the download is a wrapper holding the
+                // textures loose and the real bundle one level in. We do not
+                // open it, so say which one to upload instead.
+                $inner = array_values(array_filter(
+                    $unpacked->files,
+                    fn (string $f) => strtolower(pathinfo($f, PATHINFO_EXTENSION)) === 'zip'
+                ));
+
+                return [$inner === []
+                    ? 'That archive holds no model file.'
+                    : sprintf(
+                        'That archive holds no model file. The model looks to be inside %s — upload that instead.',
+                        implode(' or ', $inner)
+                    )];
+            }
+
+            return [sprintf(
+                'That archive holds no .%s file. It holds %s.',
+                $format,
+                implode(', ', array_map(fn (string $f) => basename($f), $found))
+            )];
         }
 
         if (count($matching) > 1) {

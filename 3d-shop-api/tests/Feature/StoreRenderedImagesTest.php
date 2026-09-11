@@ -219,7 +219,7 @@ class StoreRenderedImagesTest extends TestCase
                 parent::__construct();
             }
 
-            public function run(array $request, string $modelPath, string $scratchDir): array
+            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null): array
             {
                 $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
                 File::makeDirectory($out, 0775, true, true);

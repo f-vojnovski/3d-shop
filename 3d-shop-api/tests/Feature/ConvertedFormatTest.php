@@ -198,7 +198,7 @@ class ConvertedFormatTest extends TestCase
                 parent::__construct();
             }
 
-            public function run(array $request, string $modelPath, string $scratchDir): array
+            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null): array
             {
                 $this->test->remember($request);
 

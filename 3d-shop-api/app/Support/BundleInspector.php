@@ -40,7 +40,11 @@ class BundleInspector
         'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9',
     ];
 
-    /** We do not recurse, so an archive inside an archive is a dead end. */
+    /**
+     * Never opened. Real downloads routinely carry the original project as
+     * `source/whatever.zip`, so refusing the upload over one would turn away a
+     * large share of genuine bundles; not recursing is the defence.
+     */
     private const ARCHIVES = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'];
 
     public function __construct(
@@ -160,12 +164,6 @@ class BundleInspector
 
         if (self::isSymlink($zip, $index)) {
             return sprintf('That archive holds a link rather than a file ("%s").', $name);
-        }
-
-        $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-
-        if (in_array($extension, self::ARCHIVES, true)) {
-            return sprintf('That archive holds another archive ("%s"), which we do not open.', $name);
         }
 
         return self::checkPath($name);

@@ -20,8 +20,12 @@ class RenderRunner
      * scratch disk, so the container keeps --network=none and the worker is the
      * only thing that talks to object storage.
      */
-    public function run(array $request, string $modelPath, string $scratchDir): array
-    {
+    public function run(
+        array $request,
+        string $modelPath,
+        string $scratchDir,
+        ?string $bundleDir = null
+    ): array {
         $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
         $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
 
@@ -36,13 +40,20 @@ class RenderRunner
 
         file_put_contents($jobFile, json_encode($request, JSON_PRETTY_PRINT));
 
+        // A bundle arrives as a folder so the model keeps its neighbours; a
+        // bare model is one file. Read-only either way: the renderer never
+        // writes to what it was given.
+        $source = $bundleDir === null
+            ? [$this->hostPath($modelPath).':/in/model:ro']
+            : [$this->hostPath($bundleDir).':/in/bundle:ro'];
+
         $process = new Process([
             'docker', 'run', '--rm',
             '--network=none', '--cap-drop=ALL',
             "--memory={$this->memory}", "--cpus={$this->cpus}",
             '--pids-limit=256', '--tmpfs', '/tmp:rw,size=512m',
             '-e', "RENDER_TIMEOUT={$this->timeoutSeconds}",
-            '-v', $this->hostPath($modelPath).':/in/model:ro',
+            '-v', $source[0],
             '-v', $this->hostPath($jobFile).':/in/job.json:ro',
             '-v', $this->hostPath($outDir).':/out',
             self::IMAGE,

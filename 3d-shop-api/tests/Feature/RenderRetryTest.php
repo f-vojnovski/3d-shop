@@ -149,7 +149,7 @@ class RenderRetryTest extends TestCase
                 parent::__construct();
             }
 
-            public function run(array $request, string $modelPath, string $scratchDir): array
+            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null): array
             {
                 $this->calls++;
 

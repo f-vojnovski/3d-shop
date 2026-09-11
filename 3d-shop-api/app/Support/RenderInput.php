@@ -26,17 +26,20 @@ class RenderInput
         Product $product,
         ProductFile $source,
         MeshPrescan $scan,
-        ?string $rendered = null
+        ?string $rendered = null,
+        ?string $entry = null
     ): array {
         return [
             'product_id' => $product->id,
-            'source' => [
+            'source' => array_filter([
+                // Names the model inside a bundle; absent for a bare file.
+                'entry' => $entry,
                 'path' => $source->path,
                 'format' => $rendered ?? $scan->format,
                 'checksum' => $source->checksum,
                 'bytes' => $scan->bytes,
                 'faces' => $scan->faces,
-            ],
+            ], fn ($value) => $value !== null),
             'angles' => $source->angles(),
             'output' => ['width' => 1200, 'height' => 900],
         ];

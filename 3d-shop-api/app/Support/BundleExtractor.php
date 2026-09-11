@@ -130,7 +130,7 @@ class BundleExtractor
         $candidates = [];
 
         foreach ($this->files as $path) {
-            if (self::isJunk($path)) {
+            if (self::isJunk($path) || self::isArchive($path)) {
                 continue;
             }
 
@@ -140,6 +140,16 @@ class BundleExtractor
         }
 
         return $candidates;
+    }
+
+    /** Archives are carried but never opened, so one is never the model. */
+    private static function isArchive(string $path): bool
+    {
+        return in_array(
+            strtolower(pathinfo($path, PATHINFO_EXTENSION)),
+            ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'],
+            true
+        );
     }
 
     private static function isJunk(string $path): bool

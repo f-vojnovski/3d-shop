@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Events\PreviewRenderFinished;
 use App\Models\Product;
 use App\Models\ProductFile;
+use App\Support\BundleExtractor;
+use App\Support\BundleInspector;
 use App\Support\MeshFacts;
 use App\Support\ModelConverter;
 use App\Support\RenderInput;
@@ -105,8 +107,22 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         try {
             $modelPath = $this->fetchModel($source, $scratch, $log);
             $rendered = null;
+            $bundleDir = null;
+            $entry = null;
 
-            if (ModelConverter::needsConverting($scan->format)) {
+            if (($source->meta['bundle'] ?? null) !== null) {
+                $unpacked = $this->unpack($modelPath, $scratch, $log);
+
+                if (is_string($unpacked)) {
+                    $this->failOrRetry($product, $log, $unpacked, retryable: false);
+
+                    return;
+                }
+
+                [$bundleDir, $entry] = $unpacked;
+            }
+
+            if ($bundleDir === null && ModelConverter::needsConverting($scan->format)) {
                 $conversion = $converter->toGlb($modelPath, $scratch);
 
                 if (($conversion['status'] ?? 'failed') !== 'ok') {
@@ -131,9 +147,10 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             }
 
             $result = $runner->run(
-                RenderInput::request($product, $source, $scan, $rendered),
+                RenderInput::request($product, $source, $scan, $rendered, $entry),
                 $modelPath,
-                $scratch
+                $scratch,
+                $bundleDir
             );
         } catch (Throwable $exception) {
             $log->error('Render threw.', ['message' => $exception->getMessage()]);
@@ -163,6 +180,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         }
 
         $this->storeImages($product, $source, $scratch, $result);
+        $this->recordMissing($source, $result);
         $this->settle($product, $source, 'ready', $this->blankNotice($result));
 
         $this->announce($product->refresh(), $log);
@@ -174,6 +192,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             'blank' => $result['blank'] ?? [],
             'triangles' => $result['triangles'] ?? null,
             'wireframes' => $result['wireframes'] ?? null,
+            'missing' => $result['missing'] ?? [],
         ]);
 
         $this->removeDirectory($scratch);
@@ -318,6 +337,55 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         ]);
 
         return $derived;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|string the folder and the model in it,
+     *                                            or why it could not be opened
+     */
+    private function unpack(string $archivePath, string $scratch, $log): array|string
+    {
+        $inspection = BundleInspector::of($archivePath);
+
+        if (! $inspection->allowed()) {
+            return (string) $inspection->refusal;
+        }
+
+        $directory = $scratch.DIRECTORY_SEPARATOR.'bundle';
+        $unpacked = BundleExtractor::extract($archivePath, $inspection, $directory);
+
+        if (! $unpacked->succeeded()) {
+            return (string) $unpacked->failure;
+        }
+
+        $models = $unpacked->models();
+
+        if ($models === []) {
+            return 'That archive holds no model file.';
+        }
+
+        $log->info('Bundle unpacked.', [
+            'files' => count($unpacked->files),
+            'bytes' => $unpacked->bytes,
+            'entry' => $models[0],
+        ]);
+
+        return [$directory, $models[0]];
+    }
+
+    /**
+     * Textures the model named and the bundle did not hold. Recorded rather
+     * than hidden: the render is honest about the file, and the file is
+     * missing something.
+     */
+    private function recordMissing(ProductFile $source, array $result): void
+    {
+        $missing = array_values(array_map(
+            fn (string $path) => ltrim(str_replace('/bundle/', '', $path), '/'),
+            $result['missing'] ?? []
+        ));
+
+        $source->withMeta(['missing' => $missing === [] ? null : $missing]);
     }
 
     private function fetchModel(ProductFile $source, string $scratch, $log): string

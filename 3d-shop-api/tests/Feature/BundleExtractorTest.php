@@ -223,6 +223,21 @@ class BundleExtractorTest extends TestCase
         $this->assertCount(4, $result->files);
     }
 
+    public function test_a_nested_archive_is_never_picked_as_the_model(): void
+    {
+        $archive = $this->zip([
+            'car/car.obj' => "v 0 0 0
+",
+            'source/project.zip' => 'PK-BYTES',
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertSame(['car/car.obj'], $result->models());
+        // Carried, because the record says what the archive held.
+        $this->assertContains('source/project.zip', $result->files);
+    }
+
     public function test_several_models_are_all_reported(): void
     {
         $archive = $this->zip([

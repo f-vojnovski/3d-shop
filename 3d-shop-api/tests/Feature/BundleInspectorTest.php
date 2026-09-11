@@ -113,15 +113,21 @@ class BundleInspectorTest extends TestCase
         $this->assertStringContainsString('overwrite each other', (string) $inspection->refusal);
     }
 
-    public function test_a_nested_archive_is_refused(): void
+    /**
+     * Real downloads routinely carry the original project as `source/x.zip`.
+     * Refusing over one would turn away a large share of genuine bundles; not
+     * opening it is the defence.
+     */
+    public function test_a_nested_archive_is_carried_rather_than_refused(): void
     {
         $inspection = BundleInspector::of($this->zip([
-            'car/car.obj' => "v 0 0 0\n",
-            'car/textures.zip' => 'PK-BYTES',
+            'car/car.obj' => "v 0 0 0
+",
+            'source/project.zip' => 'PK-BYTES',
         ]));
 
-        $this->assertFalse($inspection->allowed());
-        $this->assertStringContainsString('another archive', (string) $inspection->refusal);
+        $this->assertTrue($inspection->allowed());
+        $this->assertContains('source/project.zip', $inspection->entries);
     }
 
     public function test_an_overlong_path_is_refused(): void
