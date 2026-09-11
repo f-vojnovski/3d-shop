@@ -10,7 +10,11 @@ const ModelsListPage = () => {
   };
   return (
     <>
-      <ProductListingGrid url="../products/" fetchFunction={fetchFunction} />
+      <ProductListingGrid
+        url="../products/"
+        fetchFunction={fetchFunction}
+        emptyMessage="No models are listed yet."
+      />
     </>
   );
 };

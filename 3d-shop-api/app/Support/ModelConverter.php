@@ -81,7 +81,6 @@ class ModelConverter
             : 'That file could not be read for rendering: '.substr($said, 0, 200).'.';
     }
 
-    /** Named in the provenance: the images come from what this produced. */
     /**
      * Separated for the same reason as RenderRunner::commandFor().
      *
@@ -100,6 +99,7 @@ class ModelConverter
         ];
     }
 
+    /** Named in the provenance: the images come from what this produced. */
     private function identity(): string
     {
         if (self::$identity !== null) {
@@ -123,6 +123,8 @@ class ModelConverter
     /** Docker on Windows wants //d/path, not D:\path. */
     private function hostPath(string $absolute): string
     {
+        $absolute = HostPaths::translate($absolute);
+
         if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {
             return $absolute;
         }

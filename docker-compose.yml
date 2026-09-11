@@ -1,0 +1,185 @@
+name: 3dshop
+
+# Published ports move with MINIO_PORT / API_PORT / REVERB_PORT / CLIENT_PORT
+# so this can run beside something already holding one of them.
+
+# Everything a stranger needs is in here. No credentials: with PAYMENTS_ENABLED
+# false the application binds a fake gateway, so the whole browse -> buy ->
+# download path works without anyone signing up to a payment provider.
+x-api-env: &api-env
+  APP_NAME: "3D Shop"
+  APP_ENV: local
+  APP_KEY: base64:Zm9yLXRoZS1kZW1vLW9ubHktbm90LWEtc2VjcmV0MDA9
+  APP_DEBUG: "false"
+  APP_URL: http://localhost:${API_PORT:-8000}
+  FRONTEND_URL: http://localhost:${CLIENT_PORT:-3000}
+  CORS_ALLOWED_ORIGINS: "http://localhost:${CLIENT_PORT:-3000},http://127.0.0.1:${CLIENT_PORT:-3000}"
+
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: threedshop
+  DB_USERNAME: threedshop
+  DB_PASSWORD: threedshop
+
+  REDIS_CLIENT: predis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "null"
+  QUEUE_CONNECTION: redis
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+
+  FILESYSTEM_DISK: local
+  PUBLIC_DISK: s3
+  S3_KEY: 3dshop
+  S3_SECRET: 3dshop-secret
+  S3_REGION: us-east-1
+  S3_ENDPOINT: http://minio:9000
+  S3_MODELS_BUCKET: 3dshop-models
+  S3_PUBLIC_BUCKET: 3dshop-public
+  # The browser fetches images directly, so this one is the address it can reach.
+  PUBLIC_DISK_URL: http://localhost:${MINIO_PORT:-9000}/3dshop-public
+
+  BROADCAST_CONNECTION: reverb
+  REVERB_APP_ID: "3dshop"
+  REVERB_APP_KEY: demo-key
+  REVERB_APP_SECRET: demo-secret
+  REVERB_HOST: reverb
+  REVERB_PORT: "8080"
+  REVERB_SCHEME: http
+
+  PAYMENTS_ENABLED: "false"
+  COMMISSION_BPS: "1500"
+  STRIPE_WEBHOOK_SECRET: whsec_demo
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: threedshop
+      POSTGRES_USER: threedshop
+      POSTGRES_PASSWORD: threedshop
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U threedshop"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # quay.io, not Docker Hub: MinIO no longer publishes there.
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: 3dshop
+      MINIO_ROOT_PASSWORD: 3dshop-secret
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+    volumes:
+      - minio:/data
+
+  # The models bucket stays private; the images one is world-readable because
+  # the browser loads previews straight from it.
+  # Retries rather than waiting on a healthcheck, so it does not depend on what
+  # the server image happens to ship.
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 3dshop 3dshop-secret; do sleep 2; done &&
+      mc mb --ignore-existing local/3dshop-models &&
+      mc mb --ignore-existing local/3dshop-public &&
+      mc anonymous set download local/3dshop-public
+      "
+
+  # Built here so the worker has it to start. It does nothing itself.
+  render-image:
+    image: 3dshop-render:latest
+    build:
+      context: .
+      dockerfile: 3d-shop-api/render/Dockerfile
+    entrypoint: ["/bin/true"]
+    restart: "no"
+
+  # One image for all three PHP roles. Built once here and referenced by name
+  # below, so a rebuild cannot leave the worker running last week's code.
+  api:
+    image: 3dshop-api:local
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment:
+      <<: *api-env
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  worker:
+    image: 3dshop-api:local
+    command: ["php", "artisan", "queue:work", "redis", "--tries=2"]
+    environment: *api-env
+    volumes:
+      - storage:/app/storage
+      # The renderer is a sibling container, not a child. This is the whole
+      # reason the worker can start one, and the reason only the worker gets it.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      api:
+        condition: service_started
+      render-image:
+        condition: service_completed_successfully
+
+  reverb:
+    image: 3dshop-api:local
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    environment: *api-env
+    ports:
+      - "${REVERB_PORT:-8080}:8080"
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      api:
+        condition: service_started
+
+  # Nginx serves the built app and proxies the API, so both share one origin.
+  # The Reverb settings are baked in: the browser reads them from the bundle.
+  client:
+    build:
+      context: .
+      dockerfile: docker/client.Dockerfile
+      args:
+        VITE_REVERB_APP_KEY: demo-key
+        VITE_REVERB_HOST: 127.0.0.1
+        VITE_REVERB_PORT: "${REVERB_PORT:-8080}"
+        VITE_REVERB_SCHEME: http
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  postgres:
+  minio:
+  storage:

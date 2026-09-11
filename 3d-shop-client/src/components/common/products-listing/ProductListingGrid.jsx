@@ -6,6 +6,7 @@ import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import LoadError from '../../common/load-error/LoadError';
 import Pagination from '../pagination/Pagination';
 import { useNavigate, useParams } from 'react-router-dom';
+import styles from './ProductListingGrid.module.css';
 
 const ProductListingGrid = (props) => {
   const { fetchFunction } = props;
@@ -44,7 +45,15 @@ const ProductListingGrid = (props) => {
     content = <LoadError message={error} fallback="Could not load products." />;
   }
 
-  if (productsStatus === 'succeeded') {
+  if (productsStatus === 'succeeded' && products.products.length === 0) {
+    content = (
+      <div className={styles.empty}>
+        <p>{props.emptyMessage ?? 'Nothing is listed yet.'}</p>
+      </div>
+    );
+  }
+
+  if (productsStatus === 'succeeded' && products.products.length > 0) {
     const renderedProducts = products.products.map((product) => (
       <div className="col-sm-6 col-md-3 mb-2" key={product.id}>
         <ProductOverview

@@ -99,6 +99,8 @@ class RenderRunner
     /** Docker on Windows wants //d/path, not D:\path. */
     private function hostPath(string $absolute): string
     {
+        $absolute = HostPaths::translate($absolute);
+
         if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {
             return $absolute;
         }

@@ -1,0 +1,31 @@
+# Secrets first. The build context is the whole repository, so without this the
+# API image carries a copy of the developer's own .env — payment credentials
+# included — into every layer and anywhere the image is pushed.
+**/.env
+**/.env.*
+!**/.env.example
+
+**/.git
+**/.gitignore
+**/vendor
+**/node_modules
+**/.vscode
+**/.idea
+
+# Written at run time, and a volume anyway. Copying them in means the image
+# ships one machine's logs and uploads, and seeds the volume with them.
+3d-shop-api/storage/app/**
+3d-shop-api/storage/logs/**
+3d-shop-api/storage/framework/cache/**
+3d-shop-api/storage/framework/sessions/**
+3d-shop-api/storage/framework/testing/**
+3d-shop-api/storage/framework/views/**
+3d-shop-api/bootstrap/cache/**
+
+3d-shop-client/build
+3d-shop-client/dist
+3d-shop-client/coverage
+
+docs
+docker-compose.yml
+README.md

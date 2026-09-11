@@ -10,7 +10,11 @@ const PurchasedProducstPage = () => {
   };
   return (
     <>
-      <ProductListingGrid url="../purchases/" fetchFunction={fetchFunction} />
+      <ProductListingGrid
+        url="../purchases/"
+        fetchFunction={fetchFunction}
+        emptyMessage="You have not bought anything yet."
+      />
     </>
   );
 };

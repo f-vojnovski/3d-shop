@@ -10,7 +10,11 @@ const CurrentUserProductList = () => {
   };
   return (
     <>
-      <ProductListingGrid url="../my-products/" fetchFunction={fetchFunction} />
+      <ProductListingGrid
+        url="../my-products/"
+        fetchFunction={fetchFunction}
+        emptyMessage="You have not uploaded a model yet."
+      />
     </>
   );
 };
