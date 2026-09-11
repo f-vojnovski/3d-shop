@@ -150,6 +150,7 @@ const SingleProductView = () => {
                 product={product}
                 format={measured.format}
                 bounds={measured.facts.bounds}
+                hasUvs={Boolean(measured.facts.uvs)}
               />
             </div>
           )}

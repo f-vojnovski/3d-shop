@@ -11,7 +11,14 @@ describe('persisted state', () => {
     vi.resetModules();
   });
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+  // Polled rather than slept on: redux-persist writes on its own schedule and
+  // a fixed wait is a test that fails when the machine is busy.
+  const settled = async (predicate) => {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (predicate()) return;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  };
 
   const persisted = () =>
     Object.entries(localStorage)
@@ -28,7 +35,7 @@ describe('persisted state', () => {
       error: { message: 'Those credentials do not match our records.' },
     });
     await persistor.flush();
-    await settle();
+    await settled(() => persisted().includes('token'));
 
     expect(store.getState().auth.error).toBe('Those credentials do not match our records.');
     expect(persisted()).not.toContain('do not match our records');
@@ -44,7 +51,7 @@ describe('persisted state', () => {
       payload: { user: { id: 1, name: 'seller' }, token: 'abc123' },
     });
     await persistor.flush();
-    await settle();
+    await settled(() => persisted().includes('abc123'));
 
     expect(persisted()).toContain('abc123');
   });

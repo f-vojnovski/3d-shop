@@ -13,9 +13,11 @@ import styles from './RequestView.module.css';
 const PASSES = [
   { key: 'shaded', label: 'Shaded' },
   { key: 'wireframe', label: 'Wireframe' },
+  { key: 'checker', label: 'UV checker', needsUvs: true },
+  { key: 'normals', label: 'Normals' },
 ];
 
-const RequestView = ({ product, format, bounds }) => {
+const RequestView = ({ product, format, bounds, hasUvs = true }) => {
   const dispatch = useDispatch();
   const views = useSelector(selectCustomViews);
   const requesting = useSelector((state) => state.customViews.requesting);
@@ -67,7 +69,7 @@ const RequestView = ({ product, format, bounds }) => {
 
       <div className={styles.controls} hidden={!open}>
         <div className={styles.passes} role="group" aria-label="Which pass">
-          {PASSES.map((one) => (
+          {PASSES.filter((one) => hasUvs || !one.needsUvs).map((one) => (
             <button
               key={one.key}
               type="button"

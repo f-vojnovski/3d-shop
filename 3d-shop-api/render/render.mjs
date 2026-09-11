@@ -246,8 +246,10 @@ async function main() {
   const blank = [];
 
   const drawn = [...state.images.values()];
-  // One entry per angle whichever pass was asked for, so wireframe leads alone.
-  const lead = drawn.some((image) => image.pass === 'shaded') ? 'shaded' : 'wireframe';
+  // One entry per angle. Shaded leads when it was asked for, and whatever single
+  // pass was asked for leads when it was not.
+  const passes = [...new Set(drawn.map((image) => image.pass))];
+  const lead = passes.includes('shaded') ? 'shaded' : (passes[0] ?? 'shaded');
   const primary = drawn
     .filter((image) => image.pass === lead)
     .sort((a, b) => a.index - b.index);
@@ -258,7 +260,7 @@ async function main() {
       continue;
     }
 
-    const file = `${lead === 'shaded' ? 'angle' : 'wireframe'}-${index}.png`;
+    const file = `${lead === 'shaded' ? 'angle' : lead}-${index}.png`;
     await writeFile(join(OUT, file), png);
 
     const entry = { index, file, pass: lead, bytes: png.length, coverage: Number(coverage.toFixed(5)) };

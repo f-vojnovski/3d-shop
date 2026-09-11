@@ -54,7 +54,7 @@ class CustomViewTest extends TestCase
             'path' => 'gltf_files/truck.glb',
             'bytes' => 100,
             'checksum' => hash('sha256', 'truck'),
-            'meta' => ['sniffed_format' => 'glb'],
+            'meta' => ['sniffed_format' => 'glb', 'facts' => ['uvs' => true]],
         ]);
 
         // A file with no server views of its own has nothing to aim at.
@@ -201,6 +201,41 @@ class CustomViewTest extends TestCase
             'pass' => 'shaded',
             'camera' => ['position' => [0, 99999, 0], 'target' => [0, 0, 0], 'fov' => 75],
         ])->assertStatus(422)->assertJsonValidationErrors('camera.position.1');
+    }
+
+    public function test_a_checker_view_can_be_asked_for(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson("/api/products/{$this->product->id}/views", $this->payload('checker'))
+            ->assertSuccessful()
+            ->assertJsonPath('pass', 'checker');
+    }
+
+    public function test_a_normals_view_can_be_asked_for(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson("/api/products/{$this->product->id}/views", $this->payload('normals'))
+            ->assertSuccessful()
+            ->assertJsonPath('pass', 'normals');
+    }
+
+    public function test_a_checker_view_is_refused_when_the_file_has_no_uvs(): void
+    {
+        $meta = $this->source->meta;
+        $meta['facts']['uvs'] = false;
+        $this->source->update(['meta' => $meta]);
+
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson("/api/products/{$this->product->id}/views", $this->payload('checker'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('pass');
+
+        // The other passes do not care about UVs.
+        $this->postJson("/api/products/{$this->product->id}/views", $this->payload('normals'))
+            ->assertSuccessful();
     }
 
     public function test_an_unknown_pass_is_refused(): void

@@ -142,6 +142,13 @@ async function main() {
   });
   const wire = new THREE.MeshBasicMaterial({ color: 0x141821, wireframe: true });
 
+  // Built from an array rather than a canvas: a canvas depends on the platform's
+  // rasteriser, and these images have to come out byte-identical on a re-render.
+  const checker = new THREE.MeshBasicMaterial({ map: checkerTexture(), side: THREE.DoubleSide });
+  const normals = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+
+  const overrides = { checker, normals };
+
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
 
   for (let i = 0; i < job.angles.length; i += 1) {
@@ -157,6 +164,24 @@ async function main() {
 
       await post('/image', {
         pass: 'shaded',
+        index: i,
+        triangles: Math.round(triangles),
+        coverage: coverageOf(renderer),
+        png: renderer.domElement.toDataURL('image/png'),
+      });
+    }
+
+    for (const [name, material] of Object.entries(overrides)) {
+      if (! wanted.includes(name)) {
+        continue;
+      }
+
+      scene.overrideMaterial = material;
+      renderer.render(scene, camera);
+      scene.overrideMaterial = null;
+
+      await post('/image', {
+        pass: name,
         index: i,
         triangles: Math.round(triangles),
         coverage: coverageOf(renderer),
@@ -212,6 +237,39 @@ async function materialsFor(text, base, manager) {
   library.preload();
 
   return library;
+}
+
+/**
+ * Squares in UV space, so a stretched or overlapping unwrap shows as stretched
+ * or overlapping squares. Nearest filtering keeps the edges hard, which is what
+ * makes the distortion legible.
+ */
+function checkerTexture() {
+  const size = 64;
+  const pixels = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const light = ((x >> 3) + (y >> 3)) % 2 === 0;
+      const value = light ? 0xe8 : 0x50;
+      const at = (y * size + x) * 4;
+
+      pixels[at] = value;
+      pixels[at + 1] = value;
+      pixels[at + 2] = value;
+      pixels[at + 3] = 0xff;
+    }
+  }
+
+  const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(8, 8);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.needsUpdate = true;
+
+  return texture;
 }
 
 // Background is transparent, so any alpha is geometry.

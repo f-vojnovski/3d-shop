@@ -49,6 +49,12 @@ class CustomViewController extends BaseController
             ]);
         }
 
+        if (in_array($fields['pass'], CustomView::NEEDS_UVS, true) && ! ($source->facts()['uvs'] ?? false)) {
+            throw ValidationException::withMessages([
+                'pass' => "The .{$fields['format']} file has no UVs, so a checker view would be one flat colour.",
+            ]);
+        }
+
         $camera = $fields['camera'] + ['up' => [0, 1, 0]];
         $fingerprint = CustomView::fingerprintOf($camera, $fields['pass']);
         $viewerId = (int) Auth::user()->getAuthIdentifier();
