@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\RenderCustomView;
+use App\Jobs\RenderProductPreviews;
 use App\Models\CustomView;
 use App\Models\Product;
 use App\Models\ProductFile;
@@ -29,6 +30,8 @@ class CustomViewTest extends TestCase
 
     private User $viewer;
 
+    private User $seller;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -36,15 +39,17 @@ class CustomViewTest extends TestCase
         Storage::fake('models');
         Storage::fake('public');
 
+        $this->seller = User::create([
+            'name' => 'seller',
+            'email' => 'seller@example.com',
+            'password' => 'password123',
+        ]);
+
         $this->product = Product::create([
             'name' => 'Delivery truck',
             'price_cents' => 6900,
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
-            'user_id' => User::create([
-                'name' => 'seller',
-                'email' => 'seller@example.com',
-                'password' => 'password123',
-            ])->id,
+            'user_id' => $this->seller->id,
         ]);
 
         $this->source = $this->product->files()->create([
@@ -320,6 +325,61 @@ class CustomViewTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    public function test_the_owner_can_put_a_view_they_asked_for_on_the_listing(): void
+    {
+        Sanctum::actingAs($this->seller);
+
+        $id = $this->postJson("/api/products/{$this->product->id}/views", $this->payload())->json('id');
+        CustomView::whereKey($id)->update(['status' => CustomView::READY, 'path' => 'custom_views/a.png', 'disk' => 'public']);
+
+        $this->postJson("/api/products/{$this->product->id}/views/{$id}/publish")->assertSuccessful();
+
+        $angles = $this->source->fresh()->angles();
+        $this->assertCount(1, $angles);
+        $this->assertSame('requested', $angles[0]['origin']);
+        $this->assertSame(self::CAMERA['position'], $angles[0]['position']);
+
+        // The camera travels, not the picture, so the format renders again.
+        Queue::assertPushed(RenderProductPreviews::class);
+    }
+
+    public function test_a_buyer_cannot_put_a_view_on_someone_elses_listing(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $id = $this->postJson("/api/products/{$this->product->id}/views", $this->payload())->json('id');
+        CustomView::whereKey($id)->update(['status' => CustomView::READY]);
+
+        $this->postJson("/api/products/{$this->product->id}/views/{$id}/publish")->assertForbidden();
+        $this->assertSame([], $this->source->fresh()->angles());
+    }
+
+    public function test_a_view_that_has_not_been_drawn_cannot_be_published(): void
+    {
+        Sanctum::actingAs($this->seller);
+
+        $id = $this->postJson("/api/products/{$this->product->id}/views", $this->payload())->json('id');
+
+        $this->postJson("/api/products/{$this->product->id}/views/{$id}/publish")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('view');
+    }
+
+    public function test_the_same_camera_is_not_added_twice(): void
+    {
+        Sanctum::actingAs($this->seller);
+
+        $id = $this->postJson("/api/products/{$this->product->id}/views", $this->payload())->json('id');
+        CustomView::whereKey($id)->update(['status' => CustomView::READY]);
+
+        $this->postJson("/api/products/{$this->product->id}/views/{$id}/publish")->assertSuccessful();
+        $this->postJson("/api/products/{$this->product->id}/views/{$id}/publish")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('view');
+
+        $this->assertCount(1, $this->source->fresh()->angles());
+    }
+
     private function payload(string $pass = 'wireframe', string $format = 'gltf'): array
     {
         return ['format' => $format, 'pass' => $pass, 'camera' => self::CAMERA];

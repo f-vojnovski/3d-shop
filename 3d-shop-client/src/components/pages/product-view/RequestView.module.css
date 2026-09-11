@@ -128,3 +128,21 @@
   font-size: 0.7rem;
   text-align: center;
 }
+
+.publish {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--clr-line);
+  border-radius: 6px;
+  background: none;
+  color: var(--clr-text-dim);
+  font-size: 0.72rem;
+}
+
+.publish:hover,
+.publish:focus-visible {
+  border-color: var(--clr-accent);
+  color: var(--clr-accent);
+}

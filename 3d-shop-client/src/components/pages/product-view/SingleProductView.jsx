@@ -151,6 +151,7 @@ const SingleProductView = () => {
                 format={measured.format}
                 bounds={measured.facts.bounds}
                 hasUvs={Boolean(measured.facts.uvs)}
+                onPublished={() => dispatch(fetchProductById(productId))}
               />
             </div>
           )}

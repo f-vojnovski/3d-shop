@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\RenderCustomView;
+use App\Jobs\RenderProductPreviews;
+use App\Http\Resources\ProductResource;
 use App\Models\CustomView;
 use App\Models\Product;
 use App\Models\ProductFile;
@@ -14,6 +16,9 @@ use Illuminate\Validation\ValidationException;
 
 class CustomViewController extends BaseController
 {
+    /** Mirrors the cap the upload validation puts on a format's angles. */
+    private const MAX_ANGLES = 8;
+
     /**
      * Takes a camera and draws the model from it. The viewer never receives the
      * mesh: they aim at a box the size of the measured bounding box, and the
@@ -88,6 +93,76 @@ class CustomViewController extends BaseController
         }
 
         return $this->describe($view->refresh());
+    }
+
+    /**
+     * The camera travels, not the picture: a requested view carries no image
+     * checksum and no renderer identity, so re-filing it as a still would put an
+     * unattested image in the attested gallery. Re-rendering is also the only
+     * way to add an angle after publishing.
+     */
+    public function publish(Request $request, $id, $viewId)
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if ((int) $product->user_id !== (int) Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        $view = CustomView::where('product_id', $product->id)
+            ->where('user_id', Auth::user()->getAuthIdentifier())
+            ->findOrFail($viewId);
+
+        if ($view->status !== CustomView::READY) {
+            throw ValidationException::withMessages([
+                'view' => 'That view has not been drawn yet.',
+            ]);
+        }
+
+        $source = $product->files->firstWhere('id', $view->product_file_id);
+
+        if ($source === null || $source->isSuperseded()) {
+            throw ValidationException::withMessages([
+                'view' => 'That view was drawn from a file this product no longer sells.',
+            ]);
+        }
+
+        $angles = $source->angles();
+
+        if (count($angles) >= self::MAX_ANGLES) {
+            throw ValidationException::withMessages([
+                'view' => sprintf('This file already has %d angles, which is the most a listing shows.', self::MAX_ANGLES),
+            ]);
+        }
+
+        $camera = $view->camera;
+
+        foreach ($angles as $existing) {
+            if (CustomView::fingerprintOf($existing + ['up' => [0, 1, 0]], $view->pass) === $view->fingerprint) {
+                throw ValidationException::withMessages([
+                    'view' => 'That camera is already on the listing.',
+                ]);
+            }
+        }
+
+        $angles[] = [
+            'position' => $camera['position'],
+            'target' => $camera['target'],
+            'up' => $camera['up'] ?? [0, 1, 0],
+            'fov' => $camera['fov'],
+            'origin' => 'requested',
+            'slot' => count($angles),
+        ];
+
+        $source->withMeta([
+            'angles' => $angles,
+            'render' => ['status' => 'queued', 'error' => null],
+        ]);
+
+        $product->refreshPreviewStatus();
+        RenderProductPreviews::dispatch($product->id, $source->format)->afterCommit();
+
+        return new ProductResource($product->fresh()->load('files'));
     }
 
     /** @return array<string, mixed> */

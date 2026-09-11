@@ -5,6 +5,7 @@ import Lightbox from '../../common/lightbox/Lightbox';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import {
   fetchCustomViews,
+  publishCustomView,
   requestCustomView,
   selectCustomViews,
 } from '../../../service/features/customViewSlice';
@@ -17,7 +18,7 @@ const PASSES = [
   { key: 'normals', label: 'Normals' },
 ];
 
-const RequestView = ({ product, format, bounds, hasUvs = true }) => {
+const RequestView = ({ product, format, bounds, hasUvs = true, onPublished }) => {
   const dispatch = useDispatch();
   const views = useSelector(selectCustomViews);
   const requesting = useSelector((state) => state.customViews.requesting);
@@ -25,6 +26,15 @@ const RequestView = ({ product, format, bounds, hasUvs = true }) => {
   const [pass, setPass] = useState('shaded');
   const [shown, setShown] = useState(null);
   const probe = useRef(null);
+
+  // Publishing queues a re-render, so the listing is refetched to pick it up.
+  const publish = async (viewId) => {
+    const result = await dispatch(publishCustomView({ productId: product.id, viewId }));
+
+    if (publishCustomView.fulfilled.match(result)) {
+      onPublished?.();
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchCustomViews(product.id));
@@ -100,6 +110,15 @@ const RequestView = ({ product, format, bounds, hasUvs = true }) => {
                 >
                   <img src={view.url} alt={`${product.name}, ${view.pass} view you asked for`} />
                   <span>Full size</span>
+                </button>
+              )}
+              {view.status === 'ready' && product.product_status === 'owner' && (
+                <button
+                  type="button"
+                  className={styles.publish}
+                  onClick={() => publish(view.id)}
+                >
+                  Use on the listing
                 </button>
               )}
               {view.status === 'queued' && (

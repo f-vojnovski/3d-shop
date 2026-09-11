@@ -33,6 +33,19 @@ export const requestCustomView = createAsyncThunk(
   },
 );
 
+export const publishCustomView = createAsyncThunk(
+  'customViews/publish',
+  async ({ productId, viewId }, { getState }) => {
+    const response = await postRequestWithToken(
+      `api/products/${productId}/views/${viewId}/publish`,
+      {},
+      getState().auth.token,
+    );
+
+    return response.data;
+  },
+);
+
 const put = (state, view) => {
   const at = state.views.findIndex((one) => one.id === view.id);
 

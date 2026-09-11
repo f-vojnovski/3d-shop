@@ -78,6 +78,8 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::post('/products/{id}/views', [CustomViewController::class, 'store'])
         ->middleware('throttle:20,1')
         ->where('id', '[0-9]+');
+    Route::post('/products/{id}/views/{view}/publish', [CustomViewController::class, 'publish'])
+        ->where(['id' => '[0-9]+', 'view' => '[0-9]+']);
 
     Route::get('/orders/{id}', [CheckoutController::class, 'show'])->where('id', '[0-9]+');
 
