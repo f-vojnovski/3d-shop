@@ -97,7 +97,7 @@ class ModelUpload
                 return self::refuse($scan, $refusal);
             }
 
-            $facts = MeshFacts::of($inner, $scan->format);
+            $facts = MeshFacts::of($inner, $scan->format, $scratch);
             $library = MaterialLibrary::beside($inner, $scratch);
 
             return new self(

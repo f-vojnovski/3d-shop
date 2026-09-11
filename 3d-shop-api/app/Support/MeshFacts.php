@@ -55,11 +55,16 @@ class MeshFacts
         );
     }
 
-    public static function of(string $absolutePath, string $format): self
+    /**
+     * @param  string|null  $root  the bundle this file arrived in, when it did.
+     *                             A `.gltf` keeps its buffer and its images
+     *                             beside it rather than inside itself.
+     */
+    public static function of(string $absolutePath, string $format, ?string $root = null): self
     {
         return match ($format) {
             'obj' => self::fromObj($absolutePath),
-            'gltf', 'glb' => self::fromGltf($absolutePath, $format === 'glb'),
+            'gltf', 'glb' => self::fromGltf($absolutePath, $format === 'glb', $root),
             'stl' => self::fromStl($absolutePath),
             default => self::nothing(),
         };
@@ -340,7 +345,7 @@ class MeshFacts
 
     // --------------------------------------------------------------- glTF
 
-    private static function fromGltf(string $path, bool $binary): self
+    private static function fromGltf(string $path, bool $binary, ?string $root = null): self
     {
         $handle = fopen($path, 'rb');
 
@@ -405,9 +410,7 @@ class MeshFacts
             }
         }
 
-        $textures = $binOffset === null
-            ? []
-            : self::textureSizes($handle, $gltf, $binOffset, $binLength);
+        $textures = self::textureSizes($handle, $gltf, $binOffset, $binLength, $path, $root);
 
         fclose($handle);
 
@@ -699,26 +702,24 @@ class MeshFacts
      * @param  resource  $handle
      * @return list<array{width: int, height: int}>
      */
-    private static function textureSizes($handle, array $gltf, int $binOffset, int $binLength): array
-    {
+    private static function textureSizes(
+        $handle,
+        array $gltf,
+        ?int $binOffset,
+        int $binLength,
+        string $path,
+        ?string $root
+    ): array {
         $views = $gltf['bufferViews'] ?? [];
         $sizes = [];
 
         foreach ($gltf['images'] ?? [] as $image) {
-            $view = $views[$image['bufferView'] ?? -1] ?? null;
+            // A .glb keeps its images in the binary chunk; a .gltf names them.
+            $header = isset($image['uri'])
+                ? self::headerOfNamed((string) $image['uri'], $path, $root)
+                : self::headerOfEmbedded($handle, $views[$image['bufferView'] ?? -1] ?? null, $binOffset, $binLength);
 
-            if ($view === null || ($view['buffer'] ?? 0) !== 0) {
-                continue;
-            }
-
-            $offset = $binOffset + (int) ($view['byteOffset'] ?? 0);
-
-            if ($offset + 32 > $binOffset + $binLength) {
-                continue;
-            }
-
-            fseek($handle, $offset);
-            $size = self::imageSize((string) fread($handle, 32));
+            $size = $header === null ? null : self::imageSize($header);
 
             if ($size !== null) {
                 $sizes[] = $size;
@@ -726,6 +727,59 @@ class MeshFacts
         }
 
         return $sizes;
+    }
+
+    /** @param  resource  $handle */
+    private static function headerOfEmbedded($handle, ?array $view, ?int $binOffset, int $binLength): ?string
+    {
+        if ($view === null || $binOffset === null || ($view['buffer'] ?? 0) !== 0) {
+            return null;
+        }
+
+        $offset = $binOffset + (int) ($view['byteOffset'] ?? 0);
+
+        if ($offset + 32 > $binOffset + $binLength) {
+            return null;
+        }
+
+        fseek($handle, $offset);
+
+        return (string) fread($handle, 32);
+    }
+
+    /** Only enough bytes to read a header out of: nothing here decodes an image. */
+    private static function headerOfNamed(string $uri, string $path, ?string $root): ?string
+    {
+        if (str_starts_with($uri, 'data:')) {
+            $comma = strpos($uri, ',');
+
+            if ($comma === false || ! str_contains(substr($uri, 0, $comma), ';base64')) {
+                return null;
+            }
+
+            return (string) base64_decode(substr($uri, $comma + 1, 64), true);
+        }
+
+        if ($root === null) {
+            return null;
+        }
+
+        $file = BundlePath::inside($uri, dirname($path), $root);
+
+        if ($file === null) {
+            return null;
+        }
+
+        $handle = @fopen($file, 'rb');
+
+        if ($handle === false) {
+            return null;
+        }
+
+        $header = (string) fread($handle, 32);
+        fclose($handle);
+
+        return $header;
     }
 
     /** @return array{width: int, height: int}|null */

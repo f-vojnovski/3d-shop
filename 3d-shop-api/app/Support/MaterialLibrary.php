@@ -131,7 +131,7 @@ class MaterialLibrary
 
             // One `mtllib` may name several files, space separated.
             foreach (preg_split('/\s+/', trim(substr($line, 6))) ?: [] as $name) {
-                $resolved = self::resolve($name, dirname($modelPath), $root);
+                $resolved = BundlePath::inside($name, dirname($modelPath), $root);
 
                 if ($resolved !== null) {
                     $found[$resolved] = true;
@@ -188,7 +188,7 @@ class MaterialLibrary
 
             $rest = trim(substr(trim($line), strlen($keyword)));
             $reference = self::filenameIn($rest);
-            $resolved = self::resolve($reference, dirname($library), $root);
+            $resolved = BundlePath::inside($reference, dirname($library), $root);
 
             if ($resolved !== null) {
                 $found[$resolved] = true;
@@ -216,24 +216,5 @@ class MaterialLibrary
         $tokens = preg_split('/\s+/', $rest) ?: [];
 
         return (string) end($tokens);
-    }
-
-    /** Inside the bundle or nowhere: an absolute path names the artist's disk. */
-    private static function resolve(string $name, string $from, string $root): ?string
-    {
-        $name = trim(str_replace('\\', '/', $name), " \t\"'");
-
-        if ($name === '' || preg_match('#^([a-zA-Z]:|/|\\\\)#', $name) === 1) {
-            return null;
-        }
-
-        $path = realpath($from.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $name));
-        $base = realpath($root);
-
-        if ($path === false || $base === false || ! is_file($path)) {
-            return null;
-        }
-
-        return $path === $base || str_starts_with($path, $base.DIRECTORY_SEPARATOR) ? $path : null;
     }
 }
