@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\FormatAgreement;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class ProductResource extends JsonResource
             'currency' => $this->currency,
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
-            'previews' => $this->previewsByFormat($entitled ? $viewerId : null),
+            'previews' => $this->previewsByFormat($entitled ? $viewerId : null, $status === Product::STATUS_OWNER),
             'format_agreement' => FormatAgreement::of($this->currentDeliverables()),
             'seller_images' => $this->sellerImageList(),
             'preview_status' => $this->preview_status,
@@ -57,7 +58,7 @@ class ProductResource extends JsonResource
             ->values();
     }
 
-    private function previewsByFormat(?int $entitledViewerId): array
+    private function previewsByFormat(?int $entitledViewerId, bool $isOwner): array
     {
         return $this->currentDeliverables()
             ->map(fn (ProductFile $file) => [
@@ -67,9 +68,12 @@ class ProductResource extends JsonResource
                 'error' => $file->renderError(),
                 'facts' => $file->facts(),
                 'bytes' => $file->bytes,
-                // Textures the model asked for and the bundle did not hold.
-                // Public: it is a fact about what is for sale.
-                'missing' => $file->meta['missing'] ?? null,
+                // Public: it is a fact about what is for sale. A render knows
+                // what was really asked for, so it wins over the .mtl's word.
+                'missing' => $file->meta['missing'] ?? ($file->meta['textures']['missing'] ?? null),
+                // The other half of the diagnosis, and only useful to whoever
+                // can fix it.
+                'unused_images' => $isOwner ? ($file->meta['textures']['unused'] ?? null) : null,
                 // What the buyer actually receives, named before they pay.
                 'bundle' => $this->bundleIn($file),
                 'images' => $this->stillsFrom($file),

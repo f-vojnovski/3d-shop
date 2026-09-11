@@ -530,6 +530,12 @@ class ProductController extends BaseController
                 'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
                 // Only a bundle has these, and they say what the images were
                 // drawn from when one file's checksum no longer can.
+                // Named at upload rather than after a render, so a seller can
+                // fix the paths before anyone browses the listing.
+                'textures' => $upload->textureReport !== null
+                    && ($upload->textureReport['missing'] !== [] || $upload->textureReport['unused'] !== [])
+                    ? $upload->textureReport
+                    : null,
                 'bundle' => $upload->isBundle() ? [
                     'entry' => $upload->entry,
                     'digest' => $upload->digest,

@@ -84,7 +84,6 @@ describe('ModelFacts', () => {
     expect(row('Bounding box')).toContain('2.54 × 1.15 × 4.36 m');
   });
 
-  /** Only glTF fixes a unit, so claiming metres anywhere else would be made up. */
   it('names the textures the download does not contain', () => {
     render(
       <ModelFacts facts={facts()} format="obj" missing={['textures/body.png', 'textures/trim.png']} />
@@ -104,12 +103,34 @@ describe('ModelFacts', () => {
     expect(screen.getByText('and 57 more')).toBeInTheDocument();
   });
 
+  it('tells the owner what the archive holds instead', () => {
+    render(
+      <ModelFacts
+        facts={facts()}
+        format="obj"
+        missing={['stone_lime_02.jpg']}
+        unusedImages={['textures/stone_granite_red_grey_01.jpg']}
+      />
+    );
+
+    expect(screen.getByText(/does contain one image nothing references/)).toBeInTheDocument();
+    expect(screen.getByText('textures/stone_granite_red_grey_01.jpg')).toBeInTheDocument();
+  });
+
+  it('says only what failed when there is nothing spare to point at', () => {
+    render(<ModelFacts facts={facts()} format="obj" missing={['body.png']} unusedImages={[]} />);
+
+    expect(screen.getByText(/does not contain/)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing references/)).not.toBeInTheDocument();
+  });
+
   it('says nothing when every texture is present', () => {
     render(<ModelFacts facts={facts()} format="obj" missing={null} />);
 
     expect(screen.queryByText(/does not contain/)).not.toBeInTheDocument();
   });
 
+  /** Only glTF fixes a unit, so claiming metres anywhere else would be made up. */
   it('does not claim metres for a format that records no unit', () => {
     render(<ModelFacts facts={facts()} format="obj" />);
 

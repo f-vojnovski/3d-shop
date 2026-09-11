@@ -137,6 +137,7 @@ const SingleProductView = () => {
                 format={measured.format}
                 agreement={product.format_agreement}
                 missing={measured.missing}
+                unusedImages={measured.unused_images}
               />
 
               <BundleContents bundle={measured.bundle} format={measured.format} />

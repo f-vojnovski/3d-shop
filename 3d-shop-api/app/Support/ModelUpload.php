@@ -19,6 +19,13 @@ class ModelUpload
         /** @var list<array{path: string, sha256: string, bytes: int}> */
         public readonly array $manifest = [],
         public readonly ?string $digest = null,
+        /**
+         * Textures a material named that the archive does not hold, and images
+         * it does hold that nothing names.
+         *
+         * @var array{missing: list<string>, unused: list<string>}|null
+         */
+        public readonly ?array $textureReport = null,
         public readonly ?string $refusal = null,
     ) {}
 
@@ -103,6 +110,10 @@ class ModelUpload
                 entry: $entry,
                 manifest: $unpacked->manifest,
                 digest: $unpacked->digest(),
+                textureReport: $library === null ? null : [
+                    'missing' => $library['missing'],
+                    'unused' => $library['unused'],
+                ],
             );
         } finally {
             File::deleteDirectory($scratch);

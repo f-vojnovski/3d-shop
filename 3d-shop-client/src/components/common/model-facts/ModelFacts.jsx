@@ -21,7 +21,7 @@ const largestTexture = (textures) =>
 const measured = (facts) =>
   Boolean(facts) && (facts.faces != null || facts.vertices != null || Boolean(facts.bounds));
 
-const ModelFacts = ({ facts, format, agreement, missing }) => {
+const ModelFacts = ({ facts, format, agreement, missing, unusedImages }) => {
   if (!measured(facts)) {
     return null;
   }
@@ -69,6 +69,24 @@ const ModelFacts = ({ facts, format, agreement, missing }) => {
               <li>and {count(missing.length - MISSING_SHOWN)} more</li>
             )}
           </ul>
+
+          {unusedImages?.length > 0 && (
+            <>
+              <p>
+                {unusedImages.length === 1
+                  ? 'The archive does contain one image nothing references:'
+                  : `The archive does contain ${unusedImages.length} images nothing references:`}
+              </p>
+              <ul>
+                {unusedImages.slice(0, MISSING_SHOWN).map((path) => (
+                  <li key={path}>{path}</li>
+                ))}
+                {unusedImages.length > MISSING_SHOWN && (
+                  <li>and {count(unusedImages.length - MISSING_SHOWN)} more</li>
+                )}
+              </ul>
+            </>
+          )}
         </div>
       )}
 

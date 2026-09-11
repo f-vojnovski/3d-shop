@@ -15,14 +15,20 @@ class MaterialLibrary
     /** Enough of a cap that a hostile `.mtl` cannot hold the reader open. */
     private const MAX_LINES = 200_000;
 
+    private const IMAGES = ['png', 'jpg', 'jpeg', 'tga', 'bmp', 'tif', 'tiff', 'webp', 'exr', 'hdr'];
+
     private const MAPS = [
         'map_ka', 'map_kd', 'map_ks', 'map_ns', 'map_d',
         'map_bump', 'bump', 'disp', 'decal', 'refl', 'norm',
     ];
 
     /**
-     * @return array{materials: int, textures: list<array{width: int, height: int}>}|null
-     *                                                                             null when the model names no library, or none of them is present
+     * @return array{
+     *     materials: int,
+     *     textures: list<array{width: int, height: int}>,
+     *     missing: list<string>,
+     *     unused: list<string>
+     * }|null null when the model names no library, or none of them is present
      */
     public static function beside(string $modelPath, string $root): ?array
     {
@@ -34,12 +40,18 @@ class MaterialLibrary
 
         $materials = 0;
         $images = [];
+        $missing = [];
 
         foreach ($libraries as $library) {
             $materials += self::materialsIn($library);
+            [$resolved, $unresolved] = self::texturesIn($library, $root);
 
-            foreach (self::texturesIn($library, $root) as $path) {
+            foreach ($resolved as $path) {
                 $images[$path] = true;
+            }
+
+            foreach ($unresolved as $reference) {
+                $missing[$reference] = true;
             }
         }
 
@@ -55,7 +67,49 @@ class MaterialLibrary
             }
         }
 
-        return ['materials' => $materials, 'textures' => $textures];
+        return [
+            'materials' => $materials,
+            'textures' => $textures,
+            'missing' => array_keys($missing),
+            'unused' => self::imagesNotIn($root, array_keys($images)),
+        ];
+    }
+
+    /**
+     * Alone this is housekeeping. Beside a list of references that did not
+     * resolve it is the answer: the pack has its textures, under other names.
+     *
+     * @param  list<string>  $used
+     * @return list<string>
+     */
+    private static function imagesNotIn(string $root, array $used): array
+    {
+        $base = realpath($root);
+
+        if ($base === false) {
+            return [];
+        }
+
+        $spare = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($base, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $entry) {
+            $path = $entry->getPathname();
+
+            if (! in_array(strtolower($entry->getExtension()), self::IMAGES, true)) {
+                continue;
+            }
+
+            if (! in_array($path, $used, true)) {
+                $spare[] = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen($base) + 1));
+            }
+        }
+
+        sort($spare);
+
+        return $spare;
     }
 
     /** @return list<string> */
@@ -112,16 +166,17 @@ class MaterialLibrary
         return $count;
     }
 
-    /** @return list<string> */
+    /** @return array{0: list<string>, 1: list<string>} resolved paths, then references that did not resolve */
     private static function texturesIn(string $library, string $root): array
     {
         $handle = @fopen($library, 'rb');
 
         if ($handle === false) {
-            return [];
+            return [[], []];
         }
 
         $found = [];
+        $unresolved = [];
         $lines = 0;
 
         while (($line = fgets($handle)) !== false && ++$lines < self::MAX_LINES) {
@@ -132,16 +187,19 @@ class MaterialLibrary
             }
 
             $rest = trim(substr(trim($line), strlen($keyword)));
-            $resolved = self::resolve(self::filenameIn($rest), dirname($library), $root);
+            $reference = self::filenameIn($rest);
+            $resolved = self::resolve($reference, dirname($library), $root);
 
             if ($resolved !== null) {
                 $found[$resolved] = true;
+            } elseif ($reference !== '') {
+                $unresolved[trim($reference, " 	\"'")] = true;
             }
         }
 
         fclose($handle);
 
-        return array_keys($found);
+        return [array_keys($found), array_keys($unresolved)];
     }
 
     /**

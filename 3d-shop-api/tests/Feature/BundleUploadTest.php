@@ -106,6 +106,61 @@ class BundleUploadTest extends TestCase
         $this->assertSame([], $facts['textures']);
     }
 
+    /**
+     * The shape of a real broken pack: the material file names textures on the
+     * artist's own drive, and the archive carries the textures under other
+     * names. Either half alone is a shrug; together they are the diagnosis.
+     */
+    public function test_the_seller_is_told_what_failed_and_what_the_archive_holds(): void
+    {
+        $id = $this->publish($this->bundle([
+            'car/car.obj' => "mtllib car.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            'car/car.mtl' => "newmtl body\nmap_Kd t:\\pov3dmodel\\textures\\stone_lime_02.jpg\n",
+            'car/textures/stone_granite_red_grey_01.png' => $this->png(8, 8),
+        ]));
+
+        $preview = $this->getJson("/api/products-authenticated/{$id}")->json('previews.0');
+
+        // Reported exactly as the material file wrote it, so the seller can find
+        // the line and fix it.
+        $this->assertSame(['t:\\pov3dmodel\\textures\\stone_lime_02.jpg'], $preview['missing']);
+        $this->assertSame(['car/textures/stone_granite_red_grey_01.png'], $preview['unused_images']);
+    }
+
+    public function test_a_buyer_is_not_shown_the_unused_images(): void
+    {
+        $id = $this->publish($this->bundle([
+            'car/car.obj' => "mtllib car.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            'car/car.mtl' => "newmtl body\nmap_Kd missing.png\n",
+            'car/textures/spare.png' => $this->png(8, 8),
+        ]));
+
+        Sanctum::actingAs(User::create([
+            'name' => 'buyer',
+            'email' => 'buyer@example.com',
+            'password' => 'password123',
+        ]));
+
+        $preview = $this->getJson("/api/products/{$id}")->json('previews.0');
+
+        $this->assertSame(['missing.png'], $preview['missing']);
+        $this->assertNull($preview['unused_images']);
+    }
+
+    public function test_a_bundle_whose_textures_all_resolve_reports_nothing(): void
+    {
+        $id = $this->publish($this->bundle([
+            'car/car.obj' => "mtllib car.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            'car/car.mtl' => "newmtl body\nmap_Kd textures/body.png\n",
+            'car/textures/body.png' => $this->png(16, 16),
+        ]));
+
+        $preview = $this->getJson("/api/products-authenticated/{$id}")->json('previews.0');
+
+        $this->assertNull($preview['missing']);
+        $this->assertNull($preview['unused_images']);
+    }
+
     public function test_a_plain_model_carries_no_bundle_record(): void
     {
         $id = $this->publish(
