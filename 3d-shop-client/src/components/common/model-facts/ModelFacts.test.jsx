@@ -85,6 +85,31 @@ describe('ModelFacts', () => {
   });
 
   /** Only glTF fixes a unit, so claiming metres anywhere else would be made up. */
+  it('names the textures the download does not contain', () => {
+    render(
+      <ModelFacts facts={facts()} format="obj" missing={['textures/body.png', 'textures/trim.png']} />
+    );
+
+    expect(screen.getByText(/asks for 2 textures the download does not contain/)).toBeInTheDocument();
+    expect(screen.getByText('textures/body.png')).toBeInTheDocument();
+  });
+
+  it('stops listing missing textures after six', () => {
+    const missing = Array.from({ length: 63 }, (_, index) => `textures/stone_${index}.jpg`);
+
+    render(<ModelFacts facts={facts()} format="obj" missing={missing} />);
+
+    expect(screen.getByText('textures/stone_5.jpg')).toBeInTheDocument();
+    expect(screen.queryByText('textures/stone_6.jpg')).not.toBeInTheDocument();
+    expect(screen.getByText('and 57 more')).toBeInTheDocument();
+  });
+
+  it('says nothing when every texture is present', () => {
+    render(<ModelFacts facts={facts()} format="obj" missing={null} />);
+
+    expect(screen.queryByText(/does not contain/)).not.toBeInTheDocument();
+  });
+
   it('does not claim metres for a format that records no unit', () => {
     render(<ModelFacts facts={facts()} format="obj" />);
 

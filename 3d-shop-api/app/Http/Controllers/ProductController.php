@@ -32,6 +32,9 @@ class ProductController extends BaseController
         'preview_angles.*.*.position.*' => 'required|numeric',
         'preview_angles.*.*.target' => 'required|array|size:3',
         'preview_angles.*.*.target.*' => 'required|numeric',
+        // The harness reads `up` whether or not anyone validated it.
+        'preview_angles.*.*.up' => 'sometimes|array|size:3',
+        'preview_angles.*.*.up.*' => 'numeric|between:-1,1',
         'preview_angles.*.*.fov' => 'required|numeric|min:1|max:179',
     ];
 

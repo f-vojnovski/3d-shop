@@ -135,6 +135,7 @@ const SingleProductView = () => {
                 facts={measured.facts}
                 format={measured.format}
                 agreement={product.format_agreement}
+                missing={measured.missing}
               />
             </div>
           )}

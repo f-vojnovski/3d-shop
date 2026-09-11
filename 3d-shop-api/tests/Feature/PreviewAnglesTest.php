@@ -106,6 +106,34 @@ class PreviewAnglesTest extends TestCase
         ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj.0.fov');
     }
 
+    public function test_a_nonsense_up_vector_is_rejected(): void
+    {
+        $this->seller();
+
+        $this->postJson('/api/products', $this->payload([
+            'preview_angles' => json_encode(['obj' => [array_merge(self::ANGLE, ['up' => [0, 500, 0]])]]),
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj.0.up.1');
+    }
+
+    public function test_an_up_vector_of_the_wrong_shape_is_rejected(): void
+    {
+        $this->seller();
+
+        $this->postJson('/api/products', $this->payload([
+            'preview_angles' => json_encode(['obj' => [array_merge(self::ANGLE, ['up' => [0, 1]])]]),
+        ]))->assertStatus(422)->assertJsonValidationErrors('preview_angles.obj.0.up');
+    }
+
+    /** Optional, because every angle framed before this existed omits it. */
+    public function test_an_angle_without_an_up_vector_is_still_accepted(): void
+    {
+        $this->seller();
+
+        $this->postJson('/api/products', $this->payload([
+            'preview_angles' => json_encode(['obj' => [self::ANGLE]]),
+        ]))->assertSuccessful();
+    }
+
     public function test_too_many_angles_are_rejected(): void
     {
         $this->seller();

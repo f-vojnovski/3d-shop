@@ -1,6 +1,13 @@
 ARG THREE_VERSION=0.186.0
+# By digest, not by tag: `node:22-slim` moves, and a moved base is a different
+# rasteriser than the one an old attestation names.
+ARG NODE_IMAGE=node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+# Checked below rather than pinned with apt, because Debian rotates old
+# chromium builds out of the archive and an apt pin would eventually fail the
+# build with nothing to explain why.
+ARG EXPECTED_CHROMIUM=152.0.7977.82
 
-FROM node:22-slim AS three
+FROM ${NODE_IMAGE} AS three
 ARG THREE_VERSION
 WORKDIR /pkg
 # Copy wholesale: three.module.js re-exports three.core.js and the addons import
@@ -13,11 +20,19 @@ RUN npm pack three@${THREE_VERSION} \
     && mv /out-build /out/build \
     && mv /out-addons /out/addons
 
-FROM node:22-slim
+FROM ${NODE_IMAGE}
+ARG EXPECTED_CHROMIUM
 # assimp converts the formats PHP cannot parse into glb.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium fonts-liberation assimp-utils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && chromium --version \
+    && { chromium --version | grep -qF "${EXPECTED_CHROMIUM}" || { \
+         echo "Chromium is not ${EXPECTED_CHROMIUM}. Stills attested by an" \
+              "earlier image cannot be reproduced byte-for-byte by this one;" \
+              "bump EXPECTED_CHROMIUM once you accept that."; \
+         exit 1; \
+       }; }
 
 COPY --from=three /out /app/three
 COPY 3d-shop-api/render/harness.html /app/harness.html

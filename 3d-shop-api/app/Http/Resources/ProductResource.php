@@ -67,6 +67,9 @@ class ProductResource extends JsonResource
                 'error' => $file->renderError(),
                 'facts' => $file->facts(),
                 'bytes' => $file->bytes,
+                // Textures the model asked for and the bundle did not hold.
+                // Public: it is a fact about what is for sale.
+                'missing' => $file->meta['missing'] ?? null,
                 'images' => $this->stillsFrom($file),
                 'replaced' => $this->replacementsOf($file->format, $entitledViewerId),
             ])
