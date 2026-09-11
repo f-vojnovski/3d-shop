@@ -17,6 +17,9 @@ class BundleExtractor
 {
     public const MAX_BYTES = 1_500 * 1024 * 1024;
 
+    /** Extensions that could be the thing being sold rather than a texture. */
+    private const MODELS = ['obj', 'gltf', 'glb', 'stl', 'fbx'];
+
     private const CHUNK = 1 << 20;
 
     public function __construct(
@@ -24,6 +27,8 @@ class BundleExtractor
         public readonly array $files,
         public readonly int $bytes,
         public readonly ?string $failure,
+        /** @var list<array{path: string, sha256: string, bytes: int}> */
+        public readonly array $manifest = [],
     ) {}
 
     public static function extract(
@@ -51,6 +56,7 @@ class BundleExtractor
         }
 
         $written = [];
+        $manifest = [];
         $total = 0;
 
         foreach ($inspection->entries as $entry) {
@@ -79,17 +85,72 @@ class BundleExtractor
             }
 
             $written[] = $entry;
+            $manifest[] = [
+                'path' => $entry,
+                'sha256' => (string) hash_file('sha256', $destination),
+                'bytes' => $copied,
+            ];
             $total += $copied;
         }
 
         $zip->close();
 
-        return new self($written, $total, null);
+        // Sorted, so the digest describes the contents rather than the order
+        // the archive happened to list them in.
+        usort($manifest, fn (array $a, array $b) => strcmp($a['path'], $b['path']));
+
+        return new self($written, $total, null, $manifest);
     }
 
     public function succeeded(): bool
     {
         return $this->failure === null;
+    }
+
+    /**
+     * One hash for the whole bundle. A single file's sha256 no longer says what
+     * an image was drawn from, so the record names every file it was drawn with.
+     */
+    public function digest(): string
+    {
+        return hash('sha256', implode("\n", array_map(
+            fn (array $entry) => $entry['path'].' '.$entry['sha256'],
+            $this->manifest
+        )));
+    }
+
+    /**
+     * Which entries could be the model. Junk a packer adds is ignored rather
+     * than refused: it is harmless to keep and only confuses this choice.
+     *
+     * @return list<string>
+     */
+    public function models(): array
+    {
+        $candidates = [];
+
+        foreach ($this->files as $path) {
+            if (self::isJunk($path)) {
+                continue;
+            }
+
+            if (in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), self::MODELS, true)) {
+                $candidates[] = $path;
+            }
+        }
+
+        return $candidates;
+    }
+
+    private static function isJunk(string $path): bool
+    {
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '__MACOSX' || str_starts_with($segment, '.')) {
+                return true;
+            }
+        }
+
+        return in_array(strtolower(basename($path)), ['thumbs.db', 'desktop.ini'], true);
     }
 
     /** @return int|null bytes written, or null once the budget is spent */

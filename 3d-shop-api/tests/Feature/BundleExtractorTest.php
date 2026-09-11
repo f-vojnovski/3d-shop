@@ -150,6 +150,92 @@ class BundleExtractorTest extends TestCase
         }
     }
 
+    public function test_the_manifest_names_every_file_and_its_hash(): void
+    {
+        $archive = $this->zip([
+            'car/car.obj' => "v 0 0 0\n",
+            'car/textures/body.png' => 'PNG-BYTES',
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertSame(
+            ['car/car.obj', 'car/textures/body.png'],
+            array_column($result->manifest, 'path')
+        );
+        $this->assertSame(
+            hash('sha256', 'PNG-BYTES'),
+            $result->manifest[1]['sha256']
+        );
+    }
+
+    /** Sorted, so the digest describes contents rather than archive order. */
+    public function test_the_digest_ignores_the_order_entries_were_packed_in(): void
+    {
+        $one = $this->zip(['a.obj' => "v 0 0 0\n", 'b.png' => 'PNG']);
+        $two = $this->zip(['b.png' => 'PNG', 'a.obj' => "v 0 0 0\n"]);
+
+        $first = BundleExtractor::extract($one, BundleInspector::of($one), $this->target.'-1');
+        $second = BundleExtractor::extract($two, BundleInspector::of($two), $this->target.'-2');
+
+        $this->assertSame($first->digest(), $second->digest());
+    }
+
+    public function test_the_digest_changes_when_a_file_does(): void
+    {
+        $one = $this->zip(['a.obj' => "v 0 0 0\n", 'b.png' => 'PNG']);
+        $two = $this->zip(['a.obj' => "v 0 0 0\n", 'b.png' => 'DIFFERENT']);
+
+        $first = BundleExtractor::extract($one, BundleInspector::of($one), $this->target.'-1');
+        $second = BundleExtractor::extract($two, BundleInspector::of($two), $this->target.'-2');
+
+        $this->assertNotSame($first->digest(), $second->digest());
+    }
+
+    public function test_it_names_the_models_among_the_files(): void
+    {
+        $archive = $this->zip([
+            'car/car.obj' => "v 0 0 0\n",
+            'car/car.mtl' => 'newmtl body',
+            'car/textures/body.png' => 'PNG',
+            'car/readme.txt' => 'hello',
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertSame(['car/car.obj'], $result->models());
+    }
+
+    /** A packer's leavings should not look like something for sale. */
+    public function test_packer_junk_is_not_mistaken_for_a_model(): void
+    {
+        $archive = $this->zip([
+            '__MACOSX/._car.obj' => 'junk',
+            '.hidden/secret.glb' => 'junk',
+            'Thumbs.db' => 'junk',
+            'car/car.obj' => "v 0 0 0\n",
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertSame(['car/car.obj'], $result->models());
+        // Kept on disk: the record says what was in the archive.
+        $this->assertCount(4, $result->files);
+    }
+
+    public function test_several_models_are_all_reported(): void
+    {
+        $archive = $this->zip([
+            'pack/one.obj' => "v 0 0 0\n",
+            'pack/two.glb' => 'glTF',
+            'pack/notes.txt' => 'hello',
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertSame(['pack/one.obj', 'pack/two.glb'], $result->models());
+    }
+
     /** @param  array<string, string>  $files */
     private function zip(array $files): string
     {
