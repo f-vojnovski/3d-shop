@@ -24,6 +24,15 @@ const withShots = (count) => {
 };
 
 describe('upload draft', () => {
+  it('turns standard views on for a format that cannot be framed', () => {
+    const state = reducer(
+      undefined,
+      attachModel({ format: 'fbx', file: file('t.fbx'), uri: 't' }),
+    );
+
+    expect(state.standardViews).toEqual({ fbx: true });
+  });
+
   // Opt-in per format: a seller who frames their own shots should never have a
   // turntable appear underneath them.
   it('asks for standard views per format, off by default', () => {

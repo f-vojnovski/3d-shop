@@ -18,6 +18,53 @@ const facts = (overrides = {}) => ({
 const row = (name) => screen.getByText(name).parentElement.textContent;
 
 describe('ModelFacts', () => {
+  it('says nothing about a file that could not be measured', () => {
+    const { container } = render(
+      <ModelFacts
+        format="fbx"
+        facts={{
+          vertices: null,
+          faces: null,
+          topology: 'unknown',
+          normals: false,
+          uvs: false,
+          materials: null,
+          textures: [],
+          bounds: null,
+          rigged: false,
+          animated: false,
+        }}
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('warns when the formats are not the same model', () => {
+    render(
+      <ModelFacts
+        format="gltf"
+        facts={{ faces: 100, vertices: 300, topology: 'triangles', normals: true, uvs: true, materials: 1, textures: [], bounds: null, rigged: false, animated: false }}
+        agreement={{ compared: ['gltf', 'stl'], agrees: false, differences: ['Triangle counts differ: .gltf 100, .stl 1.'] }}
+      />,
+    );
+
+    expect(screen.getByText(/not the same model/i)).toBeInTheDocument();
+    expect(screen.getByText(/Triangle counts differ/)).toBeInTheDocument();
+  });
+
+  it('stays quiet when the formats agree', () => {
+    render(
+      <ModelFacts
+        format="gltf"
+        facts={{ faces: 100, vertices: 300, topology: 'triangles', normals: true, uvs: true, materials: 1, textures: [], bounds: null, rigged: false, animated: false }}
+        agreement={{ compared: ['gltf', 'stl'], agrees: true, differences: [] }}
+      />,
+    );
+
+    expect(screen.queryByText(/not the same model/i)).not.toBeInTheDocument();
+  });
+
   it('names the file the numbers were measured from', () => {
     render(<ModelFacts facts={facts()} format="obj" />);
 

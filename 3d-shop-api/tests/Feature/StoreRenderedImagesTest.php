@@ -6,6 +6,7 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
+use App\Support\ModelConverter;
 use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -236,7 +237,7 @@ class StoreRenderedImagesTest extends TestCase
             }
         };
 
-        (new RenderProductPreviews($source->product_id, $source->format))->handle($runner);
+        (new RenderProductPreviews($source->product_id, $source->format))->handle($runner, new ModelConverter);
     }
 
     public static function renderer(): array

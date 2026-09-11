@@ -11,6 +11,26 @@
   text-transform: uppercase;
 }
 
+.mismatch {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--clr-danger, #e5534b);
+  border-radius: 6px;
+  color: var(--clr-text);
+  font-size: 0.78rem;
+}
+
+.mismatch p {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.mismatch ul {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--clr-text-dim);
+}
+
 .grid {
   margin: 0;
   display: flex;

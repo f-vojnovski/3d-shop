@@ -249,6 +249,7 @@ class ProductController extends BaseController
 
             $current->stills()->update($supersede);
             $current->wireframes()->update($supersede);
+            $current->derived()->update($supersede);
 
             $current->update([
                 'superseded_at' => now(),

@@ -16,6 +16,7 @@ class ProductFile extends Model
     public const KIND_DELIVERABLE = 'deliverable';
     public const KIND_PREVIEW_IMAGE = 'preview_image';
     public const KIND_WIREFRAME = 'wireframe';
+    public const KIND_DERIVED = 'derived';
 
     public const KIND_SELLER_IMAGE = 'seller_image';
     public const KIND_THUMBNAIL = 'thumbnail';
@@ -68,6 +69,13 @@ class ProductFile extends Model
         return $this->hasMany(self::class, 'source_file_id')
             ->where('kind', self::KIND_WIREFRAME)
             ->orderBy('sort');
+    }
+
+    /** What the renderer actually opened, when the upload needed converting. */
+    public function derived(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_file_id')
+            ->where('kind', self::KIND_DERIVED);
     }
 
     public function angles(): array

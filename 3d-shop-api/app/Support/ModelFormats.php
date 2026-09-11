@@ -3,9 +3,8 @@
 namespace App\Support;
 
 /**
- * One list of the model formats the site sells. Every rule, route pattern and
- * upload field is derived from it, because the format list was hardcoded in ten
- * places and adding one meant finding all of them.
+ * One list of the model formats the site sells. Every validation rule, route
+ * pattern and upload field is derived from it, so a format is one entry.
  */
 class ModelFormats
 {
@@ -14,6 +13,7 @@ class ModelFormats
         'obj' => ['obj'],
         'gltf' => ['gltf', 'glb'],
         'stl' => ['stl'],
+        'fbx' => ['fbx'],
     ];
 
     /** @return list<string> */

@@ -79,27 +79,43 @@ class VerifyRenderCommand extends Command
         File::deleteDirectory($scratch);
         File::makeDirectory($scratch, 0775, true);
 
+        // What the renderer opened is what the pixels came from, and for a
+        // converted upload that is not the file the buyer downloads.
+        $derived = $source->derived()->current()->first();
+        $opened = $derived ?? $source;
+
         $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
-        $bytes = RenderInput::fetch($source, $modelPath);
-        $this->line(".{$source->format}: fetched {$bytes} bytes from the {$source->disk} disk.");
+        $bytes = RenderInput::fetch($opened, $modelPath);
+        $this->line(sprintf(
+            '.%s: fetched %d bytes from the %s disk%s.',
+            $source->format,
+            $bytes,
+            $opened->disk,
+            $derived === null ? '' : ' (converted to glb)'
+        ));
 
         // Named here rather than left to show up as mismatched pixels: if the
         // stored bytes changed, every still is describing a file that is gone.
         $fetched = (string) hash_file('sha256', $modelPath);
 
-        if (! hash_equals((string) $source->checksum, $fetched)) {
+        if (! hash_equals((string) $opened->checksum, $fetched)) {
             $this->error(sprintf(
                 '.%s: the stored file is not the one that was recorded (%s… on disk, %s… recorded).',
                 $source->format,
                 substr($fetched, 0, 16),
-                substr((string) $source->checksum, 0, 16)
+                substr((string) $opened->checksum, 0, 16)
             ));
 
             return ['failures' => 1, 'verified' => 0];
         }
 
         $result = $runner->run(
-            RenderInput::request($product, $source, RenderInput::scanOf($source)),
+            RenderInput::request(
+                $product,
+                $source,
+                RenderInput::scanOf($source),
+                $derived === null ? null : 'glb'
+            ),
             $modelPath,
             $scratch
         );

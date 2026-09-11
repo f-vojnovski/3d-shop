@@ -1,4 +1,5 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
+import { canFrame } from '../../components/pages/product-upload/formats';
 
 const initialState = {
   models: {},
@@ -24,6 +25,11 @@ export const uploadDraftSlice = createSlice({
 
       state.models[format] = { file, uri, name: file.name };
       state.shots[format] = state.shots[format] ?? [];
+
+      if (!canFrame(format)) {
+        state.standardViews[format] = true;
+      }
+
       // Focus what was just attached: it has no angles yet, and publishing is
       // blocked until every attached format has one.
       state.active = format;

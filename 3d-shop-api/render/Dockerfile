@@ -14,8 +14,9 @@ RUN npm pack three@${THREE_VERSION} \
     && mv /out-addons /out/addons
 
 FROM node:22-slim
+# assimp converts the formats PHP cannot parse into glb.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      chromium fonts-liberation \
+      chromium fonts-liberation assimp-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=three /out /app/three

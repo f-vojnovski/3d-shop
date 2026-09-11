@@ -36,6 +36,7 @@ import {
   SUPPORTED_SUMMARY,
   formatOf,
   isImage,
+  canFrame,
   labelFor,
   megabytes,
 } from './formats';
@@ -302,16 +303,24 @@ const ProductUploadPage = () => {
         </button>
       </div>
 
-      <CaptureStage format={active} uri={models[active].uri} probe={probe} onCapture={capture} />
+      {canFrame(active) ? (
+        <CaptureStage format={active} uri={models[active].uri} probe={probe} onCapture={capture} />
+      ) : (
+        <div className={styles.standardOnly}>
+          Our server takes 8 standard views of {labelFor(active)}.
+        </div>
+      )}
 
-      <label className={styles.standard}>
-        <input
-          type="checkbox"
-          checked={Boolean(standardViews[active])}
-          onChange={() => dispatch(toggleStandardViews(active))}
-        />
-        <span>Add 8 standard views of {labelFor(active)}</span>
-      </label>
+      {canFrame(active) && (
+        <label className={styles.standard}>
+          <input
+            type="checkbox"
+            checked={Boolean(standardViews[active])}
+            onChange={() => dispatch(toggleStandardViews(active))}
+          />
+          <span>Add 8 standard views of {labelFor(active)}</span>
+        </label>
+      )}
 
       {activeShots.length > 0 && (
         <CameraRoll

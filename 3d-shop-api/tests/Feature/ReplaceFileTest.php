@@ -189,6 +189,17 @@ class ReplaceFileTest extends TestCase
         ))->assertNotFound();
     }
 
+    /** The images it produced are retired, so the conversion must be too. */
+    public function test_a_replaced_file_retires_its_conversion(): void
+    {
+        $source = $this->product->deliverableFor('obj');
+        $derived = $this->stillFor($source, ProductFile::KIND_DERIVED);
+
+        $this->replace()->assertSuccessful();
+
+        $this->assertNotNull($derived->fresh()->superseded_at);
+    }
+
     public function test_a_stranger_cannot_replace_anything(): void
     {
         Sanctum::actingAs(User::create([

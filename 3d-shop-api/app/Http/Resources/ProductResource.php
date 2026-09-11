@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ProductFile;
+use App\Support\FormatAgreement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,6 +28,7 @@ class ProductResource extends JsonResource
             'user_id' => $this->user_id,
             'preview_mode' => $this->preview_mode,
             'previews' => $this->previewsByFormat($entitled ? $viewerId : null),
+            'format_agreement' => FormatAgreement::of($this->currentDeliverables()),
             'seller_images' => $this->sellerImageList(),
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
@@ -46,12 +48,18 @@ class ProductResource extends JsonResource
      * One entry per model file: its angles, its own render status and its
      * stills. The seller's tabs and the buyer's format switch both read this.
      */
-    private function previewsByFormat(?int $entitledViewerId): array
+    private function currentDeliverables(): Collection
     {
         return $this->files
             ->where('kind', ProductFile::KIND_DELIVERABLE)
             ->reject(fn (ProductFile $file) => $file->isSuperseded())
             ->sortBy('format')
+            ->values();
+    }
+
+    private function previewsByFormat(?int $entitledViewerId): array
+    {
+        return $this->currentDeliverables()
             ->map(fn (ProductFile $file) => [
                 'format' => $file->format,
                 'angles' => $file->angles(),

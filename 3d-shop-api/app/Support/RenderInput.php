@@ -22,13 +22,17 @@ class RenderInput
         );
     }
 
-    public static function request(Product $product, ProductFile $source, MeshPrescan $scan): array
-    {
+    public static function request(
+        Product $product,
+        ProductFile $source,
+        MeshPrescan $scan,
+        ?string $rendered = null
+    ): array {
         return [
             'product_id' => $product->id,
             'source' => [
                 'path' => $source->path,
-                'format' => $scan->format,
+                'format' => $rendered ?? $scan->format,
                 'checksum' => $source->checksum,
                 'bytes' => $scan->bytes,
                 'faces' => $scan->faces,

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
 use App\Events\PreviewRenderFinished;
+use App\Support\ModelConverter;
 use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Jobs\FakeJob;
@@ -87,7 +88,7 @@ class RenderRetryTest extends TestCase
         $product = $this->product();
         $runner = $this->runner(['retryable' => true]);
 
-        (new RenderProductPreviews($product->id, 'obj'))->handle($runner);
+        (new RenderProductPreviews($product->id, 'obj'))->handle($runner, new ModelConverter);
 
         $this->assertSame(0, $runner->calls);
         $this->assertSame('none', $product->fresh()->preview_status);
@@ -131,7 +132,7 @@ class RenderRetryTest extends TestCase
         $job = new RenderProductPreviews($product->id, 'obj');
         $job->job = tap(new FakeJob(), fn (FakeJob $fake) => $fake->attempts = $attempt);
 
-        $job->handle($this->runner($result));
+        $job->handle($this->runner($result), new ModelConverter);
     }
 
     private function runner(array $result): RenderRunner

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Support\MeshPrescan;
+use App\Support\ModelFormats;
 use Tests\TestCase;
 
 class MeshPrescanTest extends TestCase
@@ -90,6 +91,17 @@ class MeshPrescanTest extends TestCase
         $body = "; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tFBXVersion: 7400\n}\n";
 
         $this->assertSame('fbx', MeshPrescan::of($this->tempFile($body))->format);
+    }
+
+    public function test_the_refusal_names_every_format_we_read(): void
+    {
+        $rejection = MeshPrescan::of($this->tempFile("<?php echo 'pwned';"))->rejection();
+
+        foreach (ModelFormats::all() as $format) {
+            foreach (ModelFormats::extensionsFor($format) as $extension) {
+                $this->assertStringContainsString('.'.$extension, (string) $rejection);
+            }
+        }
     }
 
     public function test_it_rejects_a_file_that_is_not_a_model(): void

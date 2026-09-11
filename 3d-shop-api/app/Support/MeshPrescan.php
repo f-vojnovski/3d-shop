@@ -71,7 +71,8 @@ class MeshPrescan
         }
 
         if ($this->format === 'unknown') {
-            return 'That file is not a recognised .obj, .gltf or .glb model.';
+            return 'That file is not a recognised model. We read '
+                .self::extensionList().'.';
         }
 
         if ($this->unsupported !== []) {
@@ -121,6 +122,21 @@ class MeshPrescan
         fclose($handle);
 
         return $json;
+    }
+
+    private static function extensionList(): string
+    {
+        $extensions = [];
+
+        foreach (ModelFormats::all() as $format) {
+            foreach (ModelFormats::extensionsFor($format) as $extension) {
+                $extensions[] = '.'.$extension;
+            }
+        }
+
+        $last = array_pop($extensions);
+
+        return implode(', ', $extensions).' or '.$last;
     }
 
     /** Magic bytes, not the filename, which the uploader controls. */

@@ -25,7 +25,15 @@ class RenderRunner
         $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
         $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
 
-        @mkdir($outDir, 0775, true);
+        if (! is_dir($outDir) && ! mkdir($outDir, 0775, true) && ! is_dir($outDir)) {
+            return [
+                'status' => 'failed',
+                'reason' => 'The renderer had nowhere to write.',
+                'retryable' => true,
+                'scratch' => $outDir,
+            ];
+        }
+
         file_put_contents($jobFile, json_encode($request, JSON_PRETTY_PRINT));
 
         $process = new Process([

@@ -126,8 +126,7 @@ class MeshFacts
         $normals = false;
         $read = 0;
 
-        // 50 bytes a triangle, taken a few thousand at a time so a million-
-        // triangle file costs the same memory as a small one.
+        // Batched so a million triangles cost what a small file costs.
         while ($read < $triangles) {
             $batch = min(4096, $triangles - $read);
             $bytes = (string) fread($handle, $batch * 50);

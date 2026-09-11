@@ -86,7 +86,7 @@ class StandardViewsTest extends TestCase
 
     public function test_an_unknown_format_is_refused(): void
     {
-        $this->postJson('/api/products', $this->payload(['standard_views' => ['fbx']]))
+        $this->postJson('/api/products', $this->payload(['standard_views' => ['ply']]))
             ->assertStatus(422)
             ->assertJsonValidationErrors('standard_views.0');
     }

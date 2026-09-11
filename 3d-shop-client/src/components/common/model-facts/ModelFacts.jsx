@@ -8,10 +8,17 @@ const size = (bounds) =>
 const largestTexture = (textures) =>
   textures.reduce((widest, one) => Math.max(widest, one.width, one.height), 0);
 
-const ModelFacts = ({ facts, format }) => {
-  if (!facts) {
+// A file the server could not read leaves every field null, and "UVs: No"
+// would be a claim rather than a measurement.
+const measured = (facts) =>
+  Boolean(facts) && (facts.faces != null || facts.vertices != null || Boolean(facts.bounds));
+
+const ModelFacts = ({ facts, format, agreement }) => {
+  if (!measured(facts)) {
     return null;
   }
+
+  const disagrees = agreement && agreement.agrees === false;
 
   const rows = [
     facts.faces ? ['Faces', `${count(facts.faces)}${facts.topology === 'unknown' ? '' : ` (${facts.topology})`}`] : null,
@@ -38,6 +45,17 @@ const ModelFacts = ({ facts, format }) => {
           </div>
         ))}
       </dl>
+
+      {disagrees && (
+        <div className={styles.mismatch}>
+          <p>The formats in this product are not the same model.</p>
+          <ul>
+            {agreement.differences.map((difference) => (
+              <li key={difference}>{difference}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

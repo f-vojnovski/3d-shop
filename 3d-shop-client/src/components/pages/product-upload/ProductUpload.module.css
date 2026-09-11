@@ -321,6 +321,14 @@
   object-fit: cover;
 }
 
+.standardOnly {
+  padding: 10px 12px;
+  border: 1px dashed var(--clr-line);
+  border-radius: 8px;
+  color: var(--clr-text-dim);
+  font-size: 0.85rem;
+}
+
 .standard {
   display: flex;
   align-items: center;

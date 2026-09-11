@@ -5,6 +5,8 @@ namespace App\Jobs;
 use App\Events\PreviewRenderFinished;
 use App\Models\Product;
 use App\Models\ProductFile;
+use App\Support\MeshFacts;
+use App\Support\ModelConverter;
 use App\Support\RenderInput;
 use App\Support\RenderRunner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -45,7 +47,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         return [30];
     }
 
-    public function handle(RenderRunner $runner): void
+    public function handle(RenderRunner $runner, ModelConverter $converter): void
     {
         $product = Product::with('files')->find($this->productId);
 
@@ -102,8 +104,34 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
 
         try {
             $modelPath = $this->fetchModel($source, $scratch, $log);
+            $rendered = null;
+
+            if (ModelConverter::needsConverting($scan->format)) {
+                $conversion = $converter->toGlb($modelPath, $scratch);
+
+                if (($conversion['status'] ?? 'failed') !== 'ok') {
+                    $log->error('Conversion failed.', ['result' => $conversion]);
+                    $this->failOrRetry(
+                        $product,
+                        $log,
+                        $conversion['reason'] ?? 'The file could not be converted.',
+                        retryable: (bool) ($conversion['retryable'] ?? false)
+                    );
+
+                    return;
+                }
+
+                $rendered = 'glb';
+                $derived = $this->recordConversion($product, $source, $conversion, $conversion['path'], $log);
+
+                // The file verify renders, and one the host wrote itself rather
+                // than a mount racing the container that filled it.
+                $modelPath = $scratch.DIRECTORY_SEPARATOR.'model.glb';
+                RenderInput::fetch($derived, $modelPath);
+            }
+
             $result = $runner->run(
-                RenderInput::request($product, $source, $scan),
+                RenderInput::request($product, $source, $scan, $rendered),
                 $modelPath,
                 $scratch
             );
@@ -239,6 +267,57 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             count($blank),
             count($blank) + count($result['images'])
         );
+    }
+
+    /**
+     * Keeps and measures what the renderer opened. The buyer still downloads
+     * the file they uploaded, so the record names both and the tool between.
+     */
+    private function recordConversion(
+        Product $product,
+        ProductFile $source,
+        array $conversion,
+        string $path,
+        $log
+    ): ProductFile {
+        $source->derived()->each(fn (ProductFile $old) => $old->delete());
+
+        $checksum = (string) hash_file('sha256', $path);
+        $stored = 'derived/'.$product->id.'-'.$source->format.'-'.substr($checksum, 0, 12).'.glb';
+        $handle = fopen($path, 'rb');
+        Storage::disk($source->disk)->put($stored, $handle);
+        fclose($handle);
+
+        $derived = $product->files()->create([
+            'source_file_id' => $source->id,
+            'kind' => ProductFile::KIND_DERIVED,
+            'format' => 'glb',
+            'disk' => $source->disk,
+            'path' => $stored,
+            'sort' => 0,
+            'bytes' => (int) filesize($path),
+            'checksum' => $checksum,
+            'meta' => ['converted_from' => $source->checksum, 'tool' => $conversion['tool'] ?? null],
+        ]);
+
+        $facts = MeshFacts::of($path, 'glb')->toArray();
+
+        $source->withMeta([
+            'facts' => $facts,
+            'conversion' => [
+                'tool' => $conversion['tool'] ?? null,
+                'to' => 'glb',
+                'derived_sha256' => $checksum,
+            ],
+        ]);
+
+        $log->info('Converted for rendering.', [
+            'tool' => $conversion['tool'] ?? null,
+            'derived_bytes' => filesize($path),
+            'faces' => $facts['faces'] ?? null,
+        ]);
+
+        return $derived;
     }
 
     private function fetchModel(ProductFile $source, string $scratch, $log): string

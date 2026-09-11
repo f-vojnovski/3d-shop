@@ -129,7 +129,11 @@ const SingleProductView = () => {
 
           {measured?.facts && (
             <div className={styles.section}>
-              <ModelFacts facts={measured.facts} format={measured.format} />
+              <ModelFacts
+                facts={measured.facts}
+                format={measured.format}
+                agreement={product.format_agreement}
+              />
             </div>
           )}
 
