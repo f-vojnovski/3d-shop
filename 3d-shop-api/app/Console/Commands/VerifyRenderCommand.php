@@ -109,15 +109,38 @@ class VerifyRenderCommand extends Command
             return ['failures' => 1, 'verified' => 0];
         }
 
+        $bundleDir = null;
+        $entry = null;
+
+        if (RenderInput::isBundle($source)) {
+            $unpacked = RenderInput::unpack($modelPath, $scratch);
+
+            if (is_string($unpacked)) {
+                $this->error(".{$source->format}: {$unpacked}");
+
+                return ['failures' => 1, 'verified' => 0];
+            }
+
+            [$bundleDir, $entry] = [$unpacked['dir'], $unpacked['entry']];
+            $this->line(sprintf(
+                '.%s: unpacked %d files, rendering %s.',
+                $source->format,
+                $unpacked['files'],
+                $entry
+            ));
+        }
+
         $result = $runner->run(
             RenderInput::request(
                 $product,
                 $source,
                 RenderInput::scanOf($source),
-                $derived === null ? null : 'glb'
+                $derived === null ? null : 'glb',
+                $entry
             ),
             $modelPath,
-            $scratch
+            $scratch,
+            $bundleDir
         );
 
         if (($result['status'] ?? 'failed') !== 'ok') {

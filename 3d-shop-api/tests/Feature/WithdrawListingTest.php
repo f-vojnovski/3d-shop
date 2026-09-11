@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
@@ -102,10 +103,12 @@ class WithdrawListingTest extends TestCase
         $this->withdraw();
         Sanctum::actingAs($this->buyer);
 
-        $this->postJson('/api/sales/buy', ['products' => [['id' => $this->product->id]]])
-            ->assertStatus(409);
+        $this->postJson('/api/checkout/session', ['products' => [['id' => $this->product->id]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('products');
 
         $this->assertSame(0, Sale::count());
+        $this->assertSame(0, Order::count());
     }
 
     private function withdraw(): void

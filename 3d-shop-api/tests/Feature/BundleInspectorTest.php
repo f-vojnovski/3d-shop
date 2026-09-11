@@ -43,7 +43,7 @@ class BundleInspectorTest extends TestCase
         $this->assertNull($inspection->refusal);
         $this->assertSame(
             ['car/car.obj', 'car/car.mtl', 'car/textures/body.png'],
-            $inspection->entries
+            array_values($inspection->entries)
         );
     }
 
@@ -55,7 +55,7 @@ class BundleInspectorTest extends TestCase
             'top.obj' => "v 0 0 0\n",
         ]));
 
-        $this->assertSame(['a/b/c/deep.png', 'top.obj'], $inspection->entries);
+        $this->assertSame(['a/b/c/deep.png', 'top.obj'], array_values($inspection->entries));
     }
 
     /** @return list<array{0: string, 1: string}> */
@@ -186,7 +186,7 @@ class BundleInspectorTest extends TestCase
         $inspection = BundleInspector::of($path);
 
         $this->assertTrue($inspection->allowed());
-        $this->assertSame(['car/car.obj'], $inspection->entries);
+        $this->assertSame(['car/car.obj'], array_values($inspection->entries));
     }
 
     /**

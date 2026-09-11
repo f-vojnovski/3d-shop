@@ -59,7 +59,7 @@ class BundleExtractor
         $manifest = [];
         $total = 0;
 
-        foreach ($inspection->entries as $entry) {
+        foreach ($inspection->entries as $name => $entry) {
             $destination = self::destinationFor($root, $entry);
 
             // Belt and braces. The inspection already refused every way a name
@@ -72,7 +72,19 @@ class BundleExtractor
                 return new self([], 0, sprintf('A path in that archive points outside it ("%s").', $entry));
             }
 
-            $copied = self::copyEntry($zip, $entry, $destination, $maxBytes - $total);
+            // Read by the name the archive holds, write by the validated one.
+            $stream = $zip->getStream($name);
+
+            if ($stream === false) {
+                $zip->close();
+                self::remove($root);
+
+                // Carrying on would put a manifest row, and so a digest, behind
+                // bytes nobody ever read.
+                return new self([], 0, sprintf('That archive does not contain the file it lists as "%s".', $entry));
+            }
+
+            $copied = self::copyEntry($stream, $destination, $maxBytes - $total);
 
             if ($copied === null) {
                 $zip->close();
@@ -163,18 +175,16 @@ class BundleExtractor
         return in_array(strtolower(basename($path)), ['thumbs.db', 'desktop.ini'], true);
     }
 
-    /** @return int|null bytes written, or null once the budget is spent */
-    private static function copyEntry(ZipArchive $zip, string $entry, string $destination, int $budget): ?int
+    /**
+     * @param  resource  $stream
+     * @return int|null bytes written, or null once the budget is spent
+     */
+    private static function copyEntry($stream, string $destination, int $budget): ?int
     {
         if ($budget <= 0) {
+            fclose($stream);
+
             return null;
-        }
-
-        $stream = $zip->getStream($entry);
-
-        if ($stream === false) {
-            // An entry the index named but the archive cannot produce.
-            return 0;
         }
 
         @mkdir(dirname($destination), 0775, true);

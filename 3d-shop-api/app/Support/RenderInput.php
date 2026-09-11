@@ -12,6 +12,44 @@ use Illuminate\Support\Facades\Storage;
  */
 class RenderInput
 {
+    /**
+     * @return array{dir: string, entry: string, files: int, bytes: int}|string
+     *                                                                  the unpacked bundle, or why it could not be opened
+     */
+    public static function unpack(string $archivePath, string $scratch): array|string
+    {
+        $inspection = BundleInspector::of($archivePath);
+
+        if (! $inspection->allowed()) {
+            return (string) $inspection->refusal;
+        }
+
+        $directory = $scratch.DIRECTORY_SEPARATOR.'bundle';
+        $unpacked = BundleExtractor::extract($archivePath, $inspection, $directory);
+
+        if (! $unpacked->succeeded()) {
+            return (string) $unpacked->failure;
+        }
+
+        $models = $unpacked->models();
+
+        if ($models === []) {
+            return 'That archive holds no model file.';
+        }
+
+        return [
+            'dir' => $directory,
+            'entry' => $models[0],
+            'files' => count($unpacked->files),
+            'bytes' => $unpacked->bytes,
+        ];
+    }
+
+    public static function isBundle(ProductFile $source): bool
+    {
+        return ($source->meta['bundle'] ?? null) !== null;
+    }
+
     public static function scanOf(ProductFile $source): MeshPrescan
     {
         // Recorded at upload, so rejecting costs no transfer from object storage.

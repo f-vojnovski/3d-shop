@@ -80,6 +80,19 @@ class CheckoutTest extends TestCase
             ->assertJsonPath('product_status', 'not-purchased');
     }
 
+    /**
+     * A Sale row is the download grant, so any route that writes one without
+     * an order gives the file away. `POST /api/sales/buy` did exactly that and
+     * survived the move to a payment provider because nothing called it.
+     */
+    public function test_no_route_grants_a_product_without_an_order(): void
+    {
+        $this->postJson('/api/sales/buy', ['products' => [['id' => $this->product->id]]])
+            ->assertNotFound();
+
+        $this->assertSame(0, Sale::count());
+    }
+
     public function test_a_withdrawn_product_cannot_be_bought(): void
     {
         $this->product->update(['unlisted' => true]);

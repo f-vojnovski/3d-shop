@@ -25,7 +25,8 @@ use App\Http\Controllers\SalesController;
 
 // Products
 Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/products/{id}', [ProductController::class, 'show'])
+    ->where('id', '[0-9]+');
 Route::get('/products/search/{name}', [ProductController::class, 'search']);
 Route::get('/products/{id}/preview/{format}', [ProductController::class, 'previewModel'])
     ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
@@ -76,7 +77,6 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
 
     Route::get('/orders/{id}', [CheckoutController::class, 'show'])->where('id', '[0-9]+');
 
-    Route::post('/sales/buy', [SalesController::class, 'makeSale']);
     Route::get('/sales/', [SalesController::class, 'getSalesForAuthenticatedUser']);
 });
 

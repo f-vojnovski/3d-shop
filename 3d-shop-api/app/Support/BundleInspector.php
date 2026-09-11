@@ -48,7 +48,13 @@ class BundleInspector
     private const ARCHIVES = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'];
 
     public function __construct(
-        /** @var list<string> Validated relative paths, safe to join to a base. */
+        /**
+         * Name the archive knows an entry by => validated relative path, safe
+         * to join to a base. The two differ whenever a packer used backslashes
+         * or `./`, and reading an entry needs the name the archive holds.
+         *
+         * @var array<string, string>
+         */
         public readonly array $entries,
         public readonly int $declaredBytes,
         public readonly int $archiveBytes,
@@ -125,7 +131,7 @@ class BundleInspector
             }
 
             $seen[$key] = $name;
-            $entries[] = self::relative($name);
+            $entries[$name] = self::relative($name);
             $declared += (int) $stat['size'];
         }
 

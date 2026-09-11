@@ -5,8 +5,6 @@ namespace App\Jobs;
 use App\Events\PreviewRenderFinished;
 use App\Models\Product;
 use App\Models\ProductFile;
-use App\Support\BundleExtractor;
-use App\Support\BundleInspector;
 use App\Support\MeshFacts;
 use App\Support\ModelConverter;
 use App\Support\RenderInput;
@@ -110,8 +108,8 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             $bundleDir = null;
             $entry = null;
 
-            if (($source->meta['bundle'] ?? null) !== null) {
-                $unpacked = $this->unpack($modelPath, $scratch, $log);
+            if (RenderInput::isBundle($source)) {
+                $unpacked = RenderInput::unpack($modelPath, $scratch);
 
                 if (is_string($unpacked)) {
                     $this->failOrRetry($product, $log, $unpacked, retryable: false);
@@ -119,7 +117,8 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                     return;
                 }
 
-                [$bundleDir, $entry] = $unpacked;
+                $log->info('Bundle unpacked.', $unpacked);
+                [$bundleDir, $entry] = [$unpacked['dir'], $unpacked['entry']];
             }
 
             if ($bundleDir === null && ModelConverter::needsConverting($scan->format)) {
@@ -337,40 +336,6 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         ]);
 
         return $derived;
-    }
-
-    /**
-     * @return array{0: string, 1: string}|string the folder and the model in it,
-     *                                            or why it could not be opened
-     */
-    private function unpack(string $archivePath, string $scratch, $log): array|string
-    {
-        $inspection = BundleInspector::of($archivePath);
-
-        if (! $inspection->allowed()) {
-            return (string) $inspection->refusal;
-        }
-
-        $directory = $scratch.DIRECTORY_SEPARATOR.'bundle';
-        $unpacked = BundleExtractor::extract($archivePath, $inspection, $directory);
-
-        if (! $unpacked->succeeded()) {
-            return (string) $unpacked->failure;
-        }
-
-        $models = $unpacked->models();
-
-        if ($models === []) {
-            return 'That archive holds no model file.';
-        }
-
-        $log->info('Bundle unpacked.', [
-            'files' => count($unpacked->files),
-            'bytes' => $unpacked->bytes,
-            'entry' => $models[0],
-        ]);
-
-        return [$directory, $models[0]];
     }
 
     /**

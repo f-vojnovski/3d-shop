@@ -251,10 +251,65 @@ class BundleExtractorTest extends TestCase
         $this->assertSame(['pack/one.obj', 'pack/two.glb'], $result->models());
     }
 
-    /** @param  array<string, string>  $files */
-    private function zip(array $files): string
+    /**
+     * Windows packers write `tex\a.png`. The inspection validates the
+     * separator away, so the name it hands on is not the name the archive can
+     * be asked for, and reading by the wrong one silently produces nothing.
+     */
+    public function test_an_entry_named_with_backslashes_is_still_extracted(): void
     {
-        $path = $this->directory.'/bundle-'.substr(md5(serialize($files)), 0, 8).'.zip';
+        $archive = $this->zipWithBackslashes([
+            'model.obj' => "v 0 0 0\nf 1 1 1\n",
+            'tex/a.png' => 'PNG-A',
+        ]);
+
+        $result = BundleExtractor::extract($archive, BundleInspector::of($archive), $this->target);
+
+        $this->assertTrue($result->succeeded(), (string) $result->failure);
+        $this->assertFileExists($this->target.'/tex/a.png');
+        $this->assertSame('PNG-A', File::get($this->target.'/tex/a.png'));
+        $this->assertSame(hash('sha256', 'PNG-A'), $result->manifest[1]['sha256']);
+        $this->assertSame(5, $result->manifest[1]['bytes']);
+    }
+
+    /** An unread file hashes to nothing, and nothing collides with nothing. */
+    public function test_backslash_bundles_with_different_contents_do_not_share_a_digest(): void
+    {
+        $one = $this->zipWithBackslashes(['model.obj' => "v 0 0 0\n", 'tex/a.png' => 'FIRST'], '-1');
+        $two = $this->zipWithBackslashes(['model.obj' => "v 0 0 0\n", 'tex/a.png' => 'SECOND'], '-2');
+
+        $first = BundleExtractor::extract($one, BundleInspector::of($one), $this->target.'-1');
+        $second = BundleExtractor::extract($two, BundleInspector::of($two), $this->target.'-2');
+
+        $this->assertNotSame('', $first->manifest[1]['sha256']);
+        $this->assertNotSame($first->digest(), $second->digest());
+    }
+
+    /**
+     * PHP's ZipArchive writes forward slashes whatever it is given, so the
+     * separator is swapped in the finished bytes. Same length, so the headers
+     * and the central directory stay valid.
+     *
+     * @param  array<string, string>  $files
+     */
+    private function zipWithBackslashes(array $files, string $suffix = ''): string
+    {
+        $path = $this->zip($files, $suffix);
+        $bytes = File::get($path);
+
+        foreach (array_keys($files) as $name) {
+            $bytes = str_replace($name, str_replace('/', '\\', $name), $bytes);
+        }
+
+        File::put($path, $bytes);
+
+        return $path;
+    }
+
+    /** @param  array<string, string>  $files */
+    private function zip(array $files, string $suffix = ''): string
+    {
+        $path = $this->directory.'/bundle-'.substr(md5(serialize($files)), 0, 8).$suffix.'.zip';
         $zip = new ZipArchive();
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
