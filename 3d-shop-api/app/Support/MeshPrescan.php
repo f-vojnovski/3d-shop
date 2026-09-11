@@ -159,6 +159,13 @@ class MeshPrescan
             return 'gltf';
         }
 
+        // A bundle: the model and its textures, which is how they actually ship.
+        if (str_starts_with($head, "PK")
+            || str_starts_with($head, "PK")
+            || str_starts_with($head, "PK")) {
+            return 'zip';
+        }
+
         if (str_starts_with($head, 'Kaydara FBX Binary') || str_contains($head, 'FBXHeaderExtension')) {
             return 'fbx';
         }

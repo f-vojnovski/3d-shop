@@ -21,8 +21,11 @@ class FormatAgreement
      */
     public static function of(Collection $deliverables): ?array
     {
+        // Sorted here rather than trusting the caller: the comparison appears on
+        // a listing and must not reorder itself between page loads.
         $measured = $deliverables
             ->filter(fn (ProductFile $file) => ($file->facts()['faces'] ?? null) !== null)
+            ->sortBy(fn (ProductFile $file) => (string) $file->format)
             ->values();
 
         if ($measured->count() < 2) {

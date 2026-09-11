@@ -46,7 +46,7 @@ class FormatAgreementTest extends TestCase
 
         $this->assertTrue($agreement['agrees']);
         $this->assertSame([], $agreement['differences']);
-        $this->assertSame(['obj', 'gltf'], $agreement['compared']);
+        $this->assertSame(['gltf', 'obj'], $agreement['compared']);
     }
 
     /** A clean .glb beside a mangled .fbx shows a buyer whichever tab they open. */
@@ -59,7 +59,7 @@ class FormatAgreementTest extends TestCase
 
         $this->assertFalse($agreement['agrees']);
         $this->assertSame(
-            ['Triangle counts differ: .gltf 12,000, .fbx 400,000.'],
+            ['Triangle counts differ: .fbx 400,000, .gltf 12,000.'],
             $agreement['differences']
         );
     }

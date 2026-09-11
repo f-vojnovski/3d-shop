@@ -9,6 +9,7 @@ use App\Models\ProductFile;
 use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
 use App\Support\ModelFormats;
+use App\Support\ModelUpload;
 use App\Support\StandardAngles;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -94,18 +95,11 @@ class ProductController extends BaseController
             ]);
         }
 
-        $scans = $this->scanModels($models);
-
         // Outside the transaction: this reads every byte of every model, and a
         // 25 MB .obj takes about a fifth of a second.
-        $facts = array_map(
-            fn (UploadedFile $file, string $format) => MeshFacts::of($file->getRealPath(), $scans[$format]->format),
-            $models,
-            array_keys($models)
-        );
-        $facts = array_combine(array_keys($models), $facts);
+        $uploads = $this->readModels($models);
 
-        return DB::transaction(function () use ($request, $models, $angles, $scans, $facts) {
+        return DB::transaction(function () use ($request, $models, $angles, $uploads) {
             $product = Product::create([
                 'name' => $request->input('name'),
                 'description' => $request->input('description'),
@@ -122,8 +116,7 @@ class ProductController extends BaseController
                     self::DELIVERABLE_DISK,
                     $format,
                     $angles[$format] ?? [],
-                    scan: $scans[$format],
-                    facts: $facts[$format]
+                    upload: $uploads[$format]
                 );
             }
 
@@ -226,10 +219,9 @@ class ProductController extends BaseController
         }
 
         $file = $request->file('model');
-        $scan = $this->scanModels([$fields['format'] => $file])[$fields['format']];
-        $facts = MeshFacts::of($file->getRealPath(), $scan->format);
+        $upload = $this->readModels([$fields['format'] => $file])[$fields['format']];
 
-        return DB::transaction(function () use ($product, $current, $file, $fields, $scan, $facts) {
+        return DB::transaction(function () use ($product, $current, $file, $fields, $upload) {
             // Cameras belong to the listing, so the views stay comparable.
             $replacement = $this->storeFile(
                 $product,
@@ -238,8 +230,7 @@ class ProductController extends BaseController
                 self::DELIVERABLE_DISK,
                 $fields['format'],
                 $current->angles(),
-                scan: $scan,
-                facts: $facts
+                upload: $upload
             );
 
             $supersede = [
@@ -397,7 +388,7 @@ class ProductController extends BaseController
 
         foreach (ModelFormats::all() as $format) {
             $rules[ModelFormats::field($format)] =
-                'nullable|file|max:51200|extensions:'.ModelFormats::extensionRule($format);
+                'nullable|file|max:51200|extensions:'.ModelFormats::uploadExtensionRule($format);
         }
 
         return $rules;
@@ -405,35 +396,24 @@ class ProductController extends BaseController
 
     /**
      * @param  array<string, UploadedFile>  $models
-     * @return array<string, MeshPrescan>
+     * @return array<string, ModelUpload>
      */
-    private function scanModels(array $models): array
+    private function readModels(array $models): array
     {
         $fields = ModelFormats::fields();
-        $scans = [];
+        $uploads = [];
 
         foreach ($models as $format => $file) {
-            $scan = MeshPrescan::of($file->getRealPath());
+            $upload = ModelUpload::read($file->getRealPath(), $format);
 
-            if ($rejection = $scan->rejection()) {
-                throw ValidationException::withMessages([$fields[$format] => $rejection]);
+            if (! $upload->accepted()) {
+                throw ValidationException::withMessages([$fields[$format] => $upload->refusal]);
             }
 
-            // The extension is the uploader's word; the magic bytes are not.
-            if (! in_array($scan->format, ModelFormats::extensionsFor($format), true)) {
-                throw ValidationException::withMessages([
-                    $fields[$format] => sprintf(
-                        'That file is a .%s, not a .%s.',
-                        $scan->format,
-                        $format
-                    ),
-                ]);
-            }
-
-            $scans[$format] = $scan;
+            $uploads[$format] = $upload;
         }
 
-        return $scans;
+        return $uploads;
     }
 
     private function refuseSettledFields(Request $request): void
@@ -469,8 +449,7 @@ class ProductController extends BaseController
         ?string $format = null,
         array $angles = [],
         int $sort = 0,
-        ?MeshPrescan $scan = null,
-        ?MeshFacts $facts = null
+        ?ModelUpload $upload = null
     ): ProductFile {
         $directory = match ($kind) {
             ProductFile::KIND_THUMBNAIL => 'thumbnails',
@@ -483,8 +462,13 @@ class ProductController extends BaseController
 
         // Derived here, never from the client's filename: a real PNG called
         // `x.php` passes image validation and would land on the public disk
-        // under a name a web server may hand to an interpreter.
-        $extension = $scan === null ? $file->extension() : $scan->format;
+        // under a name a web server may hand to an interpreter. A bundle keeps
+        // its own extension because the archive is what the buyer downloads.
+        $extension = match (true) {
+            $upload === null => $file->extension(),
+            $upload->isBundle() => 'zip',
+            default => $upload->scan->format,
+        };
         $name = uniqid().($extension === '' ? '' : '.'.$extension);
         $path = Storage::disk($disk)->putFileAs($directory, $file, $name);
 
@@ -496,13 +480,20 @@ class ProductController extends BaseController
             'sort' => $sort,
             'bytes' => $bytes,
             'checksum' => $checksum,
-            'meta' => $scan === null ? null : [
-                'sniffed_format' => $scan->format,
-                'faces' => $scan->faces,
-                'facts' => $facts?->toArray(),
+            'meta' => $upload === null ? null : array_filter([
+                'sniffed_format' => $upload->scan->format,
+                'faces' => $upload->scan->faces,
+                'facts' => $upload->facts->toArray(),
                 'angles' => $angles,
                 'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
-            ],
+                // Only a bundle has these, and they say what the images were
+                // drawn from when one file's checksum no longer can.
+                'bundle' => $upload->isBundle() ? [
+                    'entry' => $upload->entry,
+                    'digest' => $upload->digest,
+                    'files' => $upload->manifest,
+                ] : null,
+            ], fn ($value) => $value !== null),
         ]);
     }
 

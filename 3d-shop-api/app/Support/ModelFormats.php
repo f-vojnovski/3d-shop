@@ -62,6 +62,16 @@ class ModelFormats
         return implode(',', self::extensionsFor($format));
     }
 
+    /**
+     * What a seller may name their upload. Wider than the format's own
+     * extensions because a model may arrive zipped with its textures; what is
+     * actually inside is decided from the bytes, not from this.
+     */
+    public static function uploadExtensionRule(string $format): string
+    {
+        return implode(',', [...self::extensionsFor($format), 'zip']);
+    }
+
     /** Route constraints take a regex alternation. */
     public static function pattern(): string
     {
