@@ -56,6 +56,25 @@ let settle;
 const finished = new Promise((resolve) => { settle = resolve; });
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json' };
+const ASSET_TYPES = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp', '.bmp': 'image/bmp', '.tga': 'image/x-tga',
+  '.mtl': 'text/plain', '.bin': 'application/octet-stream',
+  '.gltf': 'model/gltf+json', '.glb': 'model/gltf-binary', '.obj': 'text/plain',
+};
+
+// What the model asked its neighbours for. A miss is a texture that will not
+// appear, which is the seller's problem to hear about rather than ours to hide.
+const asked = [];
+
+// The browser normalises "../" out of a URL before sending it, so a texture
+// path that climbs out of the bundle arrives as a plain request for another
+// route and never reaches the containment check below. Once the harness has
+// what it needs, nothing but the bundle is served.
+let sealed = false;
+
+// Chrome asks for this unprompted; it is not a reference the model made.
+const UNASKED = ['/favicon.ico'];
 
 const ROUTES = {
   '/': [join(APP, 'harness.html'), 'text/html'],
@@ -72,6 +91,25 @@ function readBody(request) {
     request.on('end', () => resolve(Buffer.concat(chunks)));
     request.on('error', reject);
   });
+}
+
+/**
+ * A bundle's own files. The model names these, so the path is untrusted in
+ * exactly the way /three/* is, and gets the same containment.
+ */
+function bundleRoute(path) {
+  if (! path.startsWith('/bundle/')) {
+    return null;
+  }
+
+  const root = join(IN, 'bundle');
+  const resolved = resolve(join(root, decodeURIComponent(path.slice('/bundle/'.length))));
+
+  if (resolved !== root && ! resolved.startsWith(root + sep)) {
+    return null;
+  }
+
+  return [resolved, ASSET_TYPES[extname(resolved).toLowerCase()] ?? 'application/octet-stream'];
 }
 
 /**
@@ -116,23 +154,42 @@ const server = createServer(async (request, response) => {
     } else if (path === '/failed') {
       state.failed = body.reason ?? 'unknown';
       settle();
+    } else if (path === '/sealed') {
+      sealed = true;
     }
 
     response.writeHead(204).end();
     return;
   }
 
-  const route = ROUTES[path] ?? libraryRoute(path);
+  const bundle = bundleRoute(path);
+  const route = bundle ?? (sealed ? null : (ROUTES[path] ?? libraryRoute(path)));
+  // Everything but the three.js modules, so a model reaching somewhere it was
+  // not offered shows up rather than passing unnoticed.
+  const audited = ! path.startsWith('/three/') && ! UNASKED.includes(path);
 
   if (route === null) {
+    if (audited) {
+      asked.push({ path, found: false });
+    }
+
     response.writeHead(404).end();
     return;
   }
 
   try {
     const data = await readFile(route[0]);
+
+    if (audited) {
+      asked.push({ path, found: true, bytes: data.length });
+    }
+
     response.writeHead(200, { 'Content-Type': route[1], 'Content-Length': data.length }).end(data);
   } catch {
+    if (audited) {
+      asked.push({ path, found: false });
+    }
+
     response.writeHead(404).end();
   }
 });
@@ -233,6 +290,9 @@ async function main() {
     blank,
     triangles: state.triangles,
     wireframes: state.wireframes,
+    // Every sibling the model reached for, and whether it was there.
+    assets: asked,
+    missing: asked.filter((one) => ! one.found).map((one) => one.path),
     seconds,
     renderer: rendererIdentity(),
   });

@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { fitToView } from '/fitToView.js';
 
@@ -32,13 +33,31 @@ async function main() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  const buffer = await (await fetch('/model')).arrayBuffer();
+  // A bundle is served as a folder, so the model keeps its neighbours and the
+  // loaders resolve relative references themselves. A single file is /model.
+  // Textures load asynchronously: a loader hands back a Texture at once and
+  // fills in its image later, so rendering straight after parse draws black.
+  const manager = new THREE.LoadingManager();
+  let queued = 0;
+  manager.onStart = () => { queued += 1; };
+  const settled = new Promise((resolve) => { manager.onLoad = resolve; });
+
+  const entry = job.source.entry ?? null;
+  const base = entry === null ? '' : '/bundle/'.concat(entry.split('/').slice(0, -1).join('/'), entry.includes('/') ? '/' : '');
+  const url = entry === null ? '/model' : '/bundle/'.concat(entry);
+
+  const buffer = await (await fetch(url)).arrayBuffer();
+
+  // The model is in hand and the page needs nothing else outside the bundle,
+  // so everything else is shut off before a byte of it is parsed.
+  await post('/sealed', {});
   const isGltf = job.source.format === 'glb' || job.source.format === 'gltf';
 
   let object;
   if (isGltf) {
+    // The second argument is what external URIs resolve against.
     const gltf = await new Promise((res, rej) =>
-      new GLTFLoader().parse(buffer, '', res, rej));
+      new GLTFLoader(manager).parse(buffer, base, res, rej));
     object = gltf.scene;
   } else if (job.source.format === 'stl') {
     // Geometry only: the format carries no material to light.
@@ -47,7 +66,25 @@ async function main() {
       new THREE.MeshPhongMaterial({ color: 0xb9bec7, flatShading: false }),
     );
   } else {
-    object = new OBJLoader().parse(new TextDecoder().decode(buffer));
+    const text = new TextDecoder().decode(buffer);
+    const loader = new OBJLoader(manager);
+
+    // OBJLoader parses no materials of its own: the .mtl is a second file and
+    // has to be loaded and handed over, which only a bundle can offer.
+    const library = base === '' ? null : await materialsFor(text, base, manager);
+
+    if (library !== null) {
+      loader.setMaterials(library);
+    }
+
+    object = loader.parse(text);
+  }
+
+  if (queued > 0) {
+    await Promise.race([
+      settled,
+      new Promise((resolve) => setTimeout(resolve, 60000)),
+    ]);
   }
 
   let triangles = 0;
@@ -153,6 +190,28 @@ async function main() {
     count: job.angles.length,
     wireframes,
   });
+}
+
+/** The .mtl an .obj names, if it is beside it and readable. */
+async function materialsFor(text, base, manager) {
+  const named = /^\s*mtllib\s+(.+)$/m.exec(text);
+
+  if (named === null) {
+    return null;
+  }
+
+  const response = await fetch(base + named[1].trim());
+
+  if (! response.ok) {
+    return null;
+  }
+
+  const loader = new MTLLoader(manager);
+  loader.setResourcePath(base);
+  const library = loader.parse(await response.text(), base);
+  library.preload();
+
+  return library;
 }
 
 // Background is transparent, so any alpha is geometry.
