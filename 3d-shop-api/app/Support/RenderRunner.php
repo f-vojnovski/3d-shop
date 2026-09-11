@@ -40,24 +40,7 @@ class RenderRunner
 
         file_put_contents($jobFile, json_encode($request, JSON_PRETTY_PRINT));
 
-        // A bundle arrives as a folder so the model keeps its neighbours; a
-        // bare model is one file. Read-only either way: the renderer never
-        // writes to what it was given.
-        $source = $bundleDir === null
-            ? [$this->hostPath($modelPath).':/in/model:ro']
-            : [$this->hostPath($bundleDir).':/in/bundle:ro'];
-
-        $process = new Process([
-            'docker', 'run', '--rm',
-            '--network=none', '--cap-drop=ALL',
-            "--memory={$this->memory}", "--cpus={$this->cpus}",
-            '--pids-limit=256', '--tmpfs', '/tmp:rw,size=512m',
-            '-e', "RENDER_TIMEOUT={$this->timeoutSeconds}",
-            '-v', $source[0],
-            '-v', $this->hostPath($jobFile).':/in/job.json:ro',
-            '-v', $this->hostPath($outDir).':/out',
-            self::IMAGE,
-        ]);
+        $process = new Process($this->commandFor($modelPath, $jobFile, $outDir, $bundleDir));
 
         $process->setTimeout($this->timeoutSeconds + 60);
         $process->run();
@@ -83,6 +66,33 @@ class RenderRunner
             'status' => 'failed',
             'reason' => 'The renderer result could not be read.',
             'retryable' => true,
+        ];
+    }
+
+    /**
+     * Separate from run() so a test can read the confinement back: the suite
+     * substitutes this class wherever a render happens, leaving the argv the
+     * one part of the sandbox nothing else sees.
+     *
+     * @return list<string>
+     */
+    public function commandFor(string $modelPath, string $jobFile, string $outDir, ?string $bundleDir = null): array
+    {
+        // A bundle arrives as a folder so the model keeps its neighbours; a
+        // bare model is one file. Read-only either way: the renderer never
+        // writes to what it was given.
+        $source = $bundleDir === null
+            ? $this->hostPath($modelPath).':/in/model:ro'
+            : $this->hostPath($bundleDir).':/in/bundle:ro';
+
+        return [
+            'docker', 'run', '--rm',
+            ...Sandbox::confinement($this->memory, $this->cpus),
+            '-e', "RENDER_TIMEOUT={$this->timeoutSeconds}",
+            '-v', $source,
+            '-v', $this->hostPath($jobFile).':/in/job.json:ro',
+            '-v', $this->hostPath($outDir).':/out',
+            self::IMAGE,
         ];
     }
 

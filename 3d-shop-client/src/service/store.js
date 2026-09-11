@@ -24,14 +24,18 @@ import {
 // lib/ is CommonJS; Vite's interop returns the namespace, not the storage object.
 import storage from 'redux-persist/es/storage';
 
+// `auth` is deliberately absent: it persists itself below, and listing it here
+// as well would store the whole composed slice under the root key and rehydrate
+// it over the top, putting back the two fields that config exists to drop.
 const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  whitelist: ['auth', 'cart'],
+  whitelist: ['cart'],
 };
 
-// `status` and `error` describe the last request, not the session.
+// `status` and `error` describe the last request, not the session: a failed
+// sign-in would otherwise greet the user on every later visit.
 const authPersistConfig = {
   key: 'auth',
   version: 1,

@@ -97,9 +97,16 @@ const AttestedStills = ({ product, onFormat }) => {
     );
   }
 
+  // Images survive a failed re-render, so they describe whatever the file was
+  // last time one succeeded. Saying nothing would badge them as the file on
+  // sale, which is the one thing this page must never get wrong.
+  const stale = !fromSeller && shown.preview.status === 'failed';
   const image = images[Math.min(selected, images.length - 1)];
   const outline = fromSeller ? null : image.wireframe;
   const showOutline = wireframe && outline != null;
+  // The record belongs to the image on screen, and the wireframe is attested
+  // separately from the shaded view it was drawn beside.
+  const record = showOutline ? outline.attestation_url : image.attestation_url;
   const alt = fromSeller
     ? `${product.name}, image ${image.sort + 1} from the seller`
     : `${product.name}, .${shown.preview.format} view ${image.sort + 1}`
@@ -144,9 +151,30 @@ const AttestedStills = ({ product, onFormat }) => {
       {/* Only our own images are labelled. A note on the seller's reads as a
           disclaimer against them, and the tab already says whose they are. */}
       {!fromSeller && (
-        <div className={styles.badge}>
-          System-rendered from the .{shown.preview.format} file on sale.
-        </div>
+        stale ? (
+          <div className={styles.stale}>
+            <span>
+              These images are from an earlier version of the .{shown.preview.format} file.
+              Rendering the current one failed, so they may not match what you would download.
+            </span>
+            {isOwner && <span className={styles.hint}>{shown.preview.error}</span>}
+          </div>
+        ) : (
+          <div className={styles.badge}>
+            {record ? (
+              <a
+                href={record}
+                target="_blank"
+                rel="noreferrer"
+                title="The camera, the file and the checksums this image was made from"
+              >
+                System-rendered from the .{shown.preview.format} file on sale.
+              </a>
+            ) : (
+              <>System-rendered from the .{shown.preview.format} file on sale.</>
+            )}
+          </div>
+        )
       )}
     </div>
   );

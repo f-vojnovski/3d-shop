@@ -36,17 +36,7 @@ class ModelConverter
         $target = $scratchDir.DIRECTORY_SEPARATOR.'converted.glb';
         @unlink($target);
 
-        $process = new Process([
-            'docker', 'run', '--rm',
-            '--network=none', '--cap-drop=ALL',
-            "--memory={$this->memory}", "--cpus={$this->cpus}",
-            '--pids-limit=256', '--tmpfs', '/tmp:rw,size=512m',
-            '--entrypoint', 'assimp',
-            '-v', $this->hostPath($sourcePath).':/in/model:ro',
-            '-v', $this->hostPath($scratchDir).':/out',
-            RenderRunner::IMAGE,
-            'export', '/in/model', '/out/converted.glb',
-        ]);
+        $process = new Process($this->commandFor($sourcePath, $scratchDir));
 
         $process->setTimeout($this->timeoutSeconds + 60);
         $process->run();
@@ -92,6 +82,24 @@ class ModelConverter
     }
 
     /** Named in the provenance: the images come from what this produced. */
+    /**
+     * Separated for the same reason as RenderRunner::commandFor().
+     *
+     * @return list<string>
+     */
+    public function commandFor(string $sourcePath, string $scratchDir): array
+    {
+        return [
+            'docker', 'run', '--rm',
+            ...Sandbox::confinement($this->memory, $this->cpus),
+            '--entrypoint', 'assimp',
+            '-v', $this->hostPath($sourcePath).':/in/model:ro',
+            '-v', $this->hostPath($scratchDir).':/out',
+            RenderRunner::IMAGE,
+            'export', '/in/model', '/out/converted.glb',
+        ];
+    }
+
     private function identity(): string
     {
         if (self::$identity !== null) {

@@ -203,6 +203,46 @@ describe('AttestedStills', () => {
     expect(screen.getByText(/System-rendered/)).toBeInTheDocument();
   });
 
+  it('links the badge to the record for the image on screen', () => {
+    render(<AttestedStills product={product([preview('obj', 2)])} />);
+
+    expect(screen.getByRole('link', { name: /System-rendered/ }))
+      .toHaveAttribute('href', '/api/previews/obj0/attestation');
+  });
+
+  it('links to the wireframe record once the wireframe is shown', async () => {
+    render(<AttestedStills product={product([withWireframes('obj', 2)])} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wireframe' }));
+
+    expect(screen.getByRole('link', { name: /System-rendered/ }))
+      .toHaveAttribute('href', '/api/previews/obj0wire/attestation');
+  });
+
+  it('does not badge stills from a render that has since failed', () => {
+    const stale = preview('obj', 2, { status: 'failed', error: 'The model contained no geometry.' });
+
+    render(<AttestedStills product={product([stale])} />);
+
+    // The images are still worth showing; claiming they are the file on sale
+    // is what would be false.
+    expect(screen.getByAltText('Half-track, .obj view 1')).toBeInTheDocument();
+    expect(screen.queryByText(/System-rendered/)).not.toBeInTheDocument();
+    expect(screen.getByText(/earlier version of the .obj file/)).toBeInTheDocument();
+  });
+
+  it('tells the owner why the render failed, and nobody else', () => {
+    const stale = preview('obj', 2, { status: 'failed', error: 'The model contained no geometry.' });
+
+    const { rerender } = render(<AttestedStills product={product([stale])} />);
+    expect(screen.queryByText('The model contained no geometry.')).not.toBeInTheDocument();
+
+    rerender(
+      <AttestedStills product={{ ...product([stale]), product_status: 'owner' }} />
+    );
+    expect(screen.getByText('The model contained no geometry.')).toBeInTheDocument();
+  });
+
   it('still offers the seller tab when a render failed', async () => {
     const failed = preview('obj', 0, { status: 'failed', error: 'blank' });
 

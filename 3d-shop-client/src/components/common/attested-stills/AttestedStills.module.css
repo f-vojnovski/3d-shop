@@ -101,6 +101,29 @@
   color: var(--clr-text-dim);
 }
 
+.badge a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+
+.badge a:hover,
+.badge a:focus-visible {
+  color: var(--clr-accent);
+  text-decoration-style: solid;
+}
+
+.stale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--clr-danger);
+  font-size: 0.78rem;
+  color: var(--clr-danger);
+}
+
 .notice {
   position: absolute;
   inset: 0;
