@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
 use App\Support\ModelFormats;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomViewController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\AuthController;
@@ -67,6 +68,12 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::post('/checkout/session', [CheckoutController::class, 'session']);
+    Route::get('/products/{id}/views', [CustomViewController::class, 'index'])
+        ->where('id', '[0-9]+');
+    Route::post('/products/{id}/views', [CustomViewController::class, 'store'])
+        ->middleware('throttle:20,1')
+        ->where('id', '[0-9]+');
+
     Route::get('/orders/{id}', [CheckoutController::class, 'show'])->where('id', '[0-9]+');
 
     Route::post('/sales/buy', [SalesController::class, 'makeSale']);

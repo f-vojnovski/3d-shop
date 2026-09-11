@@ -188,23 +188,26 @@ async function main() {
   const images = [];
   const blank = [];
 
-  const shaded = [...state.images.values()]
-    .filter((image) => image.pass === 'shaded')
+  const drawn = [...state.images.values()];
+  // One entry per angle whichever pass was asked for, so wireframe leads alone.
+  const lead = drawn.some((image) => image.pass === 'shaded') ? 'shaded' : 'wireframe';
+  const primary = drawn
+    .filter((image) => image.pass === lead)
     .sort((a, b) => a.index - b.index);
 
-  for (const { index, png, coverage } of shaded) {
+  for (const { index, png, coverage } of primary) {
     if (coverage < MIN_COVERAGE) {
       blank.push(index);
       continue;
     }
 
-    const file = `angle-${index}.png`;
+    const file = `${lead === 'shaded' ? 'angle' : 'wireframe'}-${index}.png`;
     await writeFile(join(OUT, file), png);
 
-    const entry = { index, file, bytes: png.length, coverage: Number(coverage.toFixed(5)) };
+    const entry = { index, file, pass: lead, bytes: png.length, coverage: Number(coverage.toFixed(5)) };
     // Nested so a discarded angle takes its wireframe with it, and `blank`
     // keeps counting angles rather than images.
-    const outline = state.images.get(`wireframe:${index}`);
+    const outline = lead === 'shaded' ? state.images.get(`wireframe:${index}`) : undefined;
 
     if (outline !== undefined && outline.coverage >= MIN_COVERAGE) {
       const wireframeFile = `wireframe-${index}.png`;

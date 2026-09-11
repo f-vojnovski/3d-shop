@@ -19,6 +19,7 @@ import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer'
 import StlModelDisplayer from '../../common/model-displayer/StlModelDisplayer';
 import AttestedStills from '../../common/attested-stills/AttestedStills';
 import ModelFacts from '../../common/model-facts/ModelFacts';
+import RequestView from './RequestView';
 import FileHistory from '../../common/file-history/FileHistory';
 import { BsPersonCircle } from 'react-icons/bs';
 
@@ -41,6 +42,7 @@ const SingleProductView = () => {
   const [shownFormat, setShownFormat] = useState(null);
   const [note, setNote] = useState('');
   const replacing = useSelector((state) => state.product.replacing);
+  const signedIn = useSelector((state) => Boolean(state.auth.token));
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -133,6 +135,16 @@ const SingleProductView = () => {
                 facts={measured.facts}
                 format={measured.format}
                 agreement={product.format_agreement}
+              />
+            </div>
+          )}
+
+          {signedIn && measured?.facts?.bounds && measured.images?.length > 0 && (
+            <div className={styles.section}>
+              <RequestView
+                product={product}
+                format={measured.format}
+                bounds={measured.facts.bounds}
               />
             </div>
           )}

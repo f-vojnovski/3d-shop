@@ -1,0 +1,130 @@
+.open {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-line);
+  border-radius: 8px;
+  color: var(--clr-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label,
+.note {
+  margin: 0;
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+}
+
+.stage {
+  position: relative;
+  height: 220px;
+  border: 1px solid var(--clr-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--clr-surface-raised);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.passes {
+  display: flex;
+  gap: 6px;
+}
+
+.pass,
+.passOn {
+  padding: 3px 10px;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.passOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
+.ask {
+  padding: 5px 12px;
+  background: var(--clr-accent);
+  border: none;
+  border-radius: 8px;
+  color: #05161f;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ask:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.full {
+  position: relative;
+  display: block;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.full span {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 2px 0;
+  background: rgb(0 0 0 / 55%);
+  border-radius: 0 0 6px 6px;
+  color: #fff;
+  font-size: 0.66rem;
+  text-align: center;
+}
+
+.results img {
+  display: block;
+  width: 98px;
+  height: 74px;
+  /* The render is the thing being inspected, so show all of it. */
+  object-fit: contain;
+  border: 1px solid var(--clr-line);
+  border-radius: 6px;
+  background: var(--clr-surface-raised);
+}
+
+.waiting,
+.failed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 98px;
+  height: 74px;
+  border: 1px dashed var(--clr-line);
+  border-radius: 6px;
+  color: var(--clr-text-dim);
+  font-size: 0.7rem;
+  text-align: center;
+}

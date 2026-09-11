@@ -90,7 +90,9 @@ async function main() {
 
   // Past this the lines cover the model solid.
   const WIREFRAME_MAX_TRIANGLES = 750000;
-  const wireframes = triangles <= WIREFRAME_MAX_TRIANGLES;
+  const wanted = job.passes ?? ['shaded', 'wireframe'];
+  const shading = wanted.includes('shaded');
+  const wireframes = wanted.includes('wireframe') && triangles <= WIREFRAME_MAX_TRIANGLES;
 
   // Filled first so the lines behind the model are occluded, offset back so the
   // fill does not z-fight the lines on its own surface.
@@ -113,15 +115,17 @@ async function main() {
     camera.lookAt(...(angle.target ?? [0, 0, 0]));
     camera.updateProjectionMatrix();
 
-    renderer.render(scene, camera);
+    if (shading) {
+      renderer.render(scene, camera);
 
-    await post('/image', {
-      pass: 'shaded',
-      index: i,
-      triangles: Math.round(triangles),
-      coverage: coverageOf(renderer),
-      png: renderer.domElement.toDataURL('image/png'),
-    });
+      await post('/image', {
+        pass: 'shaded',
+        index: i,
+        triangles: Math.round(triangles),
+        coverage: coverageOf(renderer),
+        png: renderer.domElement.toDataURL('image/png'),
+      });
+    }
 
     if (! wireframes) {
       continue;

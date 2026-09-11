@@ -6,6 +6,7 @@ import productsReducer from './features/productsSlice';
 import productReducer from './features/productSlice';
 import authReducer from './features/authSlice';
 import cartReducer from './features/cartSlice';
+import customViewsReducer from './features/customViewSlice';
 import productUpload from './features/productUploadSlice';
 import salesReducer from './features/salesSlice';
 import toastsReducer from './features/toastSlice';
@@ -45,6 +46,7 @@ const reducers = combineReducers({
   uploadDraft: uploadDraftReducer,
   auth: persistReducer(authPersistConfig, authReducer),
   cart: cartReducer,
+  customViews: customViewsReducer,
   sales: salesReducer,
   toasts: toastsReducer,
 });

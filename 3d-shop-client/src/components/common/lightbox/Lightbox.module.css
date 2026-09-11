@@ -1,0 +1,53 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgb(6 9 12 / 82%);
+  backdrop-filter: blur(10px);
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.frame img {
+  max-width: 100%;
+  /* Leaves room for the caption under the image. */
+  max-height: calc(100vh - 110px);
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--clr-surface-raised);
+}
+
+.frame figcaption {
+  color: var(--clr-text-dim);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: 999px;
+  color: var(--clr-text);
+  font-size: 1.1rem;
+  cursor: pointer;
+}

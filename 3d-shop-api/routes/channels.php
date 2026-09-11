@@ -10,3 +10,9 @@ Broadcast::channel(
     fn (User $user, string $sellerId) => (int) $user->id === (int) $sellerId,
     ['guards' => ['sanctum']],
 );
+
+Broadcast::channel(
+    'viewers.{viewerId}',
+    fn (User $user, string $viewerId) => (int) $user->id === (int) $viewerId,
+    ['guards' => ['sanctum']],
+);
