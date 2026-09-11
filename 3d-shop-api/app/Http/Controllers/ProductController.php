@@ -390,10 +390,6 @@ class ProductController extends BaseController
         }
     }
 
-    /**
-     * @param  array<string, UploadedFile>  $models
-     * @return array<string, MeshPrescan>
-     */
     /** @return array<string, string> */
     private static function modelRules(): array
     {
@@ -407,6 +403,10 @@ class ProductController extends BaseController
         return $rules;
     }
 
+    /**
+     * @param  array<string, UploadedFile>  $models
+     * @return array<string, MeshPrescan>
+     */
     private function scanModels(array $models): array
     {
         $fields = ModelFormats::fields();
