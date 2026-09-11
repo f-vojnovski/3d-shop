@@ -70,6 +70,8 @@ class ProductResource extends JsonResource
                 // Textures the model asked for and the bundle did not hold.
                 // Public: it is a fact about what is for sale.
                 'missing' => $file->meta['missing'] ?? null,
+                // What the buyer actually receives, named before they pay.
+                'bundle' => $this->bundleIn($file),
                 'images' => $this->stillsFrom($file),
                 'replaced' => $this->replacementsOf($file->format, $entitledViewerId),
             ])
@@ -109,6 +111,25 @@ class ProductResource extends JsonResource
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * The archive's contents, or null for a bare model file. Checksums are the
+     * per-file half of what the images were attested against, so they are sent
+     * whole rather than shortened for display.
+     *
+     * @return array{entry: string, digest: string, bytes: int, files: list<array{path: string, sha256: string, bytes: int}>}|null
+     */
+    private function bundleIn(ProductFile $file): ?array
+    {
+        $bundle = $file->meta['bundle'] ?? null;
+
+        return $bundle === null ? null : [
+            'entry' => $bundle['entry'],
+            'digest' => $bundle['digest'],
+            'bytes' => (int) $file->bytes,
+            'files' => $bundle['files'],
+        ];
     }
 
     /** Separate from `previews`: nothing here is attested. */

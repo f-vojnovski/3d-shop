@@ -14,6 +14,7 @@ import LoadError from '../../common/load-error/LoadError';
 import { formatPrice } from '../../../service/util/formatPrice';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
 import DownloadButton from '../../common/download-button/DownloadButton';
+import BundleContents from '../../common/bundle-contents/BundleContents';
 import ObjModelDisplayer from '../../common/model-displayer/ObjModelDisplayer';
 import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import StlModelDisplayer from '../../common/model-displayer/StlModelDisplayer';
@@ -137,6 +138,8 @@ const SingleProductView = () => {
                 agreement={product.format_agreement}
                 missing={measured.missing}
               />
+
+              <BundleContents bundle={measured.bundle} format={measured.format} />
             </div>
           )}
 
