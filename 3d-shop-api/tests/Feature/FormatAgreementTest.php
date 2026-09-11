@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
 use App\Support\FormatAgreement;
+use App\Support\MeshFacts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -50,7 +51,7 @@ class FormatAgreementTest extends TestCase
     }
 
     /** A clean .glb beside a mangled .fbx shows a buyer whichever tab they open. */
-    public function test_a_different_triangle_count_is_reported(): void
+    public function test_a_different_face_count_is_reported(): void
     {
         $this->deliverable('gltf', faces: 12000, size: [1, 1, 1]);
         $this->deliverable('fbx', faces: 400000, size: [1, 1, 1]);
@@ -59,9 +60,57 @@ class FormatAgreementTest extends TestCase
 
         $this->assertFalse($agreement['agrees']);
         $this->assertSame(
-            ['Triangle counts differ: .fbx 400,000, .gltf 12,000.'],
+            ['Face counts differ: .fbx 400,000, .gltf 12,000.'],
             $agreement['differences']
         );
+    }
+
+    /**
+     * The real numbers from one model shipped both ways: 134,894 quad faces in
+     * the .obj, 269,764 after the exporter triangulated it for the .glb. The
+     * seller did nothing wrong and the listing used to say they had.
+     */
+    public function test_quads_beside_triangles_are_not_called_a_disagreement(): void
+    {
+        $this->deliverable('obj', faces: 134894, size: [1, 1, 1], topology: MeshFacts::QUADS);
+        $this->deliverable('gltf', faces: 269764, size: [1, 1, 1], topology: MeshFacts::TRIANGLES);
+
+        $agreement = FormatAgreement::of($this->deliverables());
+
+        $this->assertTrue($agreement['agrees']);
+        $this->assertSame([], $agreement['differences']);
+    }
+
+    /** Same topology, so the counts mean the same thing and must match. */
+    public function test_two_quad_meshes_are_still_compared(): void
+    {
+        $this->deliverable('obj', faces: 1000, size: [1, 1, 1], topology: MeshFacts::QUADS);
+        $this->deliverable('fbx', faces: 2000, size: [1, 1, 1], topology: MeshFacts::QUADS);
+
+        $agreement = FormatAgreement::of($this->deliverables());
+
+        $this->assertFalse($agreement['agrees']);
+        $this->assertSame(['Face counts differ: .fbx 2,000, .obj 1,000.'], $agreement['differences']);
+    }
+
+    public function test_an_unreadable_topology_is_not_compared(): void
+    {
+        $this->deliverable('obj', faces: 100, size: [1, 1, 1], topology: MeshFacts::UNKNOWN);
+        $this->deliverable('gltf', faces: 900, size: [1, 1, 1], topology: MeshFacts::UNKNOWN);
+
+        $this->assertTrue(FormatAgreement::of($this->deliverables())['agrees']);
+    }
+
+    /** Bounds do not care what a face is, so they are compared regardless. */
+    public function test_size_is_still_compared_across_different_topologies(): void
+    {
+        $this->deliverable('obj', faces: 134894, size: [1, 1, 1], topology: MeshFacts::QUADS);
+        $this->deliverable('gltf', faces: 269764, size: [100, 100, 100], topology: MeshFacts::TRIANGLES);
+
+        $agreement = FormatAgreement::of($this->deliverables());
+
+        $this->assertFalse($agreement['agrees']);
+        $this->assertStringStartsWith('Sizes differ:', $agreement['differences'][0]);
     }
 
     public function test_a_different_size_is_reported(): void
@@ -126,7 +175,8 @@ class FormatAgreementTest extends TestCase
         string $format,
         int $faces,
         array $size,
-        ?int $vertices = null
+        ?int $vertices = null,
+        string $topology = MeshFacts::TRIANGLES
     ): ProductFile {
         return $this->product->files()->create([
             'kind' => ProductFile::KIND_DELIVERABLE,
@@ -139,6 +189,7 @@ class FormatAgreementTest extends TestCase
                 'sniffed_format' => $format,
                 'facts' => [
                     'faces' => $faces,
+                    'topology' => $topology,
                     'vertices' => $vertices ?? $faces * 3,
                     'bounds' => ['min' => [0, 0, 0], 'max' => $size, 'size' => $size],
                 ],

@@ -36,6 +36,25 @@ class MeshFacts
         public readonly bool $animated,
     ) {}
 
+    /**
+     * @param  list<array{width: int, height: int}>  $textures
+     */
+    public function withMaterials(?int $materials, array $textures): self
+    {
+        return new self(
+            vertices: $this->vertices,
+            faces: $this->faces,
+            topology: $this->topology,
+            normals: $this->normals,
+            uvs: $this->uvs,
+            materials: $materials,
+            textures: $textures,
+            bounds: $this->bounds,
+            rigged: $this->rigged,
+            animated: $this->animated,
+        );
+    }
+
     public static function of(string $absolutePath, string $format): self
     {
         return match ($format) {

@@ -45,12 +45,12 @@ describe('ModelFacts', () => {
       <ModelFacts
         format="gltf"
         facts={{ faces: 100, vertices: 300, topology: 'triangles', normals: true, uvs: true, materials: 1, textures: [], bounds: null, rigged: false, animated: false }}
-        agreement={{ compared: ['gltf', 'stl'], agrees: false, differences: ['Triangle counts differ: .gltf 100, .stl 1.'] }}
+        agreement={{ compared: ['gltf', 'stl'], agrees: false, differences: ['Face counts differ: .gltf 100, .stl 1.'] }}
       />,
     );
 
     expect(screen.getByText(/not the same model/i)).toBeInTheDocument();
-    expect(screen.getByText(/Triangle counts differ/)).toBeInTheDocument();
+    expect(screen.getByText(/Face counts differ/)).toBeInTheDocument();
   });
 
   it('stays quiet when the formats agree', () => {
@@ -78,10 +78,18 @@ describe('ModelFacts', () => {
     expect(row('Vertices')).toContain('162,766');
   });
 
-  it('reports the bounding box to two decimals', () => {
+  it('reports the bounding box to two decimals, in metres for a glTF', () => {
     render(<ModelFacts facts={facts()} format="gltf" />);
 
-    expect(row('Bounding box')).toContain('2.54 × 1.15 × 4.36');
+    expect(row('Bounding box')).toContain('2.54 × 1.15 × 4.36 m');
+  });
+
+  /** Only glTF fixes a unit, so claiming metres anywhere else would be made up. */
+  it('does not claim metres for a format that records no unit', () => {
+    render(<ModelFacts facts={facts()} format="obj" />);
+
+    expect(row('Bounding box')).toContain('2.54 × 1.15 × 4.36 units');
+    expect(row('Bounding box')).not.toContain(' m');
   });
 
   it('summarises textures by count and the largest dimension', () => {

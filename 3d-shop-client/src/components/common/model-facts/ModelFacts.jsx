@@ -2,8 +2,13 @@ import styles from './ModelFacts.module.css';
 
 const count = (value) => value.toLocaleString('en-US');
 
-const size = (bounds) =>
-  bounds.size.map((value) => value.toFixed(2)).join(' × ');
+// glTF is the only format here that fixes a unit — its spec puts every linear
+// distance in metres. An .obj or .stl carries none, and an .fbx is measured
+// after conversion, by which point its header scale is gone. Printing bare
+// numbers let a 12-unit room read as a 12-metre barn.
+const size = (bounds, format) =>
+  bounds.size.map((value) => value.toFixed(2)).join(' × ')
+  + (format === 'gltf' ? ' m' : ' units');
 
 const largestTexture = (textures) =>
   textures.reduce((widest, one) => Math.max(widest, one.width, one.height), 0);
@@ -23,7 +28,7 @@ const ModelFacts = ({ facts, format, agreement }) => {
   const rows = [
     facts.faces ? ['Faces', `${count(facts.faces)}${facts.topology === 'unknown' ? '' : ` (${facts.topology})`}`] : null,
     facts.vertices ? ['Vertices', count(facts.vertices)] : null,
-    facts.bounds ? ['Bounding box', size(facts.bounds)] : null,
+    facts.bounds ? ['Bounding box', size(facts.bounds, format)] : null,
     ['UVs', facts.uvs ? 'Yes' : 'No'],
     ['Normals', facts.normals ? 'Yes' : 'No'],
     facts.materials ? ['Materials', count(facts.materials)] : null,

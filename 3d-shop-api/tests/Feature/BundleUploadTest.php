@@ -76,6 +76,36 @@ class BundleUploadTest extends TestCase
         $this->assertSame(64, strlen($bundle['digest']));
     }
 
+    /** The one measurement a bare `.obj` cannot give, because it ships alone. */
+    public function test_a_bundle_is_measured_for_materials_and_texture_size(): void
+    {
+        $id = $this->publish($this->bundle([
+            'car/car.obj' => "mtllib car.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            'car/car.mtl' => "newmtl body\nmap_Kd textures/body.png\nnewmtl glass\nmap_Kd -s 1 1 1 textures/body.png\n",
+            'car/textures/body.png' => $this->png(64, 32),
+        ]));
+
+        $facts = Product::with('files')->findOrFail($id)->deliverableFor('obj')->facts();
+
+        $this->assertSame(2, $facts['materials']);
+        // One image, named twice, and options on the line do not hide it.
+        $this->assertSame([['width' => 64, 'height' => 32]], $facts['textures']);
+    }
+
+    /** The artist's own drive is not ours to read, and not the buyer's to get. */
+    public function test_a_texture_outside_the_bundle_is_not_counted(): void
+    {
+        $id = $this->publish($this->bundle([
+            'car/car.obj' => "mtllib car.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            'car/car.mtl' => "newmtl body\nmap_Kd t:\\pov3dmodel\\textures\\stone.jpg\nmap_Kd ../../escape.png\n",
+        ]));
+
+        $facts = Product::with('files')->findOrFail($id)->deliverableFor('obj')->facts();
+
+        $this->assertSame(1, $facts['materials']);
+        $this->assertSame([], $facts['textures']);
+    }
+
     public function test_a_plain_model_carries_no_bundle_record(): void
     {
         $id = $this->publish(
@@ -121,6 +151,15 @@ class BundleUploadTest extends TestCase
         $this->postJson('/api/products', $this->payload($this->bundle([
             'car/car.glb' => 'glTF binary-ish',
         ])))->assertStatus(422)->assertJsonValidationErrors('objModel');
+    }
+
+    private function png(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        ob_start();
+        imagepng($image);
+
+        return (string) ob_get_clean();
     }
 
     /** @param  array<string, string>|null  $files */

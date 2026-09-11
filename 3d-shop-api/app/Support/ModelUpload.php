@@ -90,9 +90,16 @@ class ModelUpload
                 return self::refuse($scan, $refusal);
             }
 
+            $facts = MeshFacts::of($inner, $scan->format);
+            $library = MaterialLibrary::beside($inner, $scratch);
+
             return new self(
                 scan: $scan,
-                facts: MeshFacts::of($inner, $scan->format),
+                // A bundle carries the .mtl a bare .obj cannot, so the material
+                // and texture counts stop being unmeasurable for it.
+                facts: $library === null
+                    ? $facts
+                    : $facts->withMaterials($library['materials'], $library['textures']),
                 entry: $entry,
                 manifest: $unpacked->manifest,
                 digest: $unpacked->digest(),

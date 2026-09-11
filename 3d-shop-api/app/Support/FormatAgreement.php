@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  */
 class FormatAgreement
 {
-    /** Triangle counts are exact; a sliver of drift in bounds is rounding. */
+    /** Face counts are exact; a sliver of drift in bounds is rounding. */
     private const BOUNDS_TOLERANCE = 0.01;
 
     /**
@@ -44,9 +44,24 @@ class FormatAgreement
         ];
     }
 
-    /** @param  Collection<int, ProductFile>  $measured */
+    /**
+     * Only comparable when the formats agree on what a face is. Most exporters
+     * triangulate on the way out, so an honest pair of one .obj of quads and
+     * one .glb differs by a factor of two by construction — the same trap the
+     * vertex comparison was dropped for.
+     *
+     * @param  Collection<int, ProductFile>  $measured
+     */
     private static function faces(Collection $measured): ?string
     {
+        $topologies = $measured
+            ->map(fn (ProductFile $file) => (string) ($file->facts()['topology'] ?? MeshFacts::UNKNOWN))
+            ->unique();
+
+        if ($topologies->count() > 1 || $topologies->first() === MeshFacts::UNKNOWN) {
+            return null;
+        }
+
         $counts = $measured
             ->mapWithKeys(fn (ProductFile $file) => [$file->format => (int) $file->facts()['faces']])
             ->all();
@@ -55,7 +70,7 @@ class FormatAgreement
             return null;
         }
 
-        return 'Triangle counts differ: '.self::listOf($counts).'.';
+        return 'Face counts differ: '.self::listOf($counts).'.';
     }
 
     /**
