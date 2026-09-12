@@ -146,8 +146,12 @@ async function main() {
   // rasteriser, and these images have to come out byte-identical on a re-render.
   const checker = new THREE.MeshBasicMaterial({ map: checkerTexture(), side: THREE.DoubleSide });
   const normals = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  const matcap = new THREE.MeshMatcapMaterial({
+    matcap: matcapTexture(),
+    side: THREE.DoubleSide,
+  });
 
-  const overrides = { checker, normals };
+  const overrides = { checker, normals, matcap };
 
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
 
@@ -244,6 +248,67 @@ async function materialsFor(text, base, manager) {
  * or overlapping squares. Nearest filtering keeps the edges hard, which is what
  * makes the distortion legible.
  */
+// A matcap is a picture of a lit sphere. three.js picks the colour by which way
+// the surface faces, so one small image lights the whole model with no lights
+// and no UVs. That is the point of the pass: nothing the seller did to the
+// textures can flatter the mesh.
+//
+// Generated from the sphere's own maths rather than drawn on a canvas, for the
+// same reason the checker is.
+function matcapTexture() {
+  const size = 256;
+  const pixels = new Uint8Array(size * size * 4);
+
+  const unit = (x, y, z) => {
+    const length = Math.hypot(x, y, z);
+
+    return [x / length, y / length, z / length];
+  };
+
+  const key = unit(-0.45, 0.55, 0.7);
+  const bounce = unit(0.6, -0.25, 0.55);
+  // Halfway between the key light and the viewer: where a highlight sits.
+  const half = unit(key[0], key[1], key[2] + 1);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const at = (y * size + x) * 4;
+      const nx = ((x + 0.5) / size) * 2 - 1;
+      const ny = 1 - ((y + 0.5) / size) * 2;
+      const squared = nx * nx + ny * ny;
+
+      // Outside the sphere is backdrop, and nothing samples it.
+      if (squared > 1) {
+        pixels[at] = 0x16;
+        pixels[at + 1] = 0x16;
+        pixels[at + 2] = 0x1a;
+        pixels[at + 3] = 0xff;
+        continue;
+      }
+
+      const nz = Math.sqrt(1 - squared);
+      const lit = Math.max(0, nx * key[0] + ny * key[1] + nz * key[2]);
+      const filled = Math.max(0, nx * bounce[0] + ny * bounce[1] + nz * bounce[2]);
+      const shine = Math.pow(Math.max(0, nx * half[0] + ny * half[1] + nz * half[2]), 48);
+      const rim = Math.pow(1 - nz, 4);
+      // Kept off the ceiling deliberately: a blown-out highlight is a patch of
+      // flat white, and flat white is exactly what this pass exists to remove.
+      const value = Math.min(0.94, 0.17 + 0.5 * lit + 0.13 * filled + 0.24 * shine + 0.09 * rim);
+      const byte = Math.round(value * 255);
+
+      pixels[at] = byte;
+      pixels[at + 1] = byte;
+      pixels[at + 2] = byte;
+      pixels[at + 3] = 0xff;
+    }
+  }
+
+  const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
+  texture.needsUpdate = true;
+
+  return texture;
+}
+
 function checkerTexture() {
   const size = 64;
   const pixels = new Uint8Array(size * size * 4);

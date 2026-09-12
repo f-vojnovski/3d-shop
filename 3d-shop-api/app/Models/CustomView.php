@@ -17,12 +17,13 @@ class CustomView extends Model
     public const WIREFRAME = 'wireframe';
     public const CHECKER = 'checker';
     public const NORMALS = 'normals';
+    public const MATCAP = 'matcap';
 
     public const QUEUED = 'queued';
     public const READY = 'ready';
     public const FAILED = 'failed';
 
-    public const PASSES = [self::SHADED, self::WIREFRAME, self::CHECKER, self::NORMALS];
+    public const PASSES = [self::SHADED, self::WIREFRAME, self::CHECKER, self::NORMALS, self::MATCAP];
 
     /** A checker on a model with no UVs is one flat colour, which says nothing. */
     public const NEEDS_UVS = [self::CHECKER];

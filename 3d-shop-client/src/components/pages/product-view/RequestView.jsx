@@ -16,6 +16,7 @@ const PASSES = [
   { key: 'wireframe', label: 'Wireframe' },
   { key: 'checker', label: 'UV checker', needsUvs: true },
   { key: 'normals', label: 'Normals' },
+  { key: 'matcap', label: 'Clay' },
 ];
 
 const RequestView = ({ product, format, bounds, proxy, hasUvs = true, onPublished }) => {
