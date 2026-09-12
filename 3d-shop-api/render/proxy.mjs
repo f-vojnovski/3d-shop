@@ -16,7 +16,76 @@ const PORT = 8711;
 const TIMEOUT_MS = Number(process.env.PROXY_TIMEOUT ?? 180) * 1000;
 const CHROME = process.env.CHROME_BIN ?? '/usr/bin/chromium';
 
-const state = { glb: null, failed: null, before: 0, after: 0 };
+const state = { glb: null, failed: null, before: 0, after: 0, textures: 0, baked: null };
+
+/**
+ * What a proxy is allowed to contain. An allow-list rather than a list of
+ * things to strip, so anything the exporter learns to emit later has to be
+ * added here deliberately instead of shipping unnoticed.
+ */
+const ALLOWED = {
+  top: ['asset', 'scene', 'scenes', 'nodes', 'meshes', 'materials',
+    'accessors', 'bufferViews', 'buffers', 'images', 'samplers', 'textures'],
+  asset: ['version', 'generator'],
+  node: ['mesh', 'children', 'translation', 'rotation', 'scale', 'matrix'],
+  mesh: ['primitives'],
+  primitive: ['attributes', 'indices', 'material', 'mode'],
+  attribute: ['POSITION', 'NORMAL', 'TANGENT', 'TEXCOORD_0', 'TEXCOORD_1', 'COLOR_0'],
+  material: ['pbrMetallicRoughness', 'normalTexture', 'occlusionTexture',
+    'emissiveTexture', 'emissiveFactor', 'alphaMode', 'alphaCutoff', 'doubleSided'],
+};
+
+function jsonChunkOf(glb) {
+  let at = 12;
+
+  while (at + 8 <= glb.length) {
+    const length = glb.readUInt32LE(at);
+    const type = glb.readUInt32LE(at + 4);
+
+    if (type === 0x4e4f534a) {
+      return JSON.parse(glb.subarray(at + 8, at + 8 + length).toString('utf8').replace(/\0+$/, ''));
+    }
+
+    at += 8 + length;
+  }
+
+  return null;
+}
+
+/** @return {string[]} everything present that is not on the list above. */
+function leaksIn(glb) {
+  const gltf = jsonChunkOf(glb);
+
+  if (gltf === null) {
+    return ['the proxy is not a readable glb'];
+  }
+
+  const found = [];
+  const check = (object, allowed, where) => {
+    for (const key of Object.keys(object ?? {})) {
+      if (! allowed.includes(key)) {
+        found.push(`${where}.${key}`);
+      }
+    }
+  };
+
+  check(gltf, ALLOWED.top, 'gltf');
+  check(gltf.asset, ALLOWED.asset, 'asset');
+
+  (gltf.nodes ?? []).forEach((node, i) => check(node, ALLOWED.node, `node[${i}]`));
+  (gltf.materials ?? []).forEach((m, i) => check(m, ALLOWED.material, `material[${i}]`));
+
+  (gltf.meshes ?? []).forEach((mesh, i) => {
+    check(mesh, ALLOWED.mesh, `mesh[${i}]`);
+
+    (mesh.primitives ?? []).forEach((primitive, p) => {
+      check(primitive, ALLOWED.primitive, `mesh[${i}].primitive[${p}]`);
+      check(primitive.attributes, ALLOWED.attribute, `mesh[${i}].primitive[${p}].attributes`);
+    });
+  });
+
+  return [...new Set(found)];
+}
 let settle;
 const finished = new Promise((done) => { settle = done; });
 
@@ -33,6 +102,7 @@ const ROUTES = {
   '/job.json': [join(IN, 'job.json'), 'application/json'],
   '/model': [join(IN, 'model'), 'application/octet-stream'],
   '/simplify.js': [join(APP, 'simplify.js'), 'text/javascript'],
+  '/shrinkTextures.js': [join(APP, 'shrinkTextures.js'), 'text/javascript'],
 };
 
 function readBody(request) {
@@ -69,6 +139,8 @@ const server = createServer(async (request, response) => {
       state.glb = Buffer.from(body.glb, 'base64');
       state.before = body.before ?? 0;
       state.after = body.after ?? 0;
+      state.textures = body.textures ?? 0;
+      state.baked = body.baked ?? null;
     } else if (path === '/failed') {
       state.failed = String(body.reason ?? 'The model could not be simplified.').slice(0, 300);
     }
@@ -154,12 +226,27 @@ async function main() {
     return 5;
   }
 
+  const leaks = leaksIn(state.glb);
+
+  if (leaks.length > 0) {
+    await writeResult({
+      status: 'failed',
+      reason: 'The proxy carried more than a proxy may carry: '+leaks.slice(0, 12).join(', '),
+      retryable: false,
+      seconds,
+    });
+
+    return 6;
+  }
+
   await writeFile(join(OUT, 'proxy.glb'), state.glb);
   await writeResult({
     status: 'ok',
     file: 'proxy.glb',
     bytes: state.glb.length,
     triangles: { before: state.before, after: state.after },
+    texturesShrunk: state.textures,
+    baked: state.baked,
     seconds,
   });
 

@@ -9,6 +9,7 @@ import SceneLighting from './SceneLighting';
 import { OrbitControls } from '@react-three/drei';
 import CameraSync from './cameraLink';
 import { simplifyObject, trianglesIn } from './simplify';
+import { shrinkTextures } from './shrinkTextures';
 
 const LOADERS = { gltf: GLTFLoader, obj: OBJLoader, stl: STLLoader };
 
@@ -66,6 +67,10 @@ const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
       const before = trianglesIn(copy);
 
       await simplifyObject(copy, keep);
+
+      // The same shrink the stored copy gets, so the seller approves the
+      // textures a buyer is shown rather than the full-size ones.
+      shrinkTextures(copy);
 
       const entry = { scene: copy, counts: { before, after: trianglesIn(copy) } };
       made.set(key, entry);

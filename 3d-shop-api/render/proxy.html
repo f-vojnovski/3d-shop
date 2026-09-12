@@ -5,14 +5,15 @@
 {"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/addons/"}}
 </script>
 <script type="module">
-import { Group, Mesh, MeshStandardMaterial } from 'three';
+import { BufferAttribute, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-// The client's own module, so the copy a seller approved on the slider is made
+// The client's own modules, so the copy a seller approved on the slider is made
 // by the same code that makes the one stored here.
 import { simplifyObject, trianglesIn } from '/simplify.js';
+import { shrinkTextures } from '/shrinkTextures.js';
 
 const LOADERS = { gltf: GLTFLoader, glb: GLTFLoader, obj: OBJLoader, stl: STLLoader };
 
@@ -50,6 +51,93 @@ const base64Of = (buffer) => {
   return btoa(binary);
 };
 
+/**
+ * Turns every bending mesh into a still one and throws the skeleton away.
+ *
+ * Positions go through the skeleton rather than being copied raw: a file whose
+ * rest pose is not its stored pose comes out inside-out otherwise.
+ */
+const bakeSkinning = (root) => {
+  const skinned = [];
+  root.traverse((node) => {
+    if (node.isSkinnedMesh) {
+      skinned.push(node);
+    }
+  });
+
+  const at = new Vector3();
+
+  for (const mesh of skinned) {
+    const geometry = mesh.geometry;
+    const position = geometry.getAttribute('position');
+
+    if (position && mesh.skeleton) {
+      const baked = new Float32Array(position.count * 3);
+
+      for (let i = 0; i < position.count; i += 1) {
+        at.fromBufferAttribute(position, i);
+        mesh.applyBoneTransform(i, at);
+        baked[i * 3] = at.x;
+        baked[i * 3 + 1] = at.y;
+        baked[i * 3 + 2] = at.z;
+      }
+
+      geometry.setAttribute('position', new BufferAttribute(baked, 3));
+    }
+
+    geometry.deleteAttribute('skinIndex');
+    geometry.deleteAttribute('skinWeight');
+
+    const still = new Mesh(geometry, mesh.material);
+    still.position.copy(mesh.position);
+    still.quaternion.copy(mesh.quaternion);
+    still.scale.copy(mesh.scale);
+    mesh.parent.add(still);
+    mesh.removeFromParent();
+  }
+
+  // The bones are their own nodes in the graph and would still be exported.
+  const bones = [];
+  root.traverse((node) => {
+    if (node.isBone) {
+      bones.push(node);
+    }
+  });
+
+  for (const bone of bones) {
+    bone.removeFromParent();
+  }
+
+  return { meshes: skinned.length, bones: bones.length };
+};
+
+/**
+ * Bone names alone say which program a character was rigged in. The exporter
+ * writes userData out as `extras`, so that goes with them.
+ */
+const stripIdentity = (root) => {
+  root.traverse((node) => {
+    node.name = '';
+    node.userData = {};
+
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+
+    for (const material of materials) {
+      if (material) {
+        material.name = '';
+        material.userData = {};
+      }
+    }
+
+    if (node.geometry) {
+      node.geometry.name = '';
+      node.geometry.userData = {};
+    }
+  });
+
+  root.name = '';
+};
+
 async function run() {
   const job = await (await fetch('/job.json')).json();
   const url = job.entry ? '/bundle/' + job.entry : '/model';
@@ -74,12 +162,16 @@ async function run() {
   await simplifyObject(scene, job.ratio);
 
   const after = trianglesIn(scene);
+  const textures = shrinkTextures(scene);
+  const baked = bakeSkinning(scene);
+
+  stripIdentity(scene);
 
   const glb = await new Promise((done, fail) => {
     new GLTFExporter().parse(scene, done, fail, { binary: true });
   });
 
-  await post('/done', { glb: base64Of(glb), before, after });
+  await post('/done', { glb: base64Of(glb), before, after, textures, baked });
 }
 
 run().catch((error) => post('/failed', { reason: String(error?.message ?? error) }));

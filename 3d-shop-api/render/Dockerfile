@@ -44,6 +44,7 @@ COPY 3d-shop-api/render/proxy.mjs /app/proxy.mjs
 # The client's own module, so server renders frame a model as the viewer did.
 COPY 3d-shop-client/src/components/common/model-displayer/fitToView.js /app/fitToView.js
 COPY 3d-shop-client/src/components/common/model-displayer/simplify.js /app/simplify.js
+COPY 3d-shop-client/src/components/common/model-displayer/shrinkTextures.js /app/shrinkTextures.js
 
 ARG THREE_VERSION
 ENV CHROME_BIN=/usr/bin/chromium \
