@@ -37,8 +37,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=three /out /app/three
 COPY 3d-shop-api/render/harness.html /app/harness.html
 COPY 3d-shop-api/render/render.mjs /app/render.mjs
+# Simplifying runs on its own entrypoint: the render path is what an attested
+# still is reproduced from, and nothing here should be able to disturb it.
+COPY 3d-shop-api/render/proxy.html /app/proxy.html
+COPY 3d-shop-api/render/proxy.mjs /app/proxy.mjs
 # The client's own module, so server renders frame a model as the viewer did.
 COPY 3d-shop-client/src/components/common/model-displayer/fitToView.js /app/fitToView.js
+COPY 3d-shop-client/src/components/common/model-displayer/simplify.js /app/simplify.js
 
 ARG THREE_VERSION
 ENV CHROME_BIN=/usr/bin/chromium \

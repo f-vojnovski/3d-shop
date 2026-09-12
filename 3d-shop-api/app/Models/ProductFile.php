@@ -18,6 +18,12 @@ class ProductFile extends Model
     public const KIND_WIREFRAME = 'wireframe';
     public const KIND_DERIVED = 'derived';
 
+    /**
+     * A cut-down copy of a deliverable, for buyers to aim a camera at. Its own
+     * kind rather than a derived file: a render deletes and rewrites those.
+     */
+    public const KIND_PROXY = 'proxy';
+
     public const KIND_SELLER_IMAGE = 'seller_image';
     public const KIND_THUMBNAIL = 'thumbnail';
 
@@ -69,6 +75,14 @@ class ProductFile extends Model
         return $this->hasMany(self::class, 'source_file_id')
             ->where('kind', self::KIND_WIREFRAME)
             ->orderBy('sort');
+    }
+
+    public function proxy(): ?self
+    {
+        return self::query()
+            ->where('kind', self::KIND_PROXY)
+            ->where('source_file_id', $this->id)
+            ->first();
     }
 
     /** What the renderer actually opened, when the upload needed converting. */

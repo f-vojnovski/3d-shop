@@ -76,6 +76,8 @@ class ProductResource extends JsonResource
                 // can fix it.
                 'unused_images' => $isOwner ? ($file->meta['textures']['unused'] ?? null) : null,
                 // What the buyer actually receives, named before they pay.
+                // What a buyer aims at when they ask for a view.
+                'proxy' => $this->proxyOf($file),
                 'bundle' => $this->bundleIn($file),
                 'images' => $this->stillsFrom($file),
                 'replaced' => $this->replacementsOf($file->format, $entitledViewerId),
@@ -188,6 +190,20 @@ class ProductResource extends JsonResource
                 'checksum' => $outline->checksum,
                 'attestation_url' => "/api/previews/{$outline->id}/attestation",
             ],
+        ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function proxyOf(ProductFile $file): ?array
+    {
+        $proxy = $this->files->first(
+            fn (ProductFile $one) => $one->kind === ProductFile::KIND_PROXY
+                && (int) $one->source_file_id === (int) $file->id
+        );
+
+        return $proxy === null ? null : [
+            'url' => "/api/products/{$this->id}/proxy/{$file->format}",
+            'triangles' => $proxy->meta['triangles'] ?? null,
         ];
     }
 

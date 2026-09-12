@@ -473,7 +473,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  animation: settle 0.12s ease-out;
+  animation: settleBig 0.12s ease-out;
 }
 
 .slotSmall {
@@ -486,7 +486,7 @@
   background: var(--clr-surface-raised);
   border-radius: var(--radius);
   overflow: hidden;
-  animation: settle 0.12s ease-out;
+  animation: settleSmall 0.12s ease-out;
 }
 
 .insetTools {
@@ -530,7 +530,19 @@
   height: var(--pic-h);
 }
 
-@keyframes settle {
+/* Identical on purpose: a slot only changes class on a swap, and the same
+   animation-name before and after would not restart. */
+@keyframes settleBig {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes settleSmall {
   from {
     opacity: 0;
   }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Jobs\BuildViewerProxy;
 use App\Jobs\RenderProductPreviews;
 use App\Jobs\ScaleThumbnail;
 use App\Models\ProductFile;
@@ -60,6 +61,10 @@ class ProductController extends BaseController
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
+            // What a buyer aims a camera at: a copy cut down to `proxy_ratio`,
+            // or nothing but the bounding box.
+            'proxy_mode' => 'sometimes|in:model,box',
+            'proxy_ratio' => 'sometimes|numeric|between:0,1',
             ...self::modelRules(),
             'thumbnails' => 'sometimes|array|max:8',
             'thumbnails.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
@@ -133,6 +138,20 @@ class ProductController extends BaseController
                     'public',
                     sort: $sort
                 );
+            }
+
+            $proxy = [
+                'mode' => $request->input('proxy_mode', 'box'),
+                'ratio' => (float) $request->input('proxy_ratio', 0.1),
+            ];
+
+            foreach ($product->files as $file) {
+                if ($file->kind !== ProductFile::KIND_DELIVERABLE) {
+                    continue;
+                }
+
+                $file->withMeta(['proxy' => $proxy]);
+                BuildViewerProxy::dispatch($file->id)->afterCommit();
             }
 
             if ($product->preview_mode === Product::PREVIEW_ATTESTED_STILLS) {
@@ -326,6 +345,26 @@ class ProductController extends BaseController
         }
 
         return $this->streamDeliverable($product, $format, inline: true);
+    }
+
+    /**
+     * The cut-down copy a buyer aims a camera at. Public on purpose — aiming
+     * happens before paying — but this route can only ever reach a proxy, and
+     * the proxy holds only the detail the seller agreed to give away.
+     */
+    public function viewerProxy($id, string $format): StreamedResponse
+    {
+        $product = Product::with('files')->findOrFail($id);
+        $proxy = $product->deliverableFor($format)?->proxy();
+
+        if ($proxy === null) {
+            abort(404, 'This product has no viewer proxy.');
+        }
+
+        return Storage::disk($proxy->disk)->response($proxy->path, 'proxy.glb', [
+            'Content-Type' => 'model/gltf-binary',
+            'Content-Disposition' => 'inline; filename="proxy.glb"',
+        ]);
     }
 
     public function download(Request $request, $id, string $format): StreamedResponse

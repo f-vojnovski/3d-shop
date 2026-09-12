@@ -85,8 +85,13 @@ const SingleProductView = () => {
 
   // The stills gallery owns the format the buyer is looking at; the viewer's
   // own picker owns it in interactive mode.
+  // The seller's own pictures are not a format, but what is measured below is
+  // a fact about the product rather than about which tab is open. Letting this
+  // go null emptied half the rail whenever the gallery switched.
   const measuredFormat =
-    product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType;
+    (product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType)
+    ?? product?.previews?.[0]?.format
+    ?? null;
   const measured = (product?.previews ?? []).find((one) => one.format === measuredFormat);
   const releases = orderedReleases(measured?.replaced);
   // A release index belongs to one format's history, so it is remembered with
@@ -191,18 +196,6 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {!release && signedIn && measured?.facts?.bounds && measured.images?.length > 0 && (
-            <div className={styles.section}>
-              <RequestView
-                product={product}
-                format={measured.format}
-                bounds={measured.facts.bounds}
-                hasUvs={Boolean(measured.facts.uvs)}
-                onPublished={() => dispatch(fetchProductById(productId))}
-              />
-            </div>
-          )}
-
           {releases.length > 0 && (
             <div className={styles.section}>
               <FileHistory
@@ -252,6 +245,19 @@ const SingleProductView = () => {
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Your files</p>
               <div className={styles.downloads}>{downloads}</div>
+            </div>
+          )}
+
+          {!release && signedIn && measured?.facts?.bounds && measured.images?.length > 0 && (
+            <div className={styles.section}>
+              <RequestView
+                product={product}
+                format={measured.format}
+                bounds={measured.facts.bounds}
+                proxy={measured.proxy}
+                hasUvs={Boolean(measured.facts.uvs)}
+                onPublished={() => dispatch(fetchProductById(productId))}
+              />
             </div>
           )}
 

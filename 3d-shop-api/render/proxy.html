@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>proxy</title>
+<script type="importmap">
+{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/addons/"}}
+</script>
+<script type="module">
+import { Group, Mesh, MeshStandardMaterial } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+// The client's own module, so the copy a seller approved on the slider is made
+// by the same code that makes the one stored here.
+import { simplifyObject, trianglesIn } from '/simplify.js';
+
+const LOADERS = { gltf: GLTFLoader, glb: GLTFLoader, obj: OBJLoader, stl: STLLoader };
+
+const post = (path, body) => fetch(path, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+/** Every loader answers with something different; the simplifier wants a scene. */
+const asScene = (loaded) => {
+  if (loaded?.scene) {
+    return loaded.scene;
+  }
+
+  if (loaded?.isBufferGeometry) {
+    const group = new Group();
+    group.add(new Mesh(loaded, new MeshStandardMaterial()));
+
+    return group;
+  }
+
+  return loaded;
+};
+
+// Spreading a multi-megabyte array into fromCharCode overflows the stack.
+const base64Of = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+
+  for (let at = 0; at < bytes.length; at += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(at, at + 0x8000));
+  }
+
+  return btoa(binary);
+};
+
+async function run() {
+  const job = await (await fetch('/job.json')).json();
+  const url = job.entry ? '/bundle/' + job.entry : '/model';
+  const Loader = LOADERS[job.format] ?? GLTFLoader;
+
+  const loaded = await new Promise((done, fail) => {
+    new Loader().load(url, done, undefined, () => fail(new Error('The model could not be read.')));
+  });
+
+  const scene = asScene(loaded);
+
+  if (!scene) {
+    throw new Error('The model held nothing to simplify.');
+  }
+
+  const before = trianglesIn(scene);
+
+  if (before === 0) {
+    throw new Error('The model contained no geometry.');
+  }
+
+  await simplifyObject(scene, job.ratio);
+
+  const after = trianglesIn(scene);
+
+  const glb = await new Promise((done, fail) => {
+    new GLTFExporter().parse(scene, done, fail, { binary: true });
+  });
+
+  await post('/done', { glb: base64Of(glb), before, after });
+}
+
+run().catch((error) => post('/failed', { reason: String(error?.message ?? error) }));
+</script>

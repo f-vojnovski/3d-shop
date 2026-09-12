@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import BoundsBoxDisplayer from '../../common/model-displayer/BoundsBoxDisplayer';
+import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer';
 import Lightbox from '../../common/lightbox/Lightbox';
 import {
   fetchCustomViews,
@@ -17,7 +18,7 @@ const PASSES = [
   { key: 'normals', label: 'Normals' },
 ];
 
-const RequestView = ({ product, format, bounds, hasUvs = true, onPublished }) => {
+const RequestView = ({ product, format, bounds, proxy, hasUvs = true, onPublished }) => {
   const dispatch = useDispatch();
   const views = useSelector(selectCustomViews);
   const requesting = useSelector((state) => state.customViews.requesting);
@@ -67,11 +68,17 @@ const RequestView = ({ product, format, bounds, hasUvs = true, onPublished }) =>
       {open && (
         <>
           <p className={styles.label}>
-            Aim at the outline and our server renders the .{format} file from there.
+            {proxy
+              ? `Aim at this cut-down copy and our server renders the .${format} file from there.`
+              : `Aim at the outline and our server renders the .${format} file from there.`}
           </p>
 
           <div className={styles.stage}>
-            <BoundsBoxDisplayer size={bounds.size} probeRef={probe} />
+            {/* The seller chose how much of the shape to give away. Without a
+                proxy there is only the bounding box to aim at. */}
+            {proxy
+              ? <GltfModelDisplayer fileUrl={proxy.url} probeRef={probe} />
+              : <BoundsBoxDisplayer size={bounds.size} probeRef={probe} />}
           </div>
         </>
       )}
