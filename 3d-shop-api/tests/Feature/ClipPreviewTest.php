@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\RenderClipPreview;
+use App\Support\MeshFacts;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
@@ -132,6 +133,76 @@ class ClipPreviewTest extends TestCase
             collect($argv)->contains(fn ($one) => str_ends_with((string) $one, ':/in/model:ro')),
             'the model is not mounted read-only'
         );
+    }
+
+    public function test_a_seller_can_ask_for_a_clip(): void
+    {
+        $source = $this->animated();
+
+        $this->postJson('/api/products/'.$source->product_id.'/clips', $this->ask())
+            ->assertStatus(202);
+
+        Queue::assertPushed(RenderClipPreview::class, fn ($job) => $job->clip === 1 && $job->frames === 24);
+    }
+
+    public function test_only_the_owner_may_ask(): void
+    {
+        $source = $this->animated();
+
+        Sanctum::actingAs(User::create([
+            'name' => 'someone else',
+            'email' => 'else'.uniqid().'@example.com',
+            'password' => 'password123',
+        ]));
+
+        $this->postJson('/api/products/'.$source->product_id.'/clips', $this->ask())
+            ->assertStatus(403);
+
+        Queue::assertNotPushed(RenderClipPreview::class);
+    }
+
+    /** Otherwise the container is started only to find nothing to draw. */
+    public function test_a_model_with_no_animation_is_turned_away_before_a_container_starts(): void
+    {
+        $source = $this->deliverable();
+
+        $this->postJson('/api/products/'.$source->product_id.'/clips', $this->ask())
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('clip');
+
+        Queue::assertNotPushed(RenderClipPreview::class);
+    }
+
+    public function test_a_pass_the_page_cannot_paint_is_refused(): void
+    {
+        $source = $this->animated();
+
+        $this->postJson('/api/products/'.$source->product_id.'/clips', $this->ask(['passes' => ['shaded', 'x-ray']]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('passes.1');
+    }
+
+    /** @return array<string, mixed> */
+    private function ask(array $extra = []): array
+    {
+        return array_merge([
+            'format' => 'obj',
+            'clip' => 1,
+            'camera' => ['position' => [3.6, 1.35, 6.6], 'target' => [0, 0, 0], 'fov' => 40],
+        ], $extra);
+    }
+
+    /** The same upload, with the facts a rigged glTF would have carried. */
+    private function animated(): ProductFile
+    {
+        $source = $this->deliverable();
+        $facts = ($source->facts() ?? (new MeshFacts(null, null, 'unknown', false, false, null, [], null, false, false))->toArray());
+        $facts['animated'] = true;
+        $facts['rigged'] = true;
+
+        $source->withMeta(['facts' => $facts]);
+
+        return $source->fresh();
     }
 
     /**

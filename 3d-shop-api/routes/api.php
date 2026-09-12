@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
 use App\Support\ModelFormats;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ClipController;
 use App\Http\Controllers\CustomViewController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PaymentWebhookController;
@@ -56,6 +57,10 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::post('/products/{id}/publish', [ProductController::class, 'publish'])
         ->where('id', '[0-9]+');
+    // Starts a container per call, like a render, so it is throttled the same way.
+    Route::post('/products/{id}/clips', [ClipController::class, 'store'])
+        ->where('id', '[0-9]+')
+        ->middleware('throttle:10,1');
     Route::post('/products/{id}/thumbnails', [ProductController::class, 'addThumbnails'])
         ->where('id', '[0-9]+');
     Route::delete('/products/{id}/thumbnails/{file}', [ProductController::class, 'removeThumbnail'])

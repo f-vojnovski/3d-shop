@@ -1,0 +1,55 @@
+.clips {
+  border-top: 1px solid var(--clr-line);
+  padding-top: 14px;
+}
+
+.label {
+  margin: 0 0 8px;
+  color: var(--clr-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pick,
+.pickOn {
+  flex: 1 1 auto;
+  padding: 5px 8px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.pickOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-accent);
+}
+
+.pick:hover {
+  color: var(--clr-text);
+}
+
+.note {
+  margin: 8px 0 0;
+  color: var(--clr-text-dim);
+  font-size: 0.74rem;
+}
