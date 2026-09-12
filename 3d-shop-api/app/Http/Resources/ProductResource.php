@@ -34,6 +34,8 @@ class ProductResource extends JsonResource
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
             'unlisted' => $this->unlisted,
+            'listing_status' => $this->listingStatus(),
+            'published_at' => $this->published_at,
             'created_at' => $this->created_at,
             'thumbnail_url' => $this->thumbnailUrl(),
             'thumbnails' => $this->thumbnailList(),

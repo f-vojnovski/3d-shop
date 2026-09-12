@@ -61,6 +61,9 @@ class ProductController extends BaseController
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
+            // Off by default: a listing goes up when the seller says so, not
+            // while its pictures are still being rendered.
+            'publish' => 'sometimes|boolean',
             // What a buyer aims a camera at: a copy cut down to `proxy_ratio`,
             // or nothing but the bounding box.
             'proxy_mode' => 'sometimes|in:model,box',
@@ -109,6 +112,8 @@ class ProductController extends BaseController
                 'price_cents' => (int) round($request->input('price') * 100),
                 'preview_mode' => $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
                 'user_id' => Auth::user()->getAuthIdentifier(),
+                'unlisted' => ! $request->boolean('publish'),
+                'published_at' => $request->boolean('publish') ? now() : null,
             ]);
 
             foreach ($models as $format => $file) {
@@ -317,6 +322,38 @@ class ProductController extends BaseController
 
             return new ProductResource($product->load('files'));
         });
+    }
+
+    /**
+     * Puts a listing on sale. Used both for the first publish and for putting a
+     * withdrawn one back, because to a seller those are the same button.
+     *
+     * `published_at` is only stamped once: it says when buyers first saw this,
+     * and withdrawing does not un-happen that.
+     */
+    public function publish($id)
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if ((int) $product->user_id !== (int) Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        // A live listing with no picture is a blank card in the grid. Angles
+        // turn into one once the render lands, so this is usually a matter of
+        // waiting rather than of doing anything.
+        if ($product->thumbnails()->count() === 0) {
+            throw ValidationException::withMessages([
+                'listing' => 'This listing has no picture yet. Wait for the render to finish, or add a thumbnail.',
+            ]);
+        }
+
+        $product->update([
+            'unlisted' => false,
+            'published_at' => $product->published_at ?? now(),
+        ]);
+
+        return new ProductResource($product->fresh()->load('files'));
     }
 
     /**

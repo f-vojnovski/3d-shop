@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';
 import styles from './ProductOverview.module.css';
 
-const ProductOverview = ({ id, name, priceCents, images = [] }) => {
+const ProductOverview = ({ id, name, priceCents, images = [], status }) => {
   const [shown, setShown] = useState(0);
 
   // The whole picture is a link to the product, so a paging button inside it
@@ -27,6 +27,12 @@ const ProductOverview = ({ id, name, priceCents, images = [] }) => {
           />
         ) : (
           <div className={styles.empty}>No preview</div>
+        )}
+
+        {status && status !== 'live' && (
+          <span className={styles.badge}>
+            {status === 'draft' ? 'Not published' : 'Off sale'}
+          </span>
         )}
 
         <Link to={`/product/${id}`} className={styles.hit} aria-label={name} />

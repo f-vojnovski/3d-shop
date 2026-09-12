@@ -572,8 +572,13 @@ const ProductUploadPage = () => {
           disabled={!ready}
           onClick={submit}
         >
-          Publish product
+          Upload model
         </SubmitButton>
+
+        <p className={styles.afterUpload}>
+          It stays private until you publish it, so you can see the rendered
+          pictures first.
+        </p>
       </div>
     </div>
   );

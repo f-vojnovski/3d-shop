@@ -28,6 +28,7 @@ class Product extends Model
         'preview_status',
         'preview_error',
         'unlisted',
+        'published_at',
     ];
 
     // DB defaults are invisible on a freshly created instance.
@@ -42,6 +43,7 @@ class Product extends Model
         return [
             'price_cents' => 'integer',
             'unlisted' => 'boolean',
+            'published_at' => 'datetime',
         ];
     }
 
@@ -153,6 +155,23 @@ class Product extends Model
         return $userId === null
             ? $query
             : $query->with(['sales' => fn ($sales) => $sales->where('buyer_id', $userId)]);
+    }
+
+    public const LISTING_DRAFT = 'draft';
+    public const LISTING_LIVE = 'live';
+    public const LISTING_WITHDRAWN = 'withdrawn';
+
+    /**
+     * Draft and withdrawn are both hidden and both unbuyable, but one has never
+     * been seen and the other has. Only the seller is told which.
+     */
+    public function listingStatus(): string
+    {
+        if (! $this->unlisted) {
+            return self::LISTING_LIVE;
+        }
+
+        return $this->published_at === null ? self::LISTING_DRAFT : self::LISTING_WITHDRAWN;
     }
 
     public function servesInteractivePreview(): bool

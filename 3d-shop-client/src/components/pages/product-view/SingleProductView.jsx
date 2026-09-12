@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
 import {
   fetchProductById,
+  publishProduct,
   replaceFile,
   withdrawProduct,
 } from '../../../service/features/productSlice';
@@ -27,6 +28,7 @@ import FileHistory from '../../common/file-history/FileHistory';
 import ReleaseStills from '../../common/release-stills/ReleaseStills';
 import ThumbnailPicker from '../../common/thumbnail-picker/ThumbnailPicker';
 import { orderedReleases } from '../../../service/util/releases';
+import SubmitButton from '../../common/submit-button/SubmitButton';
 import { BsPersonCircle } from 'react-icons/bs';
 
 const DISPLAYERS = {
@@ -49,6 +51,7 @@ const SingleProductView = () => {
   const [note, setNote] = useState('');
   const [viewingRelease, setViewingRelease] = useState(null);
   const replacing = useSelector((state) => state.product.replacing);
+  const publishing = useSelector((state) => state.product.publishing);
   const token = useSelector((state) => state.auth.token);
   const signedIn = Boolean(token);
 
@@ -300,8 +303,23 @@ const SingleProductView = () => {
           {!release && product.product_status === 'owner' && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Listing</p>
-              {product.unlisted ? (
-                <p className={styles.withdrawn}>Removed from sale.</p>
+              {product.listing_status !== 'live' && (
+                <p className={styles.withdrawn}>
+                  {product.listing_status === 'draft'
+                    ? 'Not published yet. Nobody can see this but you.'
+                    : 'Removed from sale. Nobody can see this but you.'}
+                </p>
+              )}
+
+              {product.listing_status !== 'live' ? (
+                <SubmitButton
+                  className="btn btn-primary btn-sm"
+                  pending={publishing}
+                  pendingLabel="Publishing…"
+                  onClick={() => dispatch(publishProduct(product.id))}
+                >
+                  {product.listing_status === 'draft' ? 'Publish listing' : 'Put back on sale'}
+                </SubmitButton>
               ) : confirmingWithdrawal ? (
                 <div className={styles.confirm}>
                   <button

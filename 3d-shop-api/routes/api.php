@@ -54,6 +54,8 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::post('/products/{id}/replace', [ProductController::class, 'replace'])
         ->where('id', '[0-9]+');
+    Route::post('/products/{id}/publish', [ProductController::class, 'publish'])
+        ->where('id', '[0-9]+');
     Route::post('/products/{id}/thumbnails', [ProductController::class, 'addThumbnails'])
         ->where('id', '[0-9]+');
     Route::delete('/products/{id}/thumbnails/{file}', [ProductController::class, 'removeThumbnail'])

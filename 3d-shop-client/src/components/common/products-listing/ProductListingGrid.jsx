@@ -62,6 +62,7 @@ const ProductListingGrid = (props) => {
           name={product.name}
           priceCents={product.price_cents}
           images={cardImages(product)}
+          status={product.listing_status}
         />
       </div>
     ));

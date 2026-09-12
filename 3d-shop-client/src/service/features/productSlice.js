@@ -11,6 +11,7 @@ const initialState = {
   status: 'idle',
   error: null,
   replacing: false,
+  publishing: false,
   savingThumbnails: false,
 };
 
@@ -50,7 +51,19 @@ export const productSlice = createSlice({
       .addCase(withdrawProduct.fulfilled, (state) => {
         if (state.product !== null) {
           state.product.unlisted = true;
+          state.product.listing_status = 'withdrawn';
         }
+      })
+      .addCase(publishProduct.pending, (state) => {
+        state.publishing = true;
+      })
+      .addCase(publishProduct.fulfilled, (state, action) => {
+        state.publishing = false;
+        state.product = action.payload;
+      })
+      .addCase(publishProduct.rejected, (state, action) => {
+        state.publishing = false;
+        state.error = action.error.message;
       })
       .addMatcher(isAnyOf(addThumbnails.pending, removeThumbnail.pending), (state) => {
         state.savingThumbnails = true;
@@ -88,6 +101,22 @@ export const fetchProductById = createAsyncThunk('/product/getById', async (prod
   }
   return response.data;
 });
+
+/** Puts a listing on sale, whether it has never been up or was taken down. */
+export const publishProduct = createAsyncThunk(
+  '/product/publish',
+  async (productId, { getState }) => {
+    const token = getState().auth.token;
+
+    const response = await postRequestWithToken(
+      `api/products/${productId}/publish`,
+      {},
+      token
+    );
+
+    return response.data;
+  }
+);
 
 export const withdrawProduct = createAsyncThunk(
   '/product/withdraw',
