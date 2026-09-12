@@ -34,7 +34,7 @@ const asScene = (loaded) => {
   return loaded;
 };
 
-const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
+const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
   const loaded = useLoader(LOADERS[format] ?? GLTFLoader, uri);
   const original = useMemo(() => asScene(loaded), [loaded]);
   const [proxy, setProxy] = useState(null);
@@ -50,7 +50,7 @@ const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
     }
 
     let live = true;
-    const key = uri + '|' + keep;
+    const key = uri + '|' + keep + '|' + method;
 
     // Always through the promise, cache hit or not: resolving in a microtask
     // keeps this out of the effect body, where setting state cascades renders.
@@ -66,7 +66,7 @@ const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
       const copy = original.clone(true);
       const before = trianglesIn(copy);
 
-      await simplifyObject(copy, keep);
+      await simplifyObject(copy, keep, method);
 
       // The same shrink the stored copy gets, so the seller approves the
       // textures a buyer is shown rather than the full-size ones.
@@ -85,11 +85,19 @@ const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
 
       setProxy(entry.scene);
       onCounts(entry.counts);
+    }, (error) => {
+      // Without this the panel sits on "working it out" forever and the reason
+      // never reaches anyone: a rejection here has nothing else listening.
+      console.error('The buyer preview could not be built.', error);
+
+      if (live) {
+        onCounts({ failed: true });
+      }
     });
     return () => {
       live = false;
     };
-  }, [original, uri, keep, obscured, onCounts]);
+  }, [original, uri, keep, method, obscured, onCounts]);
 
   // Fitted to the full model, not to itself: simplifying can nibble the
   // silhouette, and a proxy that re-fits would sit at a different size from the
@@ -124,7 +132,7 @@ const Proxy = ({ format, uri, keep, obscured, onCounts }) => {
   );
 };
 
-const ProxyPreview = ({ format, uri, keep, obscured, onCounts, sync }) => (
+const ProxyPreview = ({ format, uri, keep, method, obscured, onCounts, sync }) => (
   <Canvas>
     <SceneLighting format={format} />
 
@@ -133,6 +141,7 @@ const ProxyPreview = ({ format, uri, keep, obscured, onCounts, sync }) => (
         format={format}
         uri={uri}
         keep={keep}
+        method={method}
         obscured={obscured}
         onCounts={onCounts}
       />

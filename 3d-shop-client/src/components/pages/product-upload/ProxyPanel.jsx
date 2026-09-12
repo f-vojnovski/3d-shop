@@ -1,4 +1,5 @@
 import { MdBlurOn, MdClose, MdSwapHoriz, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { CAREFUL, PARTS } from '../../common/model-displayer/simplify';
 import styles from './ProductUpload.module.css';
 
 const count = (value) => value.toLocaleString('en-US');
@@ -12,7 +13,17 @@ const MODES = [
   { key: 'box', Icon: MdVisibilityOff, label: 'Buyers see only an outline box' },
 ];
 
-const ProxyPanel = ({ mode, ratio, counts, shown, swapped, onMode, onRatio, onSwap, onShown }) => {
+// A model built from many separate parts has almost no edges left to collapse,
+// so the careful cut can leave the slider looking broken. Dropping whole small
+// parts reaches the number instead, and loses the smallest details doing it.
+const METHODS = [
+  { key: CAREFUL, label: 'Keep every piece' },
+  { key: PARTS, label: 'Drop small pieces' },
+];
+
+const ProxyPanel = ({
+  mode, ratio, method, counts, shown, swapped, onMode, onRatio, onMethod, onSwap, onShown,
+}) => {
   if (!shown) {
     return (
       <button type="button" className={styles.insetShow} onClick={() => onShown(true)}>
@@ -23,9 +34,11 @@ const ProxyPanel = ({ mode, ratio, counts, shown, swapped, onMode, onRatio, onSw
 
   const note =
     mode === 'decimated'
-      ? counts
-        ? `Decimation: ${count(counts.before)} tris => ${count(counts.after)} tris`
-        : 'Decimation: working it out…'
+      ? counts?.failed
+        ? 'Decimation: this model could not be cut down.'
+        : counts
+          ? `Decimation: ${count(counts.before)} tris => ${count(counts.after)} tris`
+          : 'Decimation: working it out…'
       : mode === 'model'
         ? 'Buyers get the model itself to spin.'
         : 'Buyers get a box the size of your model, and nothing of its shape.';
@@ -73,6 +86,22 @@ const ProxyPanel = ({ mode, ratio, counts, shown, swapped, onMode, onRatio, onSw
           </button>
         ))}
       </div>
+
+      {mode === 'decimated' && (
+        <div className={styles.methods}>
+          {METHODS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={key === method ? styles.methodOn : styles.method}
+              aria-pressed={key === method}
+              onClick={() => onMethod(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {mode === 'decimated' && (
         <input

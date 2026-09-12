@@ -159,7 +159,7 @@ async function run() {
     throw new Error('The model contained no geometry.');
   }
 
-  await simplifyObject(scene, job.ratio);
+  await simplifyObject(scene, job.ratio, job.method);
 
   const after = trianglesIn(scene);
   const textures = shrinkTextures(scene);

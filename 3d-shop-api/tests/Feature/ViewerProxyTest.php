@@ -64,6 +64,40 @@ class ViewerProxyTest extends TestCase
             ->assertJsonValidationErrors('proxy_ratio');
     }
 
+    public function test_the_seller_chooses_how_hard_the_cutter_may_work(): void
+    {
+        $id = $this->publish([
+            'proxy_mode' => 'model',
+            'proxy_ratio' => '0.25',
+            'proxy_method' => 'parts',
+        ]);
+
+        $this->assertSame(
+            'parts',
+            Product::findOrFail($id)->deliverableFor('obj')->meta['proxy']['method']
+        );
+    }
+
+    /** A model of many small pieces barely moves without being told to drop any. */
+    public function test_the_careful_cut_is_what_a_seller_gets_by_default(): void
+    {
+        $id = $this->publish(['proxy_mode' => 'model', 'proxy_ratio' => '0.25']);
+
+        $this->assertSame(
+            'careful',
+            Product::findOrFail($id)->deliverableFor('obj')->meta['proxy']['method']
+        );
+    }
+
+    public function test_a_method_the_cutter_does_not_have_is_refused(): void
+    {
+        Sanctum::actingAs($this->seller());
+
+        $this->postJson('/api/products', $this->payload(['proxy_method' => 'obliterate']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('proxy_method');
+    }
+
     public function test_the_route_says_nothing_when_there_is_no_proxy(): void
     {
         $id = $this->publish(['proxy_mode' => 'box']);

@@ -8,7 +8,7 @@ const initialState = {
   sellerImages: [],
   previewMode: 'attested_stills',
   // What buyers aim at before they pay. The box is the older, safer answer.
-  proxy: { mode: 'model', ratio: 0.1 },
+  proxy: { mode: 'model', ratio: 0.1, method: 'careful' },
   converting: {},
   details: { name: '', description: '', price: '' },
   errors: {},

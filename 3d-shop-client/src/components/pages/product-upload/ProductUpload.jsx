@@ -139,6 +139,7 @@ const ProductUploadPage = () => {
       format={models[active].previewUri ? 'gltf' : active}
       uri={framingUri}
       keep={buyersSee === 'decimated' ? appliedRatio : 1}
+      method={proxy.method}
       obscured={buyersSee === 'box'}
       sync={{ stateRef: sharedCamera, id: 'proxy', activeRef: activeView }}
       onCounts={onCounts}
@@ -155,7 +156,14 @@ const ProductUploadPage = () => {
 
       dispatch(clearUploadState());
       dispatch(resetDraft());
-      dispatch(notify('success', 'Your product is live.'));
+      // An upload is a draft until the seller publishes it. Saying it is live
+      // here is wrong, and wrong at the moment they are deciding to publish.
+      dispatch(notify(
+        'success',
+        uploaded.listing_status === 'live'
+          ? 'Your product is live.'
+          : 'Uploaded. It stays private until you publish it.'
+      ));
       navigate(`/product/${uploaded.id}`);
     }
   }, [status, uploaded, models, dispatch, navigate]);
@@ -335,6 +343,7 @@ const ProductUploadPage = () => {
     form.append('preview_mode', previewMode);
     form.append('proxy_mode', proxy.mode);
     form.append('proxy_ratio', String(proxy.ratio));
+    form.append('proxy_method', proxy.method);
 
     if (previewMode === ATTESTED) {
       // Only the camera numbers travel; the roll images stay in the browser.
@@ -423,11 +432,13 @@ const ProductUploadPage = () => {
             <ProxyPanel
               mode={buyersSee}
               ratio={proxy.ratio}
+              method={proxy.method}
               counts={counts}
               shown={proxyShown}
               swapped={swapped}
               onMode={chooseMode}
               onRatio={(ratio) => dispatch(setProxy({ ratio }))}
+              onMethod={(method) => dispatch(setProxy({ method }))}
               onSwap={() => setSwapped(!swapped)}
               onShown={(next) => {
                 setProxyShown(next);

@@ -25,6 +25,7 @@ class ProxyRunner
      */
     public function run(
         float $ratio,
+        string $method,
         string $format,
         string $modelPath,
         string $scratchDir,
@@ -45,6 +46,7 @@ class ProxyRunner
         file_put_contents($jobFile, json_encode(
             array_filter([
                 'ratio' => $ratio,
+                'method' => $method,
                 'format' => $format,
                 'entry' => $entry,
             ], fn ($value) => $value !== null),

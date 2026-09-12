@@ -132,7 +132,7 @@
 .stage {
   --panel-edge: 10px;
   --panel-w: 250px;
-  --panel-h: 320px;
+  --panel-h: 334px;
   --panel-pad: 8px;
   --pic-w: calc(var(--panel-w) - var(--panel-pad) * 2);
   --pic-h: calc(var(--pic-w) * 3 / 4);
@@ -524,6 +524,32 @@
   color: var(--clr-text);
 }
 
+
+.methods {
+  display: flex;
+  gap: 6px;
+}
+
+.method,
+.methodOn {
+  flex: 1;
+  padding: 4px 6px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.methodOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-accent);
+}
+
+.method:hover {
+  color: var(--clr-text);
+}
 
 .insetPicture {
   flex: none;

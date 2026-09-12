@@ -68,6 +68,10 @@ class ProductController extends BaseController
             // or nothing but the bounding box.
             'proxy_mode' => 'sometimes|in:model,box',
             'proxy_ratio' => 'sometimes|numeric|between:0,1',
+            // How hard the cutter may work: careful never removes a whole
+            // piece, parts may, which is the only way a model built from many
+            // small pieces reaches the ratio at all.
+            'proxy_method' => 'sometimes|in:careful,parts',
             ...self::modelRules(),
             'thumbnails' => 'sometimes|array|max:8',
             'thumbnails.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
@@ -148,6 +152,7 @@ class ProductController extends BaseController
             $proxy = [
                 'mode' => $request->input('proxy_mode', 'box'),
                 'ratio' => (float) $request->input('proxy_ratio', 0.1),
+                'method' => $request->input('proxy_method', 'careful'),
             ];
 
             foreach ($product->files as $file) {

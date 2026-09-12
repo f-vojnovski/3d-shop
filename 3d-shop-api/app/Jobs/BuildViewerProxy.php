@@ -87,6 +87,7 @@ class BuildViewerProxy implements ShouldQueue
 
             $result = $runner->run(
                 (float) $ratio,
+                (string) ($wanted['method'] ?? 'careful'),
                 $format,
                 $modelPath,
                 $scratch,
