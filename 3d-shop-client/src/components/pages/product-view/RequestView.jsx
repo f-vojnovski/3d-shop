@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import BoundsBoxDisplayer from '../../common/model-displayer/BoundsBoxDisplayer';
 import Lightbox from '../../common/lightbox/Lightbox';
-import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import {
   fetchCustomViews,
   publishCustomView,
@@ -123,7 +122,11 @@ const RequestView = ({ product, format, bounds, hasUvs = true, onPublished }) =>
               )}
               {view.status === 'queued' && (
                 <span className={styles.waiting}>
-                  <LoadingSpinner />
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-label="Rendering"
+                  />
                 </span>
               )}
               {view.status === 'failed' && <span className={styles.failed}>{view.error}</span>}

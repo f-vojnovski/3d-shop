@@ -1,7 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { postLoginData } from '../../../service/features/authSlice';
-import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import { notify } from '../../../service/features/toastSlice';
 import { useNavigate } from 'react-router-dom';
 import SubmitButton from '../../common/submit-button/SubmitButton';
@@ -103,14 +102,6 @@ const LoginPage = () => {
       </div>
     </div>
   );
-
-  if (authStatus === 'loading') {
-    content = (
-      <div>
-        <LoadingSpinner />
-      </div>
-    );
-  }
 
   if (authStatus === 'succeeded') {
     content = (

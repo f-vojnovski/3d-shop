@@ -1,0 +1,45 @@
+.heading {
+  margin: 0 0 16px;
+  font-size: 1.4rem;
+}
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+  padding: 12px 14px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+}
+
+.figureLabel {
+  color: var(--clr-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.figureValue {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.empty {
+  padding: 28px 14px;
+  color: var(--clr-text-dim);
+  text-align: center;
+}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '../../../service/features/toastSlice';
@@ -8,6 +8,8 @@ import {
   removeFromCart,
 } from '../../../service/features/cartSlice';
 import { Link } from 'react-router-dom';
+import BackLink from '../../common/back-link/BackLink';
+import SubmitButton from '../../common/submit-button/SubmitButton';
 import { formatPrice } from '../../../service/util/formatPrice';
 import styles from './CheckoutPage.module.css';
 
@@ -22,12 +24,19 @@ const CheckoutPage = () => {
 
   const navigate = useNavigate();
 
+  // A settled order outlives the click that opened it, in memory and until
+  // recently in storage. Leaving for the gateway has to be caused by this
+  // visit's button press, or arriving at the cart any later way reads the same
+  // state and bounces the buyer straight back out.
+  const leavingToPay = useRef(false);
+
   const onCheckoutButtonClick = () => {
+    leavingToPay.current = true;
     dispatch(checkoutCart());
   };
 
   useEffect(() => {
-    if (cartStatus !== 'succeeded' || !order) {
+    if (!leavingToPay.current || cartStatus !== 'succeeded' || !order) {
       return;
     }
 
@@ -43,6 +52,7 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (cartStatus === 'failed') {
+      leavingToPay.current = false;
       dispatch(notify('error', error || 'There was a problem completing your purchase.'));
       dispatch(clearCheckoutError());
     }
@@ -55,6 +65,8 @@ const CheckoutPage = () => {
           className={styles.thumb}
           src={product.thumbnail_url}
           alt={`${product.name} thumbnail`}
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className={styles.thumb} />
@@ -68,6 +80,7 @@ const CheckoutPage = () => {
       <button
         className="btn btn-sm btn-outline-danger"
         onClick={() => dispatch(removeFromCart(product.id))}
+        disabled={cartStatus === 'loading'}
       >
         Remove
       </button>
@@ -82,9 +95,14 @@ const CheckoutPage = () => {
         <div className={styles.list}>{renderedProducts}</div>
         <div className={styles.summary}>
           <span className={styles.total}>Total: ${formatPrice(total)}</span>
-          <button className="btn btn-success" onClick={() => onCheckoutButtonClick()}>
+          <SubmitButton
+            className="btn btn-success"
+            pending={cartStatus === 'loading'}
+            pendingLabel="Taking you to payment…"
+            onClick={() => onCheckoutButtonClick()}
+          >
             Proceed to payment
-          </button>
+          </SubmitButton>
         </div>
       </>
     );
@@ -92,7 +110,12 @@ const CheckoutPage = () => {
     content = <div className={styles.empty}>Shopping cart is empty.</div>;
   }
 
-  return <div className="page-shell">{content}</div>;
+  return (
+    <div className="page-shell">
+      <BackLink to="/products">Continue shopping</BackLink>
+      {content}
+    </div>
+  );
 };
 
 export default CheckoutPage;

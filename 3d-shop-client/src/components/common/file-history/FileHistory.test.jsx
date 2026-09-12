@@ -1,65 +1,103 @@
+import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import FileHistory from './FileHistory';
 
-const version = (overrides = {}) => ({
+const release = (overrides = {}) => ({
   replaced_at: '2026-03-14T10:00:00Z',
   note: 'Fixed the scale.',
   sha256: 'abc123',
   facts: { faces: 213347 },
-  images: [
-    { id: 1, url: 'https://example.test/old-0.png', sort: 0, attestation_url: '/api/previews/1/attestation' },
-    { id: 2, url: 'https://example.test/old-1.png', sort: 1, attestation_url: '/api/previews/2/attestation' },
-  ],
+  images: [],
   ...overrides,
 });
 
+const older = release({ replaced_at: '2026-01-02T10:00:00Z', sha256: 'def456' });
+
+const click = (name) => userEvent.click(screen.getByRole('button', { name }));
+
+/** Stands in for the page, which owns which release is on the stage. */
+const Harness = ({ releases }) => {
+  const [viewing, setViewing] = useState(null);
+
+  return (
+    <>
+      <FileHistory format="obj" releases={releases} viewing={viewing} onView={setViewing} />
+      <output>{viewing === null ? 'latest' : `release ${viewing}`}</output>
+    </>
+  );
+};
+
 describe('FileHistory', () => {
   it('says nothing when a file was never replaced', () => {
-    const { container } = render(<FileHistory format="obj" replaced={[]} />);
+    const { container } = render(
+      <FileHistory format="obj" releases={[]} viewing={null} onView={() => {}} />
+    );
 
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('reports when the file stopped being the one on sale', () => {
-    render(<FileHistory format="obj" replaced={[version()]} />);
+  it('leads with when the current file took over', () => {
+    render(<FileHistory format="obj" releases={[release()]} viewing={null} onView={() => {}} />);
 
-    expect(screen.getByText('.obj file replaced once')).toBeInTheDocument();
+    expect(screen.getByText('Last updated on 14 March 2026')).toBeInTheDocument();
+  });
+
+  it('keeps the release list behind a button rather than on the page', async () => {
+    render(<Harness releases={[release()]} />);
+
+    expect(screen.queryByText(/Until 14 March 2026/)).not.toBeInTheDocument();
+
+    await click('View older releases');
+
     expect(screen.getByText(/Until 14 March 2026/)).toBeInTheDocument();
     expect(screen.getByText(/213,347 faces/)).toBeInTheDocument();
   });
 
-  it("shows the seller's own account of what changed", () => {
-    render(<FileHistory format="obj" replaced={[version()]} />);
+  /** Choosing a release is a request to the page, not something shown here. */
+  it('hands the chosen release up rather than rendering it', async () => {
+    const onView = vi.fn();
 
-    expect(screen.getByText('“Fixed the scale.”')).toBeInTheDocument();
-  });
-
-  it('copes with a replacement nobody explained', () => {
-    render(<FileHistory format="obj" replaced={[version({ note: null })]} />);
-
-    expect(screen.getByText(/Until 14 March 2026/)).toBeInTheDocument();
-  });
-
-  /** The old previews are the evidence, so they stay reachable. */
-  it('keeps the superseded previews and links each to its record', () => {
-    render(<FileHistory format="gltf" replaced={[version()]} />);
-
-    const first = screen.getByAltText('Previous .gltf view 1');
-
-    expect(first).toHaveAttribute('src', 'https://example.test/old-0.png');
-    expect(first.closest('a')).toHaveAttribute('href', '/api/previews/1/attestation');
-    expect(screen.getByAltText('Previous .gltf view 2')).toBeInTheDocument();
-  });
-
-  it('counts more than one replacement', () => {
     render(
-      <FileHistory
-        format="obj"
-        replaced={[version(), version({ replaced_at: '2026-01-02T10:00:00Z', sha256: 'def456' })]}
-      />
+      <FileHistory format="obj" releases={[release(), older]} viewing={null} onView={onView} />
     );
 
-    expect(screen.getByText('.obj file replaced 2 times')).toBeInTheDocument();
-    expect(screen.getByText(/Until 2 January 2026/)).toBeInTheDocument();
+    await click('View older releases');
+    await click(/Until 2 January 2026/);
+
+    expect(onView).toHaveBeenCalledWith(1);
+  });
+
+  it('offers the way back and the way sideways while a release is up', () => {
+    render(<FileHistory format="obj" releases={[release()]} viewing={0} onView={() => {}} />);
+
+    expect(screen.getByText('Showing the release until 14 March 2026')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to latest' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View another release' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View older releases' })).not.toBeInTheDocument();
+  });
+
+  it('returns the page to the current file', async () => {
+    render(<Harness releases={[release()]} />);
+
+    await click('View older releases');
+    await click(/Until 14 March 2026/);
+    expect(screen.getByText('release 0')).toBeInTheDocument();
+
+    await click('Back to latest');
+
+    expect(screen.getByText('latest')).toBeInTheDocument();
+    expect(screen.getByText('Last updated on 14 March 2026')).toBeInTheDocument();
+  });
+
+  it('moves between releases without returning to the current file first', async () => {
+    render(<Harness releases={[release(), older]} />);
+
+    await click('View older releases');
+    await click(/Until 14 March 2026/);
+    await click('View another release');
+    await click(/Until 2 January 2026/);
+
+    expect(screen.getByText('release 1')).toBeInTheDocument();
   });
 });

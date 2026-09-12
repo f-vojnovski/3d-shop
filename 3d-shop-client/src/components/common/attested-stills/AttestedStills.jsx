@@ -142,7 +142,7 @@ const AttestedStills = ({ product, onFormat }) => {
               aria-current={index === selected}
               onClick={() => setSelected(index)}
             >
-              <img src={option.url} alt="" />
+              <img src={option.url} alt="" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>

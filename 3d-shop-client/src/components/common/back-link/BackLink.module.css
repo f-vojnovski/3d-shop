@@ -1,0 +1,18 @@
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 5px 11px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.86rem;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--clr-text);
+  border-color: var(--clr-text-dim);
+}

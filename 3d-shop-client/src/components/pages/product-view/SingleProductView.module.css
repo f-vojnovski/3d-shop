@@ -117,3 +117,13 @@
   color: var(--clr-text-dim);
   font-size: 0.8rem;
 }
+
+.historyNote {
+  margin: 0;
+  padding: 9px 11px;
+  background: var(--clr-surface-raised);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.84rem;
+}

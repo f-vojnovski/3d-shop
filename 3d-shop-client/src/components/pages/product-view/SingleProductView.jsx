@@ -11,6 +11,7 @@ import { createEcho } from '../../../service/realtime/echo';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
+import BackLink from '../../common/back-link/BackLink';
 import LoadError from '../../common/load-error/LoadError';
 import { formatPrice } from '../../../service/util/formatPrice';
 import AddToCartButton from './AddToCardButton/AddToCartButton';
@@ -23,6 +24,8 @@ import AttestedStills from '../../common/attested-stills/AttestedStills';
 import ModelFacts from '../../common/model-facts/ModelFacts';
 import RequestView from './RequestView';
 import FileHistory from '../../common/file-history/FileHistory';
+import ReleaseStills from '../../common/release-stills/ReleaseStills';
+import { orderedReleases } from '../../../service/util/releases';
 import { BsPersonCircle } from 'react-icons/bs';
 
 const DISPLAYERS = {
@@ -43,6 +46,7 @@ const SingleProductView = () => {
   const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
   const [shownFormat, setShownFormat] = useState(null);
   const [note, setNote] = useState('');
+  const [viewingRelease, setViewingRelease] = useState(null);
   const replacing = useSelector((state) => state.product.replacing);
   const token = useSelector((state) => state.auth.token);
   const signedIn = Boolean(token);
@@ -83,6 +87,12 @@ const SingleProductView = () => {
   const measuredFormat =
     product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType;
   const measured = (product?.previews ?? []).find((one) => one.format === measuredFormat);
+  const releases = orderedReleases(measured?.replaced);
+  // A release index belongs to one format's history, so it is remembered with
+  // the format it was chosen from and ignored under any other.
+  const viewingIndex =
+    viewingRelease?.format === measuredFormat ? viewingRelease.index : null;
+  const release = viewingIndex === null ? null : releases[viewingIndex];
 
   if (productStatus === 'failed' && product?.id !== Number(productId)) {
     return <LoadError message={error} fallback="Could not load this product." />;
@@ -117,6 +127,18 @@ const SingleProductView = () => {
     }
   }
 
+  // A chosen release owns the stage: the point of opening one is to see it at
+  // the size the file on sale gets, not as a strip of thumbnails in the rail.
+  if (release) {
+    media = (
+      <ReleaseStills
+        release={release}
+        format={measured.format}
+        productName={product.name}
+      />
+    );
+  }
+
   const downloads = formats
     .filter((format) => product.download_urls?.[format])
     .map((format) => (
@@ -129,6 +151,8 @@ const SingleProductView = () => {
 
   return (
     <div className={styles.page}>
+      <BackLink to="/products">Back to models</BackLink>
+
       <div className={styles.layout}>
         <div className={styles.media}>{media}</div>
 
@@ -140,25 +164,33 @@ const SingleProductView = () => {
           <h1 className={styles.title}>{product.name}</h1>
           <div className={styles.price}>${formatPrice(product.price_cents)}</div>
 
-          <AddToCartButton product={product} />
+          {release ? (
+            <p className={styles.historyNote}>
+              You are looking at an older release. Go back to the latest to buy or change
+              this product.
+            </p>
+          ) : (
+            <AddToCartButton product={product} />
+          )}
 
           {product.description && <p className={styles.description}>{product.description}</p>}
 
-          {measured?.facts && (
+          {(release?.facts ?? measured?.facts) && (
             <div className={styles.section}>
               <ModelFacts
-                facts={measured.facts}
+                facts={release?.facts ?? measured.facts}
                 format={measured.format}
-                agreement={product.format_agreement}
-                missing={measured.missing}
-                unusedImages={measured.unused_images}
+                label={release ? 'Measured from that older .' + measured.format + ' file' : null}
+                agreement={release ? null : product.format_agreement}
+                missing={release ? null : measured.missing}
+                unusedImages={release ? null : measured.unused_images}
               />
 
-              <BundleContents bundle={measured.bundle} format={measured.format} />
+              {!release && <BundleContents bundle={measured.bundle} format={measured.format} />}
             </div>
           )}
 
-          {signedIn && measured?.facts?.bounds && measured.images?.length > 0 && (
+          {!release && signedIn && measured?.facts?.bounds && measured.images?.length > 0 && (
             <div className={styles.section}>
               <RequestView
                 product={product}
@@ -170,9 +202,18 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {measured?.replaced?.length > 0 && (
+          {releases.length > 0 && (
             <div className={styles.section}>
-              <FileHistory format={measured.format} replaced={measured.replaced} />
+              <FileHistory
+                format={measured.format}
+                releases={releases}
+                viewing={viewingIndex}
+                onView={(index) =>
+                  setViewingRelease(
+                    index === null ? null : { format: measuredFormat, index }
+                  )
+                }
+              />
             </div>
           )}
 
@@ -189,7 +230,7 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {formats.length > 1 && product.preview_mode !== 'attested_stills' && (
+          {!release && formats.length > 1 && product.preview_mode !== 'attested_stills' && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Preview format</p>
               <select
@@ -206,16 +247,16 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {downloads.length > 0 && (
+          {!release && downloads.length > 0 && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Your files</p>
               <div className={styles.downloads}>{downloads}</div>
             </div>
           )}
 
-          {product.product_status === 'owner' && measuredFormat && (
+          {!release && product.product_status === 'owner' && measuredFormat && (
             <div className={styles.section}>
-              <p className={styles.sectionLabel}>Replace the .{measuredFormat} file</p>
+              <p className={styles.sectionLabel}>Update .{measuredFormat} file</p>
               <input
                 className="form-control form-control-sm mb-2"
                 placeholder="What changed? (optional)"
@@ -242,7 +283,7 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {product.product_status === 'owner' && (
+          {!release && product.product_status === 'owner' && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Listing</p>
               {product.unlisted ? (

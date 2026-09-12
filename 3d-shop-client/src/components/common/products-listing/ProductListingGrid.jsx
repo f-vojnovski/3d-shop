@@ -1,4 +1,5 @@
 import ProductOverview from '../../common/product-preview/ProductOverview';
+import { cardImages } from '../../../service/util/cardImages';
 import { useSelector } from 'react-redux';
 import { selectAllProducts } from '../../../service/features/productsSlice';
 import { useEffect } from 'react';
@@ -59,10 +60,9 @@ const ProductListingGrid = (props) => {
         <ProductOverview
           id={product.id}
           name={product.name}
-          description={product.description}
           priceCents={product.price_cents}
-          thumbnailUrl={product.thumbnail_url}
-        ></ProductOverview>
+          images={cardImages(product)}
+        />
       </div>
     ));
 

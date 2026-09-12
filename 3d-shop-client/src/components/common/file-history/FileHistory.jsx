@@ -1,47 +1,80 @@
+import { useState } from 'react';
 import styles from './FileHistory.module.css';
 
 const asDate = (value) =>
   new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-const FileHistory = ({ format, replaced }) => {
-  if (!replaced || replaced.length === 0) {
+/**
+ * Picks which release the page shows. The release itself is drawn on the main
+ * stage, not here — this is the control for it.
+ */
+const FileHistory = ({ format, releases, viewing, onView }) => {
+  const [picking, setPicking] = useState(false);
+
+  if (!releases || releases.length === 0) {
     return null;
   }
 
+  const showing = typeof viewing === 'number' ? releases[viewing] : null;
+
+  let heading = `Last updated on ${asDate(releases[0].replaced_at)}`;
+
+  if (picking) {
+    heading = `Older releases of the .${format} file`;
+  } else if (showing) {
+    heading = `Showing the release until ${asDate(showing.replaced_at)}`;
+  }
+
+  const choose = (index) => {
+    onView(index);
+    setPicking(false);
+  };
+
+  const backToLatest = () => {
+    onView(null);
+    setPicking(false);
+  };
+
   return (
     <div className={styles.history}>
-      <p className={styles.label}>
-        .{format} file {replaced.length === 1 ? 'replaced once' : `replaced ${replaced.length} times`}
-      </p>
+      <p className={styles.label}>{heading}</p>
 
-      <ol className={styles.versions}>
-        {replaced.map((version) => (
-          <li key={version.replaced_at + version.sha256} className={styles.version}>
-            <div className={styles.when}>
-              Until {asDate(version.replaced_at)}
-              {version.facts?.faces ? ` · ${version.facts.faces.toLocaleString('en-US')} faces` : ''}
-            </div>
+      {picking && (
+        <ol className={styles.picker}>
+          {releases.map((release, index) => (
+            <li key={release.replaced_at + release.sha256}>
+              <button type="button" className={styles.pick} onClick={() => choose(index)}>
+                <span className={styles.when}>Until {asDate(release.replaced_at)}</span>
+                {release.facts?.faces && (
+                  <span className={styles.faces}>
+                    {release.facts.faces.toLocaleString('en-US')} faces
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
-            {version.note && <div className={styles.note}>“{version.note}”</div>}
+      <div className={styles.actions}>
+        {!picking && !showing && (
+          <button type="button" className={styles.action} onClick={() => setPicking(true)}>
+            View older releases
+          </button>
+        )}
 
-            {version.images.length > 0 && (
-              <div className={styles.strip}>
-                {version.images.map((image) => (
-                  <a
-                    key={image.id}
-                    href={image.attestation_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="What this image was rendered from"
-                  >
-                    <img src={image.url} alt={`Previous .${format} view ${image.sort + 1}`} />
-                  </a>
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
-      </ol>
+        {(picking || showing) && (
+          <button type="button" className={styles.action} onClick={backToLatest}>
+            Back to latest
+          </button>
+        )}
+
+        {showing && !picking && (
+          <button type="button" className={styles.action} onClick={() => setPicking(true)}>
+            View another release
+          </button>
+        )}
+      </div>
     </div>
   );
 };

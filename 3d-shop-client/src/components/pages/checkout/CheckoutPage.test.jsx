@@ -13,7 +13,28 @@ const product = (id, priceCents) => ({
   thumbnail_url: `/storage/thumbnails/${id}.png`,
 });
 
-const renderCart = (products) => {
+const assign = vi.fn();
+let realLocation;
+
+beforeEach(() => {
+  assign.mockClear();
+  realLocation = window.location;
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: { ...realLocation, assign },
+  });
+});
+
+afterEach(() => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    writable: true,
+    value: realLocation,
+  });
+});
+
+const renderCart = (products, checkout = {}) => {
   const store = configureStore({
     reducer: { cart: cartReducer },
     preloadedState: {
@@ -22,6 +43,8 @@ const renderCart = (products) => {
         total: products.reduce((sum, p) => sum + p.price_cents, 0),
         status: 'idle',
         error: null,
+        order: null,
+        ...checkout,
       },
     },
   });
@@ -68,5 +91,25 @@ describe('CheckoutPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
 
     expect(screen.getByText(/shopping cart is empty/i)).toBeInTheDocument();
+  });
+
+  /**
+   * The trap: an order opened earlier still names a payment page, so a cart
+   * opened on top of one used to leave for the gateway before it could be read.
+   */
+  it('does not leave for the gateway because an earlier order is still around', () => {
+    renderCart([product(1, 4000)], {
+      status: 'succeeded',
+      order: { id: 9, checkout_url: 'https://pay.example.test/9' },
+    });
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(screen.getByText('Total: $40.00')).toBeInTheDocument();
+  });
+
+  it('reports the attempt on the button rather than leaving the buyer guessing', () => {
+    renderCart([product(1, 4000)], { status: 'loading' });
+
+    expect(screen.getByRole('button', { name: /taking you to payment/i })).toBeDisabled();
   });
 });

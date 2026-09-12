@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { fetchProducts, selectAllProducts } from '../../../service/features/productsSlice';
 import ProductOverview from '../../common/product-preview/ProductOverview';
+import { cardImages } from '../../../service/util/cardImages';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
 import styles from './LandingPage.module.css';
 
@@ -88,7 +89,7 @@ const LandingPage = () => {
               id={product.id}
               name={product.name}
               priceCents={product.price_cents}
-              thumbnailUrl={product.thumbnail_url}
+              images={cardImages(product)}
             />
           ))}
         </div>

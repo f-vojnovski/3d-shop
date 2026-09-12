@@ -21,7 +21,7 @@ const largestTexture = (textures) =>
 const measured = (facts) =>
   Boolean(facts) && (facts.faces != null || facts.vertices != null || Boolean(facts.bounds));
 
-const ModelFacts = ({ facts, format, agreement, missing, unusedImages }) => {
+const ModelFacts = ({ facts, format, agreement, missing, unusedImages, label }) => {
   if (!measured(facts)) {
     return null;
   }
@@ -44,7 +44,7 @@ const ModelFacts = ({ facts, format, agreement, missing, unusedImages }) => {
 
   return (
     <div className={styles.facts}>
-      <p className={styles.label}>Measured from the .{format} file</p>
+      <p className={styles.label}>{label ?? 'Measured from the .' + format + ' file'}</p>
       <dl className={styles.grid}>
         {rows.map(([name, value]) => (
           <div key={name} className={styles.row}>

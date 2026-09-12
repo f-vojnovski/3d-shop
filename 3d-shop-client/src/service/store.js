@@ -24,14 +24,15 @@ import {
 // lib/ is CommonJS; Vite's interop returns the namespace, not the storage object.
 import storage from 'redux-persist/es/storage';
 
-// `auth` is deliberately absent: it persists itself below, and listing it here
-// as well would store the whole composed slice under the root key and rehydrate
-// it over the top, putting back the two fields that config exists to drop.
+// `auth` and `cart` are deliberately absent: each persists itself below, and
+// listing either here as well would store the whole composed slice under the
+// root key and rehydrate it over the top, putting back the fields those configs
+// exist to drop.
 const persistConfig = {
   key: 'root',
   version: 1,
   storage,
-  whitelist: ['cart'],
+  whitelist: [],
 };
 
 // `status` and `error` describe the last request, not the session: a failed
@@ -43,13 +44,24 @@ const authPersistConfig = {
   blacklist: ['status', 'error'],
 };
 
+// The cart survives a reload; the checkout that was in flight does not. A
+// persisted `succeeded` order still holds the gateway's URL, and the checkout
+// page redirects to it on sight — so restoring one sends the buyer back to a
+// payment page every time they open their cart, with no way to reach it.
+const cartPersistConfig = {
+  key: 'cart',
+  version: 1,
+  storage,
+  blacklist: ['status', 'error', 'order'],
+};
+
 const reducers = combineReducers({
   products: productsReducer,
   product: productReducer,
   productUpload: productUpload,
   uploadDraft: uploadDraftReducer,
   auth: persistReducer(authPersistConfig, authReducer),
-  cart: cartReducer,
+  cart: persistReducer(cartPersistConfig, cartReducer),
   customViews: customViewsReducer,
   sales: salesReducer,
   toasts: toastsReducer,

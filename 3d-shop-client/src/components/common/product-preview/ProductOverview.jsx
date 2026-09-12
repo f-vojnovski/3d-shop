@@ -1,21 +1,69 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';
 import styles from './ProductOverview.module.css';
 
-const ProductOverview = ({ id, name, priceCents, thumbnailUrl }) => (
-  <Link to={`/product/${id}`} className={styles.card}>
-    <div className={styles.thumb}>
-      {thumbnailUrl ? (
-        <img src={thumbnailUrl} alt={`${name} thumbnail`} />
-      ) : (
-        <div className={styles.empty}>No preview</div>
-      )}
+const ProductOverview = ({ id, name, priceCents, images = [] }) => {
+  const [shown, setShown] = useState(0);
+
+  // The whole picture is a link to the product, so a paging button inside it
+  // would be a link inside a link. They sit above the hit area instead, and
+  // have to say they are not a navigation.
+  const step = (by) => (event) => {
+    event.preventDefault();
+    setShown((current) => (current + by + images.length) % images.length);
+  };
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.thumb}>
+        {images.length > 0 ? (
+          <img
+            src={images[shown]}
+            alt={`${name} preview ${shown + 1}`}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className={styles.empty}>No preview</div>
+        )}
+
+        <Link to={`/product/${id}`} className={styles.hit} aria-label={name} />
+
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              className={styles.prev}
+              onClick={step(-1)}
+              aria-label="Previous image"
+            >
+              &#8249;
+            </button>
+            <button
+              type="button"
+              className={styles.next}
+              onClick={step(1)}
+              aria-label="Next image"
+            >
+              &#8250;
+            </button>
+
+            <div className={styles.dots}>
+              {images.map((url, index) => (
+                <span key={url} className={index === shown ? styles.dotOn : styles.dot} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <Link to={`/product/${id}`} className={styles.body}>
+        <div className={styles.name}>{name}</div>
+        <div className={styles.price}>${formatPrice(priceCents)}</div>
+      </Link>
     </div>
-    <div className={styles.body}>
-      <div className={styles.name}>{name}</div>
-      <div className={styles.price}>${formatPrice(priceCents)}</div>
-    </div>
-  </Link>
-);
+  );
+};
 
 export default ProductOverview;
