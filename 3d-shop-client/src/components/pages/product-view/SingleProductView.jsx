@@ -7,6 +7,7 @@ import {
   replaceFile,
   withdrawProduct,
 } from '../../../service/features/productSlice';
+import { createEcho } from '../../../service/realtime/echo';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
@@ -43,7 +44,8 @@ const SingleProductView = () => {
   const [shownFormat, setShownFormat] = useState(null);
   const [note, setNote] = useState('');
   const replacing = useSelector((state) => state.product.replacing);
-  const signedIn = useSelector((state) => Boolean(state.auth.token));
+  const token = useSelector((state) => state.auth.token);
+  const signedIn = Boolean(token);
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -53,15 +55,25 @@ const SingleProductView = () => {
     product?.id === Number(productId) &&
     ['queued', 'rendering'].includes(product?.preview_status);
 
+  // The render announces itself. Polling for it used to blank the page every
+  // three seconds, because every request put the whole view back into loading.
   useEffect(() => {
     if (!renderInProgress) {
       return undefined;
     }
 
-    const timer = setInterval(() => dispatch(fetchProductById(productId)), 3000);
+    const echo = createEcho(token);
+    const channel = `products.${productId}`;
 
-    return () => clearInterval(timer);
-  }, [renderInProgress, dispatch, productId]);
+    echo.channel(channel).listen('.preview.render.finished', () => {
+      dispatch(fetchProductById(productId));
+    });
+
+    return () => {
+      echo.leave(channel);
+      echo.disconnect();
+    };
+  }, [renderInProgress, dispatch, productId, token]);
 
   const formats = product?.formats ?? [];
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';
@@ -72,11 +84,13 @@ const SingleProductView = () => {
     product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType;
   const measured = (product?.previews ?? []).find((one) => one.format === measuredFormat);
 
-  if (productStatus === 'failed') {
+  if (productStatus === 'failed' && product?.id !== Number(productId)) {
     return <LoadError message={error} fallback="Could not load this product." />;
   }
 
-  if (productStatus !== 'succeeded' || product?.id !== Number(productId)) {
+  // Only before anything is on screen: a refetch while the page is up must not
+  // replace it with a spinner.
+  if (product?.id !== Number(productId)) {
     return (
       <div className="d-flex justify-content-center align-items-center">
         <LoadingSpinner />

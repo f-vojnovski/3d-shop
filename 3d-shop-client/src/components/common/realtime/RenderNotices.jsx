@@ -1,23 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { notify } from '../../../service/features/toastSlice';
-import { fetchProductById } from '../../../service/features/productSlice';
 import { customViewDrawn } from '../../../service/features/customViewSlice';
 import { createEcho } from '../../../service/realtime/echo';
 
 const RenderNotices = () => {
   const token = useSelector((state) => state.auth.token);
   const userId = useSelector((state) => state.auth.user?.id);
-  const viewedProductId = useSelector((state) => state.product.product?.id);
-
   const dispatch = useDispatch();
-
-  // Read at event time, so opening another product does not resubscribe.
-  const viewed = useRef(viewedProductId);
-
-  useEffect(() => {
-    viewed.current = viewedProductId;
-  }, [viewedProductId]);
 
   useEffect(() => {
     if (!token || !userId) {
@@ -32,10 +22,6 @@ const RenderNotices = () => {
         dispatch(notify('success', `Previews are ready for ${event.productName}.`));
       } else {
         dispatch(notify('error', event.error || `Previews failed for ${event.productName}.`));
-      }
-
-      if (viewed.current === event.productId) {
-        dispatch(fetchProductById(event.productId));
       }
     });
 

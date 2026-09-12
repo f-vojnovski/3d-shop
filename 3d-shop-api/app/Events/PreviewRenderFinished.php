@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Product;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -37,9 +38,18 @@ class PreviewRenderFinished implements ShouldBroadcastNow
         );
     }
 
+    /**
+     * The seller's own channel carries the notice; the product's carries the
+     * fact, because anyone looking at a listing mid-render needs to know it
+     * finished and only the seller can join a private channel. Every field here
+     * is already on the public listing.
+     */
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('sellers.'.$this->sellerId)];
+        return [
+            new PrivateChannel('sellers.'.$this->sellerId),
+            new Channel('products.'.$this->productId),
+        ];
     }
 
     public function broadcastAs(): string

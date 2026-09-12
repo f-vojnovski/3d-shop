@@ -30,7 +30,7 @@
   display: block;
   width: 100%;
   border: 1px solid var(--clr-line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--clr-surface);
 }
 
@@ -57,7 +57,7 @@
 .cta {
   display: inline-block;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--clr-accent);
   color: var(--clr-bg);
   font-weight: 600;

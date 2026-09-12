@@ -15,7 +15,7 @@
   margin: 12px 0 0;
   padding: 8px 10px;
   border: 1px solid var(--clr-danger, #e5534b);
-  border-radius: 6px;
+  border-radius: var(--radius);
   color: var(--clr-text);
   font-size: 0.78rem;
 }

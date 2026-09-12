@@ -9,7 +9,7 @@
   padding: 5px 10px;
   background: var(--clr-surface-raised);
   border: 1px solid var(--clr-line);
-  border-radius: 999px;
+  border-radius: var(--radius);
   color: var(--clr-text);
   font-size: 0.88rem;
   cursor: pointer;
@@ -22,7 +22,7 @@
 .badge {
   min-width: 18px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--clr-accent);
   color: #06232e;
   font-size: 0.72rem;
@@ -51,7 +51,7 @@
   width: 100%;
   padding: 7px 9px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: none;
   color: var(--clr-text);
   font-size: 0.9rem;

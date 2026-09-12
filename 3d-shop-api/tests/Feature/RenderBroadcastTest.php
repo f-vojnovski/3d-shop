@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\PreviewRenderFinished;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -37,7 +38,7 @@ class RenderBroadcastTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_the_event_is_addressed_to_the_seller_alone(): void
+    public function test_it_reaches_the_seller_privately_and_the_listing_publicly(): void
     {
         $product = $this->productFor($this->seller('seller'));
 
@@ -46,7 +47,10 @@ class RenderBroadcastTest extends TestCase
         $this->assertSame($product->user_id, $event->sellerId);
         $this->assertSame('preview.render.finished', $event->broadcastAs());
         $this->assertEquals(
-            [new PrivateChannel('sellers.'.$product->user_id)],
+            [
+                new PrivateChannel('sellers.'.$product->user_id),
+                new Channel('products.'.$product->id),
+            ],
             $event->broadcastOn()
         );
     }

@@ -89,7 +89,7 @@
 .format {
   padding: 3px 9px;
   border: 1px solid var(--clr-line);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--clr-surface-raised);
   font-size: 0.78rem;
   color: var(--clr-text-dim);
