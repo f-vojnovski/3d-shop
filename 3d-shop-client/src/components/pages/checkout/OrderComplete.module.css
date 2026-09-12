@@ -1,9 +1,9 @@
 /* A one-message page, so it sits in the middle rather than hugging a corner. */
 .page {
-  max-width: 560px;
+  max-width: var(--shell-narrow);
   min-height: 60vh;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 40px var(--shell-pad);
   display: flex;
   flex-direction: column;
   align-items: center;

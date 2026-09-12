@@ -4,7 +4,8 @@ import { OrbitControls, useGLTF } from '@react-three/drei';
 import { API_URL } from '../../../consts';
 import useFitToView from './useFitToView';
 import CameraProbe from './CameraProbe';
-import StudioEnvironment from './StudioEnvironment';
+import CameraSync from './cameraLink';
+import SceneLighting from './SceneLighting';
 
 const GltfModel = ({ fileUrl }) => {
   const gltf = useGLTF(fileUrl);
@@ -19,12 +20,9 @@ const GltfModel = ({ fileUrl }) => {
   );
 };
 
-const GltfModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
+const GltfModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
   <Canvas>
-    {/* Real materials: IBL plus a soft key, not the .obj path's flat ambient. */}
-    <StudioEnvironment />
-    <directionalLight color="white" position={[4, 5, 3]} intensity={0.6} />
-    <directionalLight color="white" position={[-4, -2, -4]} intensity={0.2} />
+    <SceneLighting format="gltf" />
 
     {/* Loading suspends: without a boundary here it reaches the app shell. */}
     <Suspense fallback={null}>
@@ -33,6 +31,7 @@ const GltfModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
 
     <OrbitControls makeDefault />
     {probeRef && <CameraProbe probeRef={probeRef} />}
+    {sync && <CameraSync {...sync} />}
   </Canvas>
 );
 

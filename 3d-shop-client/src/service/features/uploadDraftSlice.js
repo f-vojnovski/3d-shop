@@ -7,6 +7,8 @@ const initialState = {
   thumbnails: [],
   sellerImages: [],
   previewMode: 'attested_stills',
+  // What buyers aim at before they pay. The box is the older, safer answer.
+  proxy: { mode: 'model', ratio: 0.1 },
   converting: {},
   details: { name: '', description: '', price: '' },
   errors: {},
@@ -141,6 +143,10 @@ export const uploadDraftSlice = createSlice({
       state.details = { ...state.details, ...action.payload };
     },
 
+    setProxy: (state, action) => {
+      state.proxy = { ...state.proxy, ...action.payload };
+    },
+
     setPreviewMode: (state, action) => {
       state.previewMode = action.payload;
     },
@@ -172,6 +178,7 @@ export const {
   conversionFailed,
   setDetails,
   setPreviewMode,
+  setProxy,
   setErrors,
   resetDraft,
 } = uploadDraftSlice.actions;

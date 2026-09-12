@@ -12,7 +12,13 @@
   --clr-danger: #ff6b6b;
 
   --radius: 10px;
+  /* One horizontal padding everywhere, so the content column does not shift
+     as you move between pages. Only the widths differ, and only on purpose. */
+  --shell-pad: 24px;
   --shell-max: 1600px;
+  --shell-wide: 1400px;
+  --shell-form: 980px;
+  --shell-narrow: 560px;
 }
 
 /* Bootstrap 5.3 reads its palette from these at runtime, so its components
@@ -140,7 +146,7 @@ code {
 .page-shell {
   max-width: var(--shell-max);
   margin: 0 auto;
-  padding: 18px 24px 40px;
+  padding: 18px var(--shell-pad) 40px;
 }
 
 .form-shell {

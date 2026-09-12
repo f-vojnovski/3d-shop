@@ -6,6 +6,8 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { API_URL } from '../../../consts';
 import useFitToView from './useFitToView';
 import CameraProbe from './CameraProbe';
+import CameraSync from './cameraLink';
+import SceneLighting from './SceneLighting';
 
 const StlModel = ({ fileUrl }) => {
   const geometry = useLoader(STLLoader, fileUrl);
@@ -27,11 +29,9 @@ const StlModel = ({ fileUrl }) => {
   );
 };
 
-const StlModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
+const StlModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
   <Canvas>
-    <ambientLight intensity={0.3} />
-    <directionalLight color="white" position={[4, 5, 3]} intensity={1.1} />
-    <directionalLight color="white" position={[-4, -2, -4]} intensity={0.35} />
+    <SceneLighting format="stl" />
 
     <Suspense fallback={null}>
       <StlModel fileUrl={isLocalFile ? fileUrl : `${API_URL}${fileUrl}`} />
@@ -39,6 +39,7 @@ const StlModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
 
     <OrbitControls makeDefault />
     {probeRef && <CameraProbe probeRef={probeRef} />}
+    {sync && <CameraSync {...sync} />}
   </Canvas>
 );
 

@@ -1,7 +1,7 @@
 .page {
-  max-width: 1400px;
+  max-width: var(--shell-wide);
   margin: 0 auto;
-  padding: 18px 20px 40px;
+  padding: 18px var(--shell-pad) 40px;
 }
 
 .layout {

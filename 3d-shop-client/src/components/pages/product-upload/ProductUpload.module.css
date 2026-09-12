@@ -1,7 +1,7 @@
 .page {
-  max-width: 980px;
+  max-width: var(--shell-form);
   margin: 0 auto;
-  padding: 22px 20px 60px;
+  padding: 22px var(--shell-pad) 60px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -130,6 +130,12 @@
 }
 
 .stage {
+  --panel-edge: 10px;
+  --panel-w: 250px;
+  --panel-h: 320px;
+  --panel-pad: 8px;
+  --pic-w: calc(var(--panel-w) - var(--panel-pad) * 2);
+  --pic-h: calc(var(--pic-w) * 3 / 4);
   position: relative;
   aspect-ratio: 4 / 3;
   background: var(--clr-surface);
@@ -140,6 +146,7 @@
 
 .shutter {
   position: absolute;
+  z-index: 3;
   bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
@@ -363,4 +370,178 @@
 .picture figcaption button:hover {
   color: var(--clr-accent);
   border-color: transparent;
+}
+
+.proxySlider {
+  width: 100%;
+  accent-color: var(--clr-accent);
+}
+
+
+.inset {
+  position: absolute;
+  z-index: 1;
+  right: var(--panel-edge);
+  bottom: var(--panel-edge);
+  width: var(--panel-w);
+  /* Fixed, and scrolls if a mode needs more room: the box must never
+     resize under the pointer, and padding it out looked worse. */
+  height: var(--panel-h);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--panel-pad);
+  background: rgb(14 17 19 / 92%);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+}
+
+.insetHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--clr-text-dim);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.insetHead button {
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--clr-text-dim);
+  cursor: pointer;
+}
+
+.insetHead button:hover {
+  color: var(--clr-text);
+}
+
+.insetNote {
+  margin: 0;
+  color: var(--clr-text-dim);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.insetShow {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  background: rgb(14 17 19 / 92%);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.insetShow:hover {
+  color: var(--clr-text);
+}
+
+.obscure,
+.obscureOn {
+  padding: 5px 10px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.obscureOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
+.required {
+  color: var(--clr-danger);
+  font-weight: 400;
+}
+
+.slotBig {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  animation: settle 0.12s ease-out;
+}
+
+.slotSmall {
+  position: absolute;
+  z-index: 2;
+  right: calc(var(--panel-edge) + var(--panel-pad));
+  bottom: calc(var(--panel-edge) + var(--panel-h) - var(--panel-pad) - var(--pic-h));
+  width: var(--pic-w);
+  height: var(--pic-h);
+  background: var(--clr-surface-raised);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: settle 0.12s ease-out;
+}
+
+.insetTools {
+  display: flex;
+  gap: 4px;
+}
+
+.insetModes {
+  display: flex;
+  gap: 4px;
+}
+
+.mode,
+.modeOn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 5px 0;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 1rem;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.modeOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-accent);
+}
+
+.mode:hover {
+  color: var(--clr-text);
+}
+
+
+.insetPicture {
+  flex: none;
+  height: var(--pic-h);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Hidden, never unmounted: dropping the canvas would rebuild its context. */
+.slotHidden {
+  visibility: hidden;
+  pointer-events: none;
 }

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { MdPhotoCamera } from 'react-icons/md';
 import { postForBinary } from '../../../service/api/axiosClient';
 import { clearUploadState, uploadProduct } from '../../../service/features/productUploadSlice';
 import {
@@ -19,6 +20,7 @@ import {
   setDetails,
   setErrors,
   setPreviewMode,
+  setProxy,
   addThumbnail,
   removeThumbnail,
   alsoAsThumbnail,
@@ -33,8 +35,10 @@ import { firstErrors, price as validatePrice, required } from '../../../service/
 import { notify } from '../../../service/features/toastSlice';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import CameraRoll from './CameraRoll';
-import CaptureStage from './CaptureStage';
+import ModelView from './ModelView';
 import DropZone from './DropZone';
+import ProxyPanel from './ProxyPanel';
+import ProxyPreview from '../../common/model-displayer/ProxyPreview';
 import {
   FORMATS,
   MAX_IMAGE_BYTES,
@@ -68,6 +72,7 @@ const ProductUploadPage = () => {
     shots,
     converting,
     thumbnails,
+    proxy,
   } = useSelector((state) => state.uploadDraft);
   const token = useSelector((state) => state.auth.token);
   const attached = useSelector(selectAttachedFormats);
@@ -80,12 +85,66 @@ const ProductUploadPage = () => {
 
   // A handle into the live canvas, not state.
   const probe = useRef(null);
+  // The view both canvases share, and which of them owns it: the canvas the
+  // pointer is over publishes, the other follows.
+  const sharedCamera = useRef(null);
+  const activeView = useRef('model');
+  const [proxyShown, setProxyShown] = useState(true);
   const framingUri = active
     ? (needsConverting(active) ? models[active]?.previewUri : models[active]?.uri)
     : null;
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const [swapped, setSwapped] = useState(false);
+  const [counts, setCounts] = useState(null);
+  const [appliedRatio, setAppliedRatio] = useState(0.1);
+
+  // The slider moves continuously; simplifying on every tick would run the
+  // simplifier dozens of times per drag.
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedRatio(proxy.ratio), 250);
+
+    return () => clearTimeout(timer);
+  }, [proxy.ratio]);
+
+  const onCounts = useCallback((next) => setCounts(next), []);
+
+  // One question with three answers, stored as the two fields the API already
+  // understands: whether stills stand in for the model, and what the aiming
+  // widget gets.
+  const buyersSee =
+    previewMode === INTERACTIVE ? 'model' : proxy.mode === 'box' ? 'box' : 'decimated';
+
+  const chooseMode = (key) => {
+    dispatch(setPreviewMode(key === 'model' ? INTERACTIVE : ATTESTED));
+
+    if (key !== 'model') {
+      dispatch(setProxy({ mode: key === 'box' ? 'box' : 'model' }));
+    }
+  };
+
+  const modelView = framingUri && (
+    <ModelView
+      format={active}
+      uri={framingUri}
+      probe={probe}
+      sync={{ stateRef: sharedCamera, id: 'model', activeRef: activeView }}
+    />
+  );
+
+  const proxyView = framingUri && (
+    <ProxyPreview
+      format={models[active].previewUri ? 'gltf' : active}
+      uri={framingUri}
+      keep={buyersSee === 'decimated' ? appliedRatio : 1}
+      obscured={buyersSee === 'box'}
+      sync={{ stateRef: sharedCamera, id: 'proxy', activeRef: activeView }}
+      onCounts={onCounts}
+    />
+  );
+
 
   useEffect(() => {
     if (status === 'succeeded' && uploaded) {
@@ -224,7 +283,9 @@ const ProductUploadPage = () => {
     );
   };
 
-  const submit = () => {
+  // One reckoning of what is missing, so the button and the check behind it
+  // can never disagree about whether the listing is ready.
+  const problems = useMemo(() => {
     // A render can stand in for a thumbnail the seller never framed.
     const rendersWillSupplyOne =
       previewMode === ATTESTED && attached.some((format) => (shots[format] ?? []).length > 0);
@@ -233,7 +294,8 @@ const ProductUploadPage = () => {
       ? attached.filter((format) => (shots[format] ?? []).length === 0)
       : [];
 
-    const found = firstErrors({
+    return firstErrors({
+      model: attached.length > 0 ? null : 'Attach a model to sell.',
       name: required(details.name, 'A name'),
       price: validatePrice(details.price),
       thumbnail: thumbnails.length > 0 || rendersWillSupplyOne
@@ -243,10 +305,14 @@ const ProductUploadPage = () => {
         ? null
         : `Frame a view of ${missing.map(labelFor).join(' and ')}.`,
     });
+  }, [attached, details, previewMode, shots, thumbnails]);
 
-    dispatch(setErrors(found));
+  const ready = Object.keys(problems).length === 0;
 
-    if (Object.keys(found).length > 0) {
+  const submit = () => {
+    dispatch(setErrors(problems));
+
+    if (!ready) {
       return;
     }
 
@@ -267,6 +333,8 @@ const ProductUploadPage = () => {
     form.append('description', details.description);
     form.append('price', details.price);
     form.append('preview_mode', previewMode);
+    form.append('proxy_mode', proxy.mode);
+    form.append('proxy_ratio', String(proxy.ratio));
 
     if (previewMode === ATTESTED) {
       // Only the camera numbers travel; the roll images stay in the browser.
@@ -322,7 +390,51 @@ const ProductUploadPage = () => {
 
       {framingUri ? (
         <>
-          <CaptureStage format={active} uri={framingUri} probe={probe} onCapture={capture} />
+          <div className={styles.stage}>
+            {/* Stable positions: a swap changes only their class, so neither
+                canvas changes parent and neither WebGL context is rebuilt. */}
+            <div
+              className={swapped ? styles.slotSmall : styles.slotBig}
+              onPointerEnter={() => { activeView.current = 'model'; }}
+            >
+              {modelView}
+            </div>
+
+            <div
+              className={[
+                swapped ? styles.slotBig : styles.slotSmall,
+                proxyShown ? null : styles.slotHidden,
+              ].filter(Boolean).join(' ')}
+              onPointerEnter={() => { activeView.current = 'proxy'; }}
+            >
+              {proxyView}
+            </div>
+
+            <button
+              type="button"
+              className={styles.shutter}
+              title="Capture this view"
+              aria-label="Capture this view"
+              onClick={capture}
+            >
+              <MdPhotoCamera />
+            </button>
+
+            <ProxyPanel
+              mode={buyersSee}
+              ratio={proxy.ratio}
+              counts={counts}
+              shown={proxyShown}
+              swapped={swapped}
+              onMode={chooseMode}
+              onRatio={(ratio) => dispatch(setProxy({ ratio }))}
+              onSwap={() => setSwapped(!swapped)}
+              onShown={(next) => {
+                setProxyShown(next);
+                setSwapped(false);
+              }}
+            />
+          </div>
 
           {models[active].previewUri && (
             <p className={styles.converted}>
@@ -359,7 +471,9 @@ const ProductUploadPage = () => {
 
       <div className={styles.details}>
         <label className={styles.field}>
-          <span>Name</span>
+          <span>
+            Name <b className={styles.required}>*</b>
+          </span>
           <input
             className="form-control"
             value={details.name}
@@ -380,7 +494,9 @@ const ProductUploadPage = () => {
 
         <div className={styles.row}>
           <label className={styles.fieldNarrow}>
-            <span>Price</span>
+            <span>
+              Price <b className={styles.required}>*</b>
+            </span>
             <div className="input-group">
               <span className="input-group-text">$</span>
               <input
@@ -390,18 +506,6 @@ const ProductUploadPage = () => {
               />
             </div>
             {errors.price && <div className="field-error">{errors.price}</div>}
-          </label>
-
-          <label className={styles.fieldNarrow}>
-            <span>Buyers see</span>
-            <select
-              className="form-select"
-              value={previewMode}
-              onChange={(event) => dispatch(setPreviewMode(event.target.value))}
-            >
-              <option value={ATTESTED}>Images we render</option>
-              <option value={INTERACTIVE}>The model itself</option>
-            </select>
           </label>
 
           <div className={styles.thumbnailSlot}>
@@ -465,6 +569,7 @@ const ProductUploadPage = () => {
         <SubmitButton
           className="btn btn-primary w-100"
           pending={status === 'loading'}
+          disabled={!ready}
           onClick={submit}
         >
           Publish product

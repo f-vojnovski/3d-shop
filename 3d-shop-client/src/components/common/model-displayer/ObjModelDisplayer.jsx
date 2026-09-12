@@ -5,6 +5,8 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { API_URL } from '../../../consts';
 import useFitToView from './useFitToView';
 import CameraProbe from './CameraProbe';
+import CameraSync from './cameraLink';
+import SceneLighting from './SceneLighting';
 
 const ObjModel = ({ fileUrl }) => {
   const obj = useLoader(OBJLoader, fileUrl);
@@ -19,12 +21,9 @@ const ObjModel = ({ fileUrl }) => {
   );
 };
 
-const ObjModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
+const ObjModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
   <Canvas>
-    {/* Neutral, but not flat: untextured geometry needs a strong angled key to read as 3D. */}
-    <ambientLight intensity={0.3} />
-    <directionalLight color="white" position={[4, 5, 3]} intensity={1.1} />
-    <directionalLight color="white" position={[-4, -2, -4]} intensity={0.35} />
+    <SceneLighting format="obj" />
 
     {/* Loading suspends: without a boundary here it reaches the app shell. */}
     <Suspense fallback={null}>
@@ -33,6 +32,7 @@ const ObjModelDisplayer = ({ fileUrl, isLocalFile, probeRef }) => (
 
     <OrbitControls makeDefault />
     {probeRef && <CameraProbe probeRef={probeRef} />}
+    {sync && <CameraSync {...sync} />}
   </Canvas>
 );
 
