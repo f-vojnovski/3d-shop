@@ -175,4 +175,59 @@ describe('ModelFacts', () => {
     expect(row('UVs')).toContain('No');
     expect(row('Normals')).toContain('No');
   });
+
+  describe('the rig', () => {
+    const rigged = (rig) => facts({ rigged: true, animated: true, rig });
+
+    it('says how many bones there are and how many do anything', () => {
+      render(<ModelFacts facts={rigged({ bones: 249, bones_used: 35, clips: [] })} format="gltf" />);
+
+      expect(screen.getByText('249 bones, 35 do the work')).toBeInTheDocument();
+    });
+
+    /** Saying "249 bones, 249 do the work" reads as a complaint about nothing. */
+    it('does not labour the point when every bone works', () => {
+      render(<ModelFacts facts={rigged({ bones: 19, bones_used: 19, clips: [] })} format="gltf" />);
+
+      expect(screen.getByText('19 bones')).toBeInTheDocument();
+    });
+
+    it('names the skeleton family when it recognises one', () => {
+      render(<ModelFacts facts={rigged({ bones: 60, naming: 'Mixamo', clips: [] })} format="gltf" />);
+
+      expect(screen.getByText('Mixamo')).toBeInTheDocument();
+    });
+
+    it('says nothing about naming when it recognised nothing', () => {
+      render(<ModelFacts facts={rigged({ bones: 60, clips: [] })} format="gltf" />);
+
+      expect(screen.queryByText('Bone names')).not.toBeInTheDocument();
+    });
+
+    it('counts the animations', () => {
+      render(<ModelFacts facts={rigged({ bones: 6, clips: [{ name: 'Walk' }, { name: 'Run' }] })} format="gltf" />);
+
+      expect(screen.getByText('2 clips')).toBeInTheDocument();
+    });
+
+    /** Only a fault earns a line; a clean rig should not be given a scoreboard. */
+    it('mentions loose points only when there are some', () => {
+      const { rerender } = render(
+        <ModelFacts facts={rigged({ bones: 6, unweighted_vertices: 0, clips: [] })} format="gltf" />
+      );
+
+      expect(screen.queryByText('Loose points')).not.toBeInTheDocument();
+
+      rerender(<ModelFacts facts={rigged({ bones: 6, unweighted_vertices: 1204, clips: [] })} format="gltf" />);
+
+      expect(screen.getByText('1,204 attached to no bone')).toBeInTheDocument();
+    });
+
+    /** Older uploads were measured before any of this was read out of the file. */
+    it('falls back to the old yes-or-no when a file has no rig detail', () => {
+      render(<ModelFacts facts={facts({ rigged: true, animated: true })} format="gltf" />);
+
+      expect(screen.getAllByText('Yes').length).toBeGreaterThan(0);
+    });
+  });
 });

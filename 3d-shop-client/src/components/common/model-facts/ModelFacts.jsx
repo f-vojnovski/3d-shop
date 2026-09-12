@@ -13,6 +13,41 @@ const size = (bounds, format) =>
   bounds.size.map((value) => value.toFixed(2)).join(' × ')
   + (format === 'gltf' ? ' m' : ' units');
 
+/**
+ * What a rigged model is really made of. "249 bones" sounds like a lot of work
+ * until you learn that 35 of them touch the mesh and the rest are the controls
+ * the artist left in, so both numbers go on the same line or neither does.
+ */
+const rigRows = (facts) => {
+  const rig = facts.rig;
+
+  if (!rig) {
+    return [
+      facts.rigged ? ['Rigged', 'Yes'] : null,
+      facts.animated ? ['Animated', 'Yes'] : null,
+    ];
+  }
+
+  const clips = rig.clips?.length ?? 0;
+
+  return [
+    rig.bones
+      ? ['Rigged', rig.bones_used != null && rig.bones_used !== rig.bones
+        ? `${count(rig.bones)} bones, ${count(rig.bones_used)} do the work`
+        : `${count(rig.bones)} bones`]
+      : null,
+    rig.naming ? ['Bone names', rig.naming] : null,
+    rig.max_influences ? ['Bones per point', `up to ${rig.max_influences}`] : null,
+    rig.morph_targets ? ['Face shapes', count(rig.morph_targets)] : null,
+    clips > 0 ? ['Animated', clips === 1 ? '1 clip' : `${clips} clips`] : null,
+    // Only worth a line when it is a fault: these are the points that stay put
+    // while the rest of the model moves.
+    rig.unweighted_vertices
+      ? ['Loose points', `${count(rig.unweighted_vertices)} attached to no bone`]
+      : null,
+  ];
+};
+
 const largestTexture = (textures) =>
   textures.reduce((widest, one) => Math.max(widest, one.width, one.height), 0);
 
@@ -38,8 +73,7 @@ const ModelFacts = ({ facts, format, agreement, missing, unusedImages, label }) 
     facts.textures.length > 0
       ? ['Textures', `${facts.textures.length}, up to ${largestTexture(facts.textures)}px`]
       : null,
-    facts.rigged ? ['Rigged', 'Yes'] : null,
-    facts.animated ? ['Animated', 'Yes'] : null,
+    ...rigRows(facts),
   ].filter(Boolean);
 
   return (

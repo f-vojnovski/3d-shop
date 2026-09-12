@@ -52,15 +52,7 @@ class AnimateRunner
         }
 
         file_put_contents($jobFile, json_encode(
-            array_filter([
-                'clip' => $clip,
-                'frames' => $frames,
-                'output' => ['width' => $size, 'height' => $size],
-                'passes' => array_values(array_intersect($passes, self::PASSES)),
-                'camera' => $camera,
-                'format' => $format,
-                'entry' => $entry,
-            ], fn ($value) => $value !== null),
+            self::jobFor($clip, $frames, $size, $camera, $passes, $format, $entry),
             JSON_PRETTY_PRINT
         ));
 
@@ -91,6 +83,35 @@ class AnimateRunner
             'reason' => 'The clip result could not be read.',
             'retryable' => true,
         ];
+    }
+
+    /**
+     * What the container is asked for. Separate from run() so the suite can
+     * check it without starting a container: a pass the page cannot paint must
+     * be dropped here, and that is worth a test of its own.
+     *
+     * @param  array{position: list<float>, target?: list<float>, up?: list<float>, fov?: float}  $camera
+     * @param  list<string>  $passes
+     * @return array<string, mixed>
+     */
+    public static function jobFor(
+        int $clip,
+        int $frames,
+        int $size,
+        array $camera,
+        array $passes,
+        string $format,
+        ?string $entry = null
+    ): array {
+        return array_filter([
+            'clip' => $clip,
+            'frames' => $frames,
+            'output' => ['width' => $size, 'height' => $size],
+            'passes' => array_values(array_intersect($passes, self::PASSES)),
+            'camera' => $camera,
+            'format' => $format,
+            'entry' => $entry,
+        ], fn ($value) => $value !== null);
     }
 
     /**

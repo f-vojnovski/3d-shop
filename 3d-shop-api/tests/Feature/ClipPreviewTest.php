@@ -88,12 +88,7 @@ class ClipPreviewTest extends TestCase
 
     public function test_a_pass_the_page_cannot_paint_never_reaches_the_container(): void
     {
-        $runner = new AnimateRunner();
-        $scratch = $this->scratch();
-
-        $runner->run(0, 24, 512, ['position' => [0, 1, 6]], ['shaded', 'x-ray'], 'glb', $scratch.'/model', $scratch);
-
-        $job = json_decode((string) file_get_contents($scratch.'/job.json'), true);
+        $job = AnimateRunner::jobFor(0, 24, 512, ['position' => [0, 1, 6]], ['shaded', 'x-ray'], 'glb');
 
         $this->assertSame(['shaded'], $job['passes']);
     }
@@ -246,15 +241,6 @@ class ClipPreviewTest extends TestCase
 
         (new RenderClipPreview($source->id, clip: $clip, passes: $passes))
             ->handle($runner, app(ModelConverter::class));
-    }
-
-    private function scratch(): string
-    {
-        $path = storage_path('app/private/clip-test-'.uniqid());
-        @mkdir($path, 0775, true);
-        file_put_contents($path.'/model', 'x');
-
-        return $path;
     }
 
     private function deliverable(): ProductFile

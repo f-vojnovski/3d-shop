@@ -41,6 +41,8 @@ class MeshFacts
         public readonly ?array $bounds,
         public readonly bool $rigged,
         public readonly bool $animated,
+        /** @var array<string, mixed>|null  what the rig is made of, when there is one */
+        public readonly ?array $rig = null,
     ) {}
 
     /**
@@ -59,6 +61,7 @@ class MeshFacts
             bounds: $this->bounds,
             rigged: $this->rigged,
             animated: $this->animated,
+            rig: $this->rig,
         );
     }
 
@@ -90,6 +93,7 @@ class MeshFacts
             'bounds' => $this->bounds,
             'rigged' => $this->rigged,
             'animated' => $this->animated,
+            'rig' => $this->rig,
         ];
     }
 
@@ -418,6 +422,8 @@ class MeshFacts
         }
 
         $textures = self::textureSizes($handle, $gltf, $binOffset, $binLength, $path, $root);
+        $bounds = self::boundsOf($min, $max);
+        $rig = RigFacts::of($gltf, $handle, $binOffset, $bounds === null ? null : max($bounds['size']));
 
         fclose($handle);
 
@@ -430,9 +436,10 @@ class MeshFacts
             uvs: $uvs,
             materials: count($gltf['materials'] ?? []),
             textures: $textures,
-            bounds: self::boundsOf($min, $max),
+            bounds: $bounds,
             rigged: ($gltf['skins'] ?? []) !== [],
             animated: ($gltf['animations'] ?? []) !== [],
+            rig: $rig,
         );
     }
 
