@@ -6,7 +6,11 @@ import reducer, {
   removeShot,
   resetDraft,
   retakeShot,
-  setThumbnail,
+  addThumbnail,
+  removeThumbnail,
+  alsoAsThumbnail,
+  alsoAsPreviewImage,
+  addSellerImage,
   convertingStarted,
   convertedPreview,
   conversionFailed,
@@ -64,7 +68,8 @@ describe('upload draft', () => {
       models: {},
       shots: {},
       active: null,
-      thumbnail: null,
+      thumbnails: [],
+      sellerImages: [],
     });
   });
 
@@ -106,33 +111,58 @@ describe('upload draft', () => {
     expect(state.shots.obj.map((one) => one.id)).toEqual([before[1], before[0], before[2]]);
   });
 
-  it('follows the thumbnail when its shot moves', () => {
-    let state = withShots(3);
-    state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 0 }));
-
-    state = reducer(state, moveShot({ format: 'obj', index: 0, by: 1 }));
-
-    expect(state.thumbnail.index).toBe(1);
-  });
-
-  it('keeps the thumbnail on its own picture when an earlier shot is removed', () => {
-    let state = withShots(3);
-    state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 2 }));
-    const chosen = state.shots.obj[2].id;
+  /**
+   * A thumbnail is a copy, so the seller can frame a view purely to get the
+   * picture and then clear the view away.
+   */
+  it('keeps a thumbnail taken from a shot after that shot is gone', () => {
+    let state = withShots(2);
+    state = reducer(state, addThumbnail({ file: file('t.jpg'), uri: 'taken' }));
 
     state = reducer(state, removeShot({ format: 'obj', index: 0 }));
-
-    expect(state.shots.obj[state.thumbnail.index].id).toBe(chosen);
-  });
-
-  it('drops the thumbnail when the shot behind it is removed', () => {
-    let state = withShots(2);
-    state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 1 }));
-
-    state = reducer(state, removeShot({ format: 'obj', index: 1 }));
+    state = reducer(state, moveShot({ format: 'obj', index: 0, by: 1 }));
 
     expect(state.shots.obj).toHaveLength(1);
-    expect(state.thumbnail).toBeNull();
+    expect(state.thumbnails.map((one) => one.uri)).toEqual(['taken']);
+  });
+
+  it('holds as many thumbnails as the seller adds', () => {
+    let state = reducer(undefined, addThumbnail({ file: file('a.jpg'), uri: 'a' }));
+    state = reducer(state, addThumbnail({ file: file('b.jpg'), uri: 'b' }));
+
+    expect(state.thumbnails.map((one) => one.uri)).toEqual(['a', 'b']);
+
+    state = reducer(state, removeThumbnail(0));
+
+    expect(state.thumbnails.map((one) => one.uri)).toEqual(['b']);
+  });
+
+  /** The same picture can sell the card and sit in the gallery below it. */
+  it('lets a picture be a thumbnail and a preview image at once', () => {
+    let state = reducer(undefined, addSellerImage({ file: file('a.jpg'), uri: 'a' }));
+
+    state = reducer(state, alsoAsThumbnail(0));
+
+    expect(state.sellerImages.map((one) => one.uri)).toEqual(['a']);
+    expect(state.thumbnails.map((one) => one.uri)).toEqual(['a']);
+  });
+
+  it('sends a thumbnail down to the preview images without losing it', () => {
+    let state = reducer(undefined, addThumbnail({ file: file('b.jpg'), uri: 'b' }));
+
+    state = reducer(state, alsoAsPreviewImage(0));
+
+    expect(state.thumbnails.map((one) => one.uri)).toEqual(['b']);
+    expect(state.sellerImages.map((one) => one.uri)).toEqual(['b']);
+  });
+
+  it('does not add the same picture to a list twice', () => {
+    let state = reducer(undefined, addSellerImage({ file: file('a.jpg'), uri: 'a' }));
+
+    state = reducer(state, alsoAsThumbnail(0));
+    state = reducer(state, alsoAsThumbnail(0));
+
+    expect(state.thumbnails).toHaveLength(1);
   });
 
   it('replaces a shot in place when it is retaken', () => {
@@ -165,8 +195,8 @@ describe('upload draft', () => {
 
   it('forgets everything after a successful publish', () => {
     let state = withShots(2);
-    state = reducer(state, setThumbnail({ file: file('t.jpg'), uri: 't', from: 'obj', index: 0 }));
+    state = reducer(state, addThumbnail({ file: file('t.jpg'), uri: 't' }));
 
-    expect(reducer(state, resetDraft())).toMatchObject({ models: {}, shots: {}, thumbnail: null });
+    expect(reducer(state, resetDraft())).toMatchObject({ models: {}, shots: {}, thumbnails: [] });
   });
 });

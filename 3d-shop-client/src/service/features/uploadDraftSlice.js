@@ -4,7 +4,7 @@ const initialState = {
   models: {},
   shots: {},
   active: null,
-  thumbnail: null,
+  thumbnails: [],
   sellerImages: [],
   previewMode: 'attested_stills',
   converting: {},
@@ -37,10 +37,6 @@ export const uploadDraftSlice = createSlice({
       delete state.shots[format];
       delete state.converting[format];
 
-      if (state.thumbnail?.from === format) {
-        state.thumbnail = null;
-      }
-
       if (state.active === format) {
         state.active = Object.keys(state.models)[0] ?? null;
       }
@@ -66,30 +62,14 @@ export const uploadDraftSlice = createSlice({
       state.shots[format] = shotsOf(state, format).map((shot, at) =>
         at === index ? { ...shot, camera, snapshot } : shot
       );
-
-      if (state.thumbnail?.from === format && state.thumbnail.index === index) {
-        state.thumbnail = null;
-      }
     },
 
     removeShot: (state, action) => {
       const { format, index } = action.payload;
 
       state.shots[format] = shotsOf(state, format).filter((_, at) => at !== index);
-
-      if (state.thumbnail?.from !== format) {
-        return;
-      }
-
-      if (state.thumbnail.index === index) {
-        state.thumbnail = null;
-      } else if (state.thumbnail.index > index) {
-        state.thumbnail = { ...state.thumbnail, index: state.thumbnail.index - 1 };
-      }
     },
 
-    // The thumbnail is a position in the roll, not an id, so it travels with
-    // its shot rather than pointing at whatever lands in that slot.
     moveShot: (state, action) => {
       const { format, index, by } = action.payload;
       const shots = [...shotsOf(state, format)];
@@ -101,18 +81,16 @@ export const uploadDraftSlice = createSlice({
 
       [shots[index], shots[to]] = [shots[to], shots[index]];
       state.shots[format] = shots;
-
-      if (state.thumbnail?.from === format) {
-        if (state.thumbnail.index === index) {
-          state.thumbnail = { ...state.thumbnail, index: to };
-        } else if (state.thumbnail.index === to) {
-          state.thumbnail = { ...state.thumbnail, index };
-        }
-      }
     },
 
-    setThumbnail: (state, action) => {
-      state.thumbnail = action.payload;
+    // A thumbnail taken from a shot is a copy of it, so the shot can be
+    // retaken, reordered or dropped afterwards without disturbing the picture.
+    addThumbnail: (state, action) => {
+      state.thumbnails = [...state.thumbnails, action.payload];
+    },
+
+    removeThumbnail: (state, action) => {
+      state.thumbnails = state.thumbnails.filter((_, at) => at !== action.payload);
     },
 
     addSellerImage: (state, action) => {
@@ -121,6 +99,24 @@ export const uploadDraftSlice = createSlice({
 
     removeSellerImage: (state, action) => {
       state.sellerImages = state.sellerImages.filter((_, at) => at !== action.payload);
+    },
+
+    // The two lists are not exclusive: the same picture can sell the listing
+    // on a card and sit in the gallery underneath it.
+    alsoAsThumbnail: (state, action) => {
+      const image = state.sellerImages[action.payload];
+
+      if (image && ! state.thumbnails.some((one) => one.uri === image.uri)) {
+        state.thumbnails = [...state.thumbnails, image];
+      }
+    },
+
+    alsoAsPreviewImage: (state, action) => {
+      const thumbnail = state.thumbnails[action.payload];
+
+      if (thumbnail && ! state.sellerImages.some((one) => one.uri === thumbnail.uri)) {
+        state.sellerImages = [...state.sellerImages, thumbnail];
+      }
     },
 
     convertingStarted: (state, action) => {
@@ -167,7 +163,10 @@ export const {
   removeShot,
   removeSellerImage,
   moveShot,
-  setThumbnail,
+  addThumbnail,
+  removeThumbnail,
+  alsoAsThumbnail,
+  alsoAsPreviewImage,
   convertingStarted,
   convertedPreview,
   conversionFailed,

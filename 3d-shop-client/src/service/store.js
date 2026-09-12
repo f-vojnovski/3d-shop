@@ -78,7 +78,7 @@ const store = configureStore({
         // The upload draft holds the chosen File objects until submit.
         ignoredPaths: [
           'uploadDraft.models',
-          'uploadDraft.thumbnail',
+          'uploadDraft.thumbnails',
           'uploadDraft.sellerImages',
         ],
         ignoredActionPaths: ['payload.file'],

@@ -19,7 +19,10 @@ import {
   setDetails,
   setErrors,
   setPreviewMode,
-  setThumbnail,
+  addThumbnail,
+  removeThumbnail,
+  alsoAsThumbnail,
+  alsoAsPreviewImage,
   convertingStarted,
   convertedPreview,
   conversionFailed,
@@ -64,7 +67,7 @@ const ProductUploadPage = () => {
     sellerImages,
     shots,
     converting,
-    thumbnail,
+    thumbnails,
   } = useSelector((state) => state.uploadDraft);
   const token = useSelector((state) => state.auth.token);
   const attached = useSelector(selectAttachedFormats);
@@ -123,10 +126,7 @@ const ProductUploadPage = () => {
     }
   }, [dispatch, token]);
 
-  const accept = useCallback(async (files) => {
-    // One drop can carry several images; the `thumbnail` above stays stale until the next render.
-    let haveThumbnail = Boolean(thumbnail);
-
+  const accept = useCallback(async (files, into = 'thumbnails') => {
     for (const file of files) {
       const format = formatOf(file);
 
@@ -157,19 +157,14 @@ const ProductUploadPage = () => {
 
         const uri = await fileToDataUri(file);
 
-        if (haveThumbnail) {
-          dispatch(addSellerImage({ file, uri }));
-        } else {
-          dispatch(setThumbnail({ file, uri, from: 'upload' }));
-          haveThumbnail = true;
-        }
+        dispatch(into === 'images' ? addSellerImage({ file, uri }) : addThumbnail({ file, uri }));
 
         continue;
       }
 
       dispatch(notify('error', `${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`));
     }
-  }, [dispatch, thumbnail, convertForFraming]);
+  }, [dispatch, convertForFraming]);
 
   // A drop that misses the zone would otherwise be handled by the browser,
   // which opens the file and looks like the page silently ignoring it.
@@ -218,15 +213,13 @@ const ProductUploadPage = () => {
     }
   };
 
-  const useAsThumbnail = async (index) => {
+  const addShotAsThumbnail = async (index) => {
     const shot = activeShots[index];
 
     dispatch(
-      setThumbnail({
+      addThumbnail({
         file: await dataUriToFile(shot.snapshot, `${active}-thumbnail.jpg`),
         uri: shot.snapshot,
-        from: active,
-        index,
       })
     );
   };
@@ -243,9 +236,9 @@ const ProductUploadPage = () => {
     const found = firstErrors({
       name: required(details.name, 'A name'),
       price: validatePrice(details.price),
-      thumbnail: thumbnail || rendersWillSupplyOne
+      thumbnail: thumbnails.length > 0 || rendersWillSupplyOne
         ? null
-        : 'Pick a thumbnail: capture one, or drop an image.',
+        : 'Add a thumbnail: capture one, or drop an image.',
       angles: missing.length === 0
         ? null
         : `Frame a view of ${missing.map(labelFor).join(' and ')}.`,
@@ -263,9 +256,9 @@ const ProductUploadPage = () => {
       form.append(format.field, models[format.key].file);
     });
 
-    if (thumbnail) {
-      form.append('thumbnail', thumbnail.file);
-    }
+    thumbnails.forEach((image, index) => {
+      form.append(`thumbnails[${index}]`, image.file);
+    });
 
     sellerImages.forEach((image, index) => {
       form.append(`images[${index}]`, image.file);
@@ -349,11 +342,10 @@ const ProductUploadPage = () => {
       {activeShots.length > 0 && (
         <CameraRoll
           shots={activeShots}
-          thumbnailIndex={thumbnail?.from === active ? thumbnail.index : -1}
           onRemove={(index) => dispatch(removeShot({ format: active, index }))}
           onRetake={retake}
           onMove={(index, by) => dispatch(moveShot({ format: active, index, by }))}
-          onThumbnail={useAsThumbnail}
+          onThumbnail={addShotAsThumbnail}
         />
       )}
 
@@ -413,29 +405,59 @@ const ProductUploadPage = () => {
           </label>
 
           <div className={styles.thumbnailSlot}>
-            <span>Thumbnail</span>
-            {thumbnail ? (
-              <img src={thumbnail.uri} alt="Thumbnail" />
-            ) : (
+            <span>Thumbnails</span>
+            <div className={styles.sellerImages}>
+              {thumbnails.map((image, index) => (
+                <figure key={image.uri} className={styles.picture}>
+                  <img src={image.uri} alt={`Thumbnail ${index + 1}`} />
+                  <figcaption>
+                    <button
+                      type="button"
+                      title="Also show as a preview image"
+                      onClick={() => dispatch(alsoAsPreviewImage(index))}
+                    >
+                      &darr;
+                    </button>
+                    <button
+                      type="button"
+                      title="Remove"
+                      onClick={() => dispatch(removeThumbnail(index))}
+                    >
+                      &times;
+                    </button>
+                  </figcaption>
+                </figure>
+              ))}
               <DropZone onFiles={accept} compact />
-            )}
+            </div>
             {errors.thumbnail && <div className="field-error">{errors.thumbnail}</div>}
           </div>
 
           <div className={styles.thumbnailSlot}>
-            <span>Your own images (optional)</span>
+            <span>Uploaded preview images (optional)</span>
             <div className={styles.sellerImages}>
               {sellerImages.map((image, index) => (
-                <button
-                  key={image.uri}
-                  type="button"
-                  title="Remove this image"
-                  onClick={() => dispatch(removeSellerImage(index))}
-                >
-                  <img src={image.uri} alt={`Your image ${index + 1}`} />
-                </button>
+                <figure key={image.uri} className={styles.picture}>
+                  <img src={image.uri} alt={`Preview image ${index + 1}`} />
+                  <figcaption>
+                    <button
+                      type="button"
+                      title="Also use as a thumbnail"
+                      onClick={() => dispatch(alsoAsThumbnail(index))}
+                    >
+                      &uarr;
+                    </button>
+                    <button
+                      type="button"
+                      title="Remove"
+                      onClick={() => dispatch(removeSellerImage(index))}
+                    >
+                      &times;
+                    </button>
+                  </figcaption>
+                </figure>
               ))}
-              <DropZone onFiles={accept} compact />
+              <DropZone onFiles={(files) => accept(files, 'images')} compact />
             </div>
           </div>
         </div>

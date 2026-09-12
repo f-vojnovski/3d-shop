@@ -36,6 +36,7 @@ class ProductResource extends JsonResource
             'unlisted' => $this->unlisted,
             'created_at' => $this->created_at,
             'thumbnail_url' => $this->thumbnailUrl(),
+            'thumbnails' => $this->thumbnailList(),
             'formats' => $formats,
             'preview_urls' => $this->previewUrls($formats),
             'download_urls' => $this->isDownloadableBy($viewerId)
@@ -202,11 +203,29 @@ class ProductResource extends JsonResource
 
     private function thumbnailUrl(): ?string
     {
-        $thumbnail = $this->thumbnail();
+        return $this->thumbnailList()[0]['url'] ?? null;
+    }
 
-        return $thumbnail
-            ? Storage::disk($thumbnail->disk)->url($thumbnail->path)
-            : null;
+    /**
+     * The cart and the checkout lines take the first of these.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function thumbnailList(): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_THUMBNAIL)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded())
+            ->sortBy('sort')
+            ->map(fn (ProductFile $file) => [
+                'id' => $file->id,
+                'url' => Storage::disk($file->disk)->url($file->path),
+                'sort' => $file->sort,
+                // False until the job has shrunk it to card size.
+                'scaled' => (bool) ($file->meta['scaled'] ?? false),
+            ])
+            ->values()
+            ->all();
     }
 
     // Preview is public, but only while the seller chooses to expose geometry.

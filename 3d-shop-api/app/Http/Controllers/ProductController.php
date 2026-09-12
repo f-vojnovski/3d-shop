@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Jobs\RenderProductPreviews;
+use App\Jobs\ScaleThumbnail;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
@@ -23,6 +24,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends BaseController
 {
+    private const THUMBNAIL_SOURCES = [
+        ProductFile::KIND_PREVIEW_IMAGE,
+        ProductFile::KIND_SELLER_IMAGE,
+    ];
+
     private const DELIVERABLE_DISK = 'models';
 
     // Angles arrive keyed by model format: {"obj": [...], "gltf": [...]}.
@@ -56,7 +62,8 @@ class ProductController extends BaseController
             'price' => 'required|numeric|min:0|max:999999.99',
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
             ...self::modelRules(),
-            'thumbnail' => 'nullable|file|image|mimes:jpeg,png,webp|max:5120',
+            'thumbnails' => 'sometimes|array|max:8',
+            'thumbnails.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
             'images' => 'sometimes|array|max:8',
             'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
             ...self::ANGLE_RULES,
@@ -81,9 +88,9 @@ class ProductController extends BaseController
 
         // Only a render can stand in for a missing thumbnail, so a listing that
         // will not produce one has to arrive with its own.
-        if ($request->file('thumbnail') === null && $angles === []) {
+        if (($request->file('thumbnails') ?? []) === [] && $angles === []) {
             throw ValidationException::withMessages([
-                'thumbnail' => 'Pick a thumbnail, or frame a camera angle and the first render will be used.',
+                'thumbnails' => 'Pick a thumbnail, or frame a camera angle and the first render will be used.',
             ]);
         }
 
@@ -112,8 +119,11 @@ class ProductController extends BaseController
                 );
             }
 
-            if ($request->file('thumbnail') !== null) {
-                $this->storeFile($product, $request->file('thumbnail'), ProductFile::KIND_THUMBNAIL, 'public');
+            foreach (array_values($request->file('thumbnails') ?? []) as $sort => $picture) {
+                $thumbnail = $this->storeFile(
+                    $product, $picture, ProductFile::KIND_THUMBNAIL, 'public', sort: $sort
+                );
+                ScaleThumbnail::dispatch($thumbnail->id)->afterCommit();
             }
 
             foreach (array_values($request->file('images') ?? []) as $sort => $image) {
@@ -483,6 +493,117 @@ class ProductController extends BaseController
         }
     }
 
+    /**
+     * Stored at full size and shrunk by a job, so the upload returns as soon as
+     * the bytes are safe rather than waiting on image work.
+     */
+    public function addThumbnails(Request $request, $id)
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if ((int) $product->user_id !== (int) Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        $request->validate([
+            'images' => 'sometimes|array|max:8',
+            'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
+            'from' => 'sometimes|array|max:8',
+            'from.*' => 'integer',
+        ]);
+
+        $sort = (int) ($product->thumbnails->max('sort') ?? -1) + 1;
+        $added = [];
+
+        foreach ($request->file('images') ?? [] as $image) {
+            $added[] = $this->storeFile(
+                $product, $image, ProductFile::KIND_THUMBNAIL, 'public', sort: $sort++
+            );
+        }
+
+        foreach ((array) $request->input('from', []) as $sourceId) {
+            $source = $product->files->first(
+                fn (ProductFile $file) => (int) $file->id === (int) $sourceId
+                    && in_array($file->kind, self::THUMBNAIL_SOURCES, true)
+                    && ! $file->isSuperseded()
+            );
+
+            if ($source === null) {
+                throw ValidationException::withMessages([
+                    'from' => 'That picture does not belong to this product.',
+                ]);
+            }
+
+            $added[] = $this->copyToThumbnail($product, $source, $sort++);
+        }
+
+        if ($added === []) {
+            throw ValidationException::withMessages([
+                'images' => 'Send a picture to add, or name one the product already has.',
+            ]);
+        }
+
+        foreach ($added as $thumbnail) {
+            ScaleThumbnail::dispatch($thumbnail->id)->afterCommit();
+        }
+
+        return new ProductResource($product->fresh()->load('files'));
+    }
+
+    public function removeThumbnail(Request $request, $id, $fileId)
+    {
+        $product = Product::with('files')->findOrFail($id);
+
+        if ((int) $product->user_id !== (int) Auth::user()->getAuthIdentifier()) {
+            abort(403, 'You are not the owner of this product!');
+        }
+
+        $thumbnail = $product->files->first(
+            fn (ProductFile $file) => (int) $file->id === (int) $fileId
+                && $file->kind === ProductFile::KIND_THUMBNAIL
+                && ! $file->isSuperseded()
+        );
+
+        if ($thumbnail === null) {
+            abort(404);
+        }
+
+        // A listing with no picture is a blank card in the grid.
+        if ($product->thumbnails()->count() <= 1) {
+            throw ValidationException::withMessages([
+                'thumbnails' => 'A listing needs a picture. Add another before removing this one.',
+            ]);
+        }
+
+        Storage::disk($thumbnail->disk)->delete($thumbnail->path);
+        $thumbnail->delete();
+
+        return new ProductResource($product->fresh()->load('files'));
+    }
+
+    /**
+     * Copied, never pointed at. The scaling job rewrites what a thumbnail holds,
+     * and an attested render's bytes have to survive exactly as they were made.
+     */
+    private function copyToThumbnail(Product $product, ProductFile $source, int $sort): ProductFile
+    {
+        $bytes = (string) Storage::disk($source->disk)->get($source->path);
+        $extension = pathinfo($source->path, PATHINFO_EXTENSION) ?: 'png';
+        $path = 'thumbnails/'.uniqid().'.'.$extension;
+
+        Storage::disk('public')->put($path, $bytes);
+
+        return $product->files()->create([
+            'kind' => ProductFile::KIND_THUMBNAIL,
+            'disk' => 'public',
+            'path' => $path,
+            'sort' => $sort,
+            'bytes' => strlen($bytes),
+            'checksum' => hash('sha256', $bytes),
+            'meta' => ['from' => $source->kind],
+        ]);
+    }
+
     private function storeFile(
         Product $product,
         UploadedFile $file,
@@ -514,7 +635,7 @@ class ProductController extends BaseController
         $name = uniqid().($extension === '' ? '' : '.'.$extension);
         $path = Storage::disk($disk)->putFileAs($directory, $file, $name);
 
-        return $product->files()->create([
+        $stored = $product->files()->create([
             'kind' => $kind,
             'format' => $format,
             'disk' => $disk,
@@ -543,6 +664,8 @@ class ProductController extends BaseController
                 ] : null,
             ], fn ($value) => $value !== null),
         ]);
+
+        return $stored;
     }
 
     private function streamDeliverable(Product $product, string $format, bool $inline): StreamedResponse

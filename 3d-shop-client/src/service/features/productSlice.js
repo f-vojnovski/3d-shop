@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, isAnyOf } from '@reduxjs/toolkit';
 import {
   deleteRequestWithToken,
   getRequest,
@@ -11,6 +11,7 @@ const initialState = {
   status: 'idle',
   error: null,
   replacing: false,
+  savingThumbnails: false,
 };
 
 export const productSlice = createSlice({
@@ -50,7 +51,24 @@ export const productSlice = createSlice({
         if (state.product !== null) {
           state.product.unlisted = true;
         }
-      });
+      })
+      .addMatcher(isAnyOf(addThumbnails.pending, removeThumbnail.pending), (state) => {
+        state.savingThumbnails = true;
+      })
+      .addMatcher(
+        isAnyOf(addThumbnails.fulfilled, removeThumbnail.fulfilled),
+        (state, action) => {
+          state.savingThumbnails = false;
+          state.product = action.payload;
+        }
+      )
+      .addMatcher(
+        isAnyOf(addThumbnails.rejected, removeThumbnail.rejected),
+        (state, action) => {
+          state.savingThumbnails = false;
+          state.error = action.error.message;
+        }
+      );
   },
 });
 
@@ -82,6 +100,42 @@ export const withdrawProduct = createAsyncThunk(
   }
 );
 
+/**
+ * Card pictures: files from the seller's machine, the ids of images the
+ * product already has, or both. They come back shrunk once the job has run.
+ */
+export const addThumbnails = createAsyncThunk(
+  '/product/addThumbnails',
+  async ({ productId, files = [], from = [] }, { getState }) => {
+    const token = getState().auth.token;
+    const form = new FormData();
+
+    files.forEach((file) => form.append('images[]', file));
+    from.forEach((id) => form.append('from[]', id));
+
+    const response = await postRequestWithToken(
+      `api/products/${productId}/thumbnails`,
+      form,
+      token
+    );
+
+    return response.data;
+  }
+);
+
+export const removeThumbnail = createAsyncThunk(
+  '/product/removeThumbnail',
+  async ({ productId, fileId }, { getState }) => {
+    const token = getState().auth.token;
+
+    const response = await deleteRequestWithToken(
+      `api/products/${productId}/thumbnails/${fileId}`,
+      token
+    );
+
+    return response.data;
+  }
+);
 export const replaceFile = createAsyncThunk(
   '/product/replaceFile',
   async ({ productId, format, file, note }, { getState }) => {

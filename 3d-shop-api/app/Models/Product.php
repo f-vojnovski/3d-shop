@@ -85,6 +85,14 @@ class Product extends Model
             ->orderBy('sort');
     }
 
+    public function thumbnails(): HasMany
+    {
+        return $this->files()
+            ->where('kind', ProductFile::KIND_THUMBNAIL)
+            ->current()
+            ->orderBy('sort');
+    }
+
     public function thumbnail(): ?ProductFile
     {
         return $this->files->first(

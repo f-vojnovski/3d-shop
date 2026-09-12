@@ -62,6 +62,10 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::post('/products/{id}/replace', [ProductController::class, 'replace'])
         ->where('id', '[0-9]+');
+    Route::post('/products/{id}/thumbnails', [ProductController::class, 'addThumbnails'])
+        ->where('id', '[0-9]+');
+    Route::delete('/products/{id}/thumbnails/{file}', [ProductController::class, 'removeThumbnail'])
+        ->where(['id' => '[0-9]+', 'file' => '[0-9]+']);
     // Starts a container per call, so it is rate limited more tightly than the
     // rest of the upload flow.
     Route::post('/uploads/convert', [ProductController::class, 'convert'])

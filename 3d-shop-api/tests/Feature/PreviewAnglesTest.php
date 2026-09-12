@@ -50,7 +50,7 @@ class PreviewAnglesTest extends TestCase
             'name' => 'Half-track',
             'price' => '24.50',
             'objModel' => UploadedFile::fake()->createWithContent('model.obj', "v 0 0 0\n"),
-            'thumbnail' => UploadedFile::fake()->image('thumb.png'),
+            'thumbnails' => [UploadedFile::fake()->image('thumb.png')],
         ], $extra);
     }
 
@@ -179,7 +179,7 @@ class PreviewAnglesTest extends TestCase
 
         $this->postJson('/api/products', $this->payload())->assertSuccessful();
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(RenderProductPreviews::class);
     }
 
     public function test_attested_stills_cannot_be_published_without_an_angle(): void

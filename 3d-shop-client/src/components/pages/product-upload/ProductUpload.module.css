@@ -335,3 +335,43 @@
   font-size: 0.8rem;
   line-height: 1.5;
 }
+
+.picture {
+  position: relative;
+  margin: 0;
+  line-height: 0;
+}
+
+.picture img {
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+}
+
+.picture figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 0;
+  background: rgb(0 0 0 / 60%);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.picture figcaption button {
+  width: 20px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #fff;
+  font-size: 0.74rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.picture figcaption button:hover {
+  color: var(--clr-accent);
+  border-color: transparent;
+}

@@ -3,13 +3,11 @@ import styles from './ProductUpload.module.css';
 
 const round = (n) => (Math.round(n * 10) / 10).toFixed(1);
 
-const CameraRoll = ({ shots, thumbnailIndex, onRemove, onRetake, onMove, onThumbnail }) => (
+const CameraRoll = ({ shots, onRemove, onRetake, onMove, onThumbnail }) => (
   <div className={styles.roll}>
     {shots.map((shot, index) => (
       <figure key={shot.id} className={styles.shot}>
         <img src={shot.snapshot} alt={`View ${index + 1}`} />
-
-        {index === thumbnailIndex && <span className={styles.thumbnailFlag}>Thumbnail</span>}
 
         <figcaption className={styles.shotAngle}>
           {shot.camera.position.map(round).join(', ')} · {round(shot.camera.fov)}°
@@ -22,7 +20,7 @@ const CameraRoll = ({ shots, thumbnailIndex, onRemove, onRetake, onMove, onThumb
           <button type="button" title="Retake from this view" onClick={() => onRetake(index)}>
             <MdRefresh />
           </button>
-          <button type="button" title="Use as thumbnail" onClick={() => onThumbnail(index)}>
+          <button type="button" title="Add as a thumbnail" onClick={() => onThumbnail(index)}>
             <MdCameraAlt />
           </button>
           <button type="button" title="Remove" onClick={() => onRemove(index)}>

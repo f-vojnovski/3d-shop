@@ -190,7 +190,7 @@ class PerFormatPreviewsTest extends TestCase
             'name' => 'Half-track',
             'price' => '24.50',
             'objModel' => UploadedFile::fake()->createWithContent('model.obj', "v 0 0 0\n"),
-            'thumbnail' => UploadedFile::fake()->image('thumb.png'),
+            'thumbnails' => [UploadedFile::fake()->image('thumb.png')],
         ], $extra);
     }
 

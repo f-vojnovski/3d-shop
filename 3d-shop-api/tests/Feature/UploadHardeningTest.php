@@ -31,7 +31,7 @@ class UploadHardeningTest extends TestCase
      */
     public function test_a_double_extension_image_is_stored_under_a_derived_name(): void
     {
-        $id = $this->publish(['thumbnail' => $this->pngNamed('payload.png.aspx')]);
+        $id = $this->publish(['thumbnails' => [$this->pngNamed('payload.png.aspx')]]);
 
         $path = Product::findOrFail($id)->thumbnail()->path;
 
@@ -56,8 +56,8 @@ class UploadHardeningTest extends TestCase
     public function test_a_php_extension_is_refused_outright(): void
     {
         $this->postJson('/api/products', $this->payload([
-            'thumbnail' => $this->pngNamed('payload.png.php'),
-        ]))->assertStatus(422)->assertJsonValidationErrors('thumbnail');
+            'thumbnails' => [$this->pngNamed('payload.png.php')],
+        ]))->assertStatus(422)->assertJsonValidationErrors('thumbnails.0');
     }
 
     public function test_a_model_is_stored_under_the_format_its_bytes_say(): void
@@ -125,8 +125,8 @@ class UploadHardeningTest extends TestCase
         $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
 
         $this->postJson('/api/products', $this->payload([
-            'thumbnail' => UploadedFile::fake()->createWithContent('thumb.svg', $svg),
-        ]))->assertStatus(422)->assertJsonValidationErrors('thumbnail');
+            'thumbnails' => [UploadedFile::fake()->createWithContent('thumb.svg', $svg)],
+        ]))->assertStatus(422)->assertJsonValidationErrors('thumbnails.0');
     }
 
     /**
@@ -196,7 +196,7 @@ class UploadHardeningTest extends TestCase
             'name' => 'Concept car',
             'price' => '24.50',
             'objModel' => UploadedFile::fake()->createWithContent('model.obj', "v 0 0 0\n"),
-            'thumbnail' => UploadedFile::fake()->image('thumb.png'),
+            'thumbnails' => [UploadedFile::fake()->image('thumb.png')],
         ], $extra), fn ($value) => $value !== null);
     }
 

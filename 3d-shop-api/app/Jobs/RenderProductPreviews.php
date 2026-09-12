@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\PreviewRenderFinished;
+use App\Jobs\ScaleThumbnail;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
@@ -494,18 +495,23 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            // Points at the same stored object rather than copying it: both
-            // rows keep it alive, and files:prune only deletes what nothing
-            // references.
-            $fresh->files()->create([
+            // Copied, never pointed at: the scaling job rewrites what a
+            // thumbnail holds, and the still it came from is attested.
+            $bytes = (string) Storage::disk($still->disk)->get($still->path);
+            $path = 'thumbnails/'.uniqid().'.png';
+            Storage::disk('public')->put($path, $bytes);
+
+            $adopted = $fresh->files()->create([
                 'kind' => ProductFile::KIND_THUMBNAIL,
-                'disk' => $still->disk,
-                'path' => $still->path,
+                'disk' => 'public',
+                'path' => $path,
                 'sort' => 0,
-                'bytes' => $still->bytes,
-                'checksum' => $still->checksum,
+                'bytes' => strlen($bytes),
+                'checksum' => hash('sha256', $bytes),
                 'meta' => ['from' => 'standard_view'],
             ]);
+
+            ScaleThumbnail::dispatch($adopted->id)->afterCommit();
         });
     }
 

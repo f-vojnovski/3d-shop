@@ -41,7 +41,7 @@ class ReplaceFileTest extends TestCase
             'price' => '129.00',
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
             'objModel' => UploadedFile::fake()->createWithContent('car.obj', "v 0 0 0\nf 1 1 1\n"),
-            'thumbnail' => UploadedFile::fake()->image('thumb.png'),
+            'thumbnails' => [UploadedFile::fake()->image('thumb.png')],
             'preview_angles' => json_encode(['obj' => [[
                 'position' => [3, 2, 3], 'target' => [0, 0, 0], 'fov' => 75,
             ]]]),

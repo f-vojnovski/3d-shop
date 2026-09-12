@@ -25,6 +25,7 @@ import ModelFacts from '../../common/model-facts/ModelFacts';
 import RequestView from './RequestView';
 import FileHistory from '../../common/file-history/FileHistory';
 import ReleaseStills from '../../common/release-stills/ReleaseStills';
+import ThumbnailPicker from '../../common/thumbnail-picker/ThumbnailPicker';
 import { orderedReleases } from '../../../service/util/releases';
 import { BsPersonCircle } from 'react-icons/bs';
 
@@ -251,6 +252,13 @@ const SingleProductView = () => {
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Your files</p>
               <div className={styles.downloads}>{downloads}</div>
+            </div>
+          )}
+
+          {!release && product.product_status === 'owner' && (
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>Thumbnails</p>
+              <ThumbnailPicker product={product} />
             </div>
           )}
 
