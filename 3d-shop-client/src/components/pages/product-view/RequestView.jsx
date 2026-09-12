@@ -19,12 +19,23 @@ const PASSES = [
   { key: 'matcap', label: 'Clay' },
 ];
 
-const RequestView = ({ product, format, bounds, proxy, hasUvs = true, onPublished }) => {
+// A wireframe of a walking model is unreadable and a checker says nothing about
+// motion, so a moving view is offered fewer ways to be painted.
+const CLIP_PASSES = [
+  { key: 'shaded', label: 'Moving' },
+  { key: 'influence', label: 'Which bone moves what' },
+  { key: 'bones', label: 'Skeleton' },
+];
+
+const STILL = 'still';
+
+const RequestView = ({ product, format, bounds, proxy, clips = [], hasUvs = true, onPublished }) => {
   const dispatch = useDispatch();
   const views = useSelector(selectCustomViews);
   const requesting = useSelector((state) => state.customViews.requesting);
   const [open, setOpen] = useState(false);
   const [pass, setPass] = useState('shaded');
+  const [clip, setClip] = useState(STILL);
   const [shown, setShown] = useState(null);
   const probe = useRef(null);
 
@@ -53,6 +64,7 @@ const RequestView = ({ product, format, bounds, proxy, hasUvs = true, onPublishe
         productId: product.id,
         format,
         pass,
+        clip: clip === STILL ? null : clip,
         camera: aimed.camera,
       }));
     }
@@ -85,8 +97,30 @@ const RequestView = ({ product, format, bounds, proxy, hasUvs = true, onPublishe
       )}
 
       <div className={styles.controls} hidden={!open}>
+        {clips.length > 0 && (
+          <div className={styles.passes} role="group" aria-label="Still or moving">
+            {[{ key: STILL, label: 'Still' }, ...clips.map((one, index) => ({
+              key: one.index,
+              label: one.name || `Clip ${index + 1}`,
+            }))].map((one) => (
+              <button
+                key={one.key}
+                type="button"
+                aria-pressed={clip === one.key}
+                className={clip === one.key ? styles.passOn : styles.pass}
+                onClick={() => {
+                  setClip(one.key);
+                  setPass('shaded');
+                }}
+              >
+                {one.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className={styles.passes} role="group" aria-label="Which pass">
-          {PASSES.filter((one) => hasUvs || !one.needsUvs).map((one) => (
+          {(clip === STILL ? PASSES.filter((one) => hasUvs || !one.needsUvs) : CLIP_PASSES).map((one) => (
             <button
               key={one.key}
               type="button"

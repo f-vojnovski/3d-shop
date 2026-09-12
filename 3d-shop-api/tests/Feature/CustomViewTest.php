@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RenderCustomClip;
 use App\Jobs\RenderCustomView;
 use App\Jobs\RenderProductPreviews;
 use App\Models\CustomView;
@@ -378,6 +379,87 @@ class CustomViewTest extends TestCase
             ->assertJsonValidationErrors('view');
 
         $this->assertCount(1, $this->source->fresh()->angles());
+    }
+
+    public function test_a_viewer_can_ask_to_see_the_model_moving(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->animated();
+
+        $this->postJson($this->route(), $this->payload('shaded') + ['clip' => 1])
+            ->assertSuccessful()
+            ->assertJsonPath('clip', 1);
+
+        Queue::assertPushed(RenderCustomClip::class);
+        Queue::assertNotPushed(RenderCustomView::class);
+    }
+
+    /** The still path draws attested images; a moving one must not go near it. */
+    public function test_a_still_still_goes_to_the_still_renderer(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson($this->route(), $this->payload('wireframe'))->assertSuccessful();
+
+        Queue::assertPushed(RenderCustomView::class);
+        Queue::assertNotPushed(RenderCustomClip::class);
+    }
+
+    public function test_the_same_camera_on_a_different_clip_is_its_own_view(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->animated();
+
+        $this->postJson($this->route(), $this->payload('shaded') + ['clip' => 0])->assertSuccessful();
+        $this->postJson($this->route(), $this->payload('shaded') + ['clip' => 1])->assertSuccessful();
+
+        $this->assertSame(2, CustomView::where('product_file_id', $this->source->id)->count());
+    }
+
+    public function test_asking_to_see_a_model_move_that_does_not_is_refused(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson($this->route(), $this->payload('shaded') + ['clip' => 0])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('clip');
+
+        Queue::assertNotPushed(RenderCustomClip::class);
+    }
+
+    /** A wireframe of a walking model is unreadable, so it is not offered. */
+    public function test_a_still_only_pass_is_refused_for_a_moving_view(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->animated();
+
+        $this->postJson($this->route(), $this->payload('wireframe') + ['clip' => 0])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('pass');
+    }
+
+    public function test_a_moving_only_pass_is_refused_for_a_still(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $this->postJson($this->route(), $this->payload('bones'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('pass');
+    }
+
+    private function route(): string
+    {
+        return "/api/products/{$this->product->id}/views";
+    }
+
+    private function animated(): void
+    {
+        $this->source->withMeta([
+            'facts' => ($this->source->facts() ?? []) + ['animated' => true, 'rigged' => true],
+        ]);
     }
 
     private function payload(string $pass = 'wireframe', string $format = 'gltf'): array

@@ -28,6 +28,17 @@ class CustomView extends Model
     /** A checker on a model with no UVs is one flat colour, which says nothing. */
     public const NEEDS_UVS = [self::CHECKER];
 
+    public const INFLUENCE = 'influence';
+
+    public const BONES = 'bones';
+
+    /**
+     * What a moving view can be painted as. Narrower than the still passes: a
+     * wireframe of a walking model is unreadable, and a checker says nothing
+     * about motion.
+     */
+    public const CLIP_PASSES = [self::SHADED, self::INFLUENCE, self::BONES];
+
     /** Long enough to look at, short enough not to become a gallery. */
     public const LIFETIME_HOURS = 2;
 
@@ -36,6 +47,7 @@ class CustomView extends Model
         'product_id',
         'product_file_id',
         'pass',
+        'clip',
         'status',
         'camera',
         'fingerprint',
@@ -50,13 +62,14 @@ class CustomView extends Model
     {
         return [
             'camera' => 'array',
+            'clip' => 'integer',
             'bytes' => 'integer',
             'expires_at' => 'datetime',
         ];
     }
 
     /** Asking for the same camera and pass twice returns the first answer. */
-    public static function fingerprintOf(array $camera, string $pass): string
+    public static function fingerprintOf(array $camera, string $pass, ?int $clip = null): string
     {
         return hash('sha256', json_encode([
             'position' => array_map(fn ($value) => round((float) $value, 4), $camera['position']),
@@ -64,7 +77,13 @@ class CustomView extends Model
             'up' => array_map(fn ($value) => round((float) $value, 4), $camera['up'] ?? [0, 1, 0]),
             'fov' => round((float) $camera['fov'], 2),
             'pass' => $pass,
+            'clip' => $clip,
         ]));
+    }
+
+    public function isMoving(): bool
+    {
+        return $this->clip !== null;
     }
 
     public function user(): BelongsTo

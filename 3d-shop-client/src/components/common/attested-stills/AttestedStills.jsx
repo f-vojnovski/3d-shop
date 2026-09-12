@@ -4,20 +4,45 @@ import styles from './AttestedStills.module.css';
 
 const IN_PROGRESS = ['queued', 'rendering'];
 const SELLER = 'seller';
+const CLIPS = 'clips';
+
+// A clip belongs in the gallery beside the stills: it is a picture of the file
+// on sale, drawn the same way, and a buyer looks for it in the same place.
+const PAINTS = [
+  { pass: 'shaded', label: 'Moving' },
+  { pass: 'influence', label: 'Which bone moves what' },
+  { pass: 'bones', label: 'Skeleton' },
+];
+
+const NOTES = {
+  shaded: 'System-rendered from the file on sale. A picture of the motion, not the motion itself.',
+  influence: 'Each part is coloured by the bone that pulls it. Pink means no bone pulls it at all.',
+  bones: 'The skeleton, drawn through the body.',
+};
+
+const nameOf = (clip, at) => clip.name || `Clip ${at + 1}`;
+
+const shadedFirst = (clip) =>
+  clip.passes.find((one) => one.pass === 'shaded') ?? clip.passes[0];
 
 const AttestedStills = ({ product, onFormat }) => {
   const [tab, setTab] = useState(null);
   const [selected, setSelected] = useState(0);
   const [wireframe, setWireframe] = useState(false);
+  const [paint, setPaint] = useState('shaded');
 
   const previews = product.previews ?? [];
   const sellerImages = product.seller_images ?? [];
+  const clips = (product.clips ?? []).filter((one) => one.passes?.length > 0);
   const isOwner = product.product_status === 'owner';
 
   const tabs = [
     ...previews.map((preview) => ({ key: preview.format, label: `.${preview.format}`, preview })),
     ...(sellerImages.length > 0
       ? [{ key: SELLER, label: 'From the seller', preview: null }]
+      : []),
+    ...(clips.length > 0
+      ? [{ key: CLIPS, label: 'Animations', preview: null }]
       : []),
   ];
 
@@ -58,6 +83,63 @@ const AttestedStills = ({ product, onFormat }) => {
       <div className={styles.notice}>
         <LoadingSpinner />
         <span>Our server is rendering previews from this model.</span>
+      </div>
+    );
+  }
+
+  if (shown.key === CLIPS) {
+    const clip = clips[Math.min(selected, clips.length - 1)];
+    const painted = PAINTS.filter(({ pass }) => clip.passes.some((one) => one.pass === pass));
+    const showing = clip.passes.find((one) => one.pass === paint) ?? shadedFirst(clip);
+    const name = nameOf(clip, selected);
+
+    return (
+      <div className={styles.stills}>
+        <div className={styles.stage}>
+          <img src={showing.url} alt={`${product.name}, ${name}, ${showing.pass}`} />
+
+          {painted.length > 1 && (
+            <div className={styles.paints}>
+              {painted.map(({ pass, label }) => (
+                <button
+                  key={pass}
+                  type="button"
+                  className={pass === showing.pass ? styles.paintOn : styles.paint}
+                  aria-pressed={pass === showing.pass}
+                  onClick={() => setPaint(pass)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {switcher}
+
+        {clips.length > 1 && (
+          <div className={styles.strip}>
+            {clips.map((one, index) => (
+              <button
+                key={one.index}
+                type="button"
+                className={index === selected ? styles.selected : undefined}
+                aria-label={nameOf(one, index)}
+                aria-current={index === selected}
+                onClick={() => setSelected(index)}
+              >
+                <img src={shadedFirst(one).url} alt="" loading="lazy" decoding="async" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.badge}>
+          {name}
+          {typeof clip.seconds === 'number' && ` · ${clip.seconds}s`}
+          {clip.frames && ` · ${clip.frames} frames`}
+          {NOTES[showing.pass] && ` — ${NOTES[showing.pass]}`}
+        </div>
       </div>
     );
   }

@@ -94,6 +94,34 @@
   border-color: var(--clr-accent);
 }
 
+.paints {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.paint,
+.paintOn {
+  padding: 3px 10px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-line);
+  border-radius: var(--radius);
+  color: var(--clr-text-dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.paintOn {
+  border-color: var(--clr-accent);
+  color: var(--clr-text);
+}
+
+.paint:hover {
+  color: var(--clr-text);
+}
+
 .badge {
   padding: 6px 10px;
   border-top: 1px solid var(--clr-line);

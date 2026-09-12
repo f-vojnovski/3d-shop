@@ -22,10 +22,10 @@ export const fetchCustomViews = createAsyncThunk(
 
 export const requestCustomView = createAsyncThunk(
   'customViews/request',
-  async ({ productId, format, pass, camera }, { getState }) => {
+  async ({ productId, format, pass, clip = null, camera }, { getState }) => {
     const response = await postRequestWithToken(
       `api/products/${productId}/views`,
-      { format, pass, camera },
+      { format, pass, clip, camera },
       getState().auth.token,
     );
 

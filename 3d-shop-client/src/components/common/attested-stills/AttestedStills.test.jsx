@@ -32,12 +32,21 @@ const preview = (format, count, overrides = {}) => ({
   ...overrides,
 });
 
-const product = (previews, sellerImages = []) => ({
+const product = (previews, sellerImages = [], clips = []) => ({
   name: 'Half-track',
   preview_mode: 'attested_stills',
   product_status: 'not-purchased',
   previews,
   seller_images: sellerImages,
+  clips,
+});
+
+const clip = (index, name, passes) => ({
+  index,
+  name,
+  seconds: 1,
+  frames: 24,
+  passes: passes.map((pass) => ({ pass, url: `https://example.test/${index}-${pass}.webp`, bytes: 1000 })),
 });
 
 const sellerImage = (index) => ({
@@ -250,5 +259,78 @@ describe('AttestedStills', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
 
     expect(screen.getByAltText('Half-track, image 1 from the seller')).toBeInTheDocument();
+  });
+
+  describe('animations', () => {
+    const walk = clip(0, 'Walk', ['shaded', 'influence', 'bones']);
+    const run = clip(1, 'Run', ['shaded']);
+
+    it('offers animations as a tab beside the formats', () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
+
+      expect(screen.getByRole('tab', { name: 'Animations' })).toBeInTheDocument();
+    });
+
+    it('says nothing about animations when there are none', () => {
+      render(<AttestedStills product={product([preview('glb', 2)])} />);
+
+      expect(screen.queryByRole('tab', { name: 'Animations' })).not.toBeInTheDocument();
+    });
+
+    it('puts the clip on the stage', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+
+      expect(screen.getByAltText('Half-track, Walk, shaded')).toHaveAttribute(
+        'src',
+        'https://example.test/0-shaded.webp'
+      );
+    });
+
+    it('switches how the clip is painted', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Skeleton' }));
+
+      expect(screen.getByAltText('Half-track, Walk, bones')).toBeInTheDocument();
+    });
+
+    it('switches between clips from the strip', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [walk, run])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+
+      expect(screen.getByAltText('Half-track, Run, shaded')).toBeInTheDocument();
+    });
+
+    /** A clip drawn only one way has nothing to switch between. */
+    it('does not offer a paint that was never drawn', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [run])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+
+      expect(screen.queryByRole('button', { name: 'Skeleton' })).not.toBeInTheDocument();
+    });
+
+    it('says what the bone colours mean, because nobody would guess', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Which bone moves what' }));
+
+      expect(screen.getByText(/coloured by the bone that pulls it/i)).toBeInTheDocument();
+    });
+
+    /** Exporters leave clips unnamed often enough that a blank would show. */
+    it('names an unnamed clip rather than showing a blank', async () => {
+      render(<AttestedStills product={product([preview('glb', 2)], [], [clip(0, null, ['shaded'])])} />);
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+
+      expect(screen.getByAltText('Half-track, Clip 1, shaded')).toBeInTheDocument();
+    });
   });
 });

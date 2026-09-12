@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RenderCustomClip;
 use App\Jobs\RenderCustomView;
 use App\Jobs\RenderProductPreviews;
 use App\Http\Resources\ProductResource;
@@ -29,7 +30,11 @@ class CustomViewController extends BaseController
 
         $fields = $request->validate([
             'format' => 'required|in:'.ModelFormats::rule(),
-            'pass' => 'required|in:'.implode(',', CustomView::PASSES),
+            'pass' => 'required|in:'.implode(',', array_unique(
+                array_merge(CustomView::PASSES, CustomView::CLIP_PASSES)
+            )),
+            // Given when the viewer wants the model moving rather than still.
+            'clip' => 'sometimes|nullable|integer|min:0|max:63',
             'camera.position' => 'required|array|size:3',
             'camera.position.*' => 'required|numeric|between:-1000,1000',
             'camera.target' => 'required|array|size:3',
@@ -53,6 +58,24 @@ class CustomViewController extends BaseController
             ]);
         }
 
+        $clip = $fields['clip'] ?? null;
+
+        if ($clip !== null && ($source->facts()['animated'] ?? false) !== true) {
+            throw ValidationException::withMessages([
+                'clip' => "The .{$fields['format']} file has no animation in it.",
+            ]);
+        }
+
+        $allowed = $clip === null ? CustomView::PASSES : CustomView::CLIP_PASSES;
+
+        if (! in_array($fields['pass'], $allowed, true)) {
+            throw ValidationException::withMessages([
+                'pass' => $clip === null
+                    ? "A still cannot be drawn as {$fields['pass']}."
+                    : "A moving view cannot be drawn as {$fields['pass']}.",
+            ]);
+        }
+
         if (in_array($fields['pass'], CustomView::NEEDS_UVS, true) && ! ($source->facts()['uvs'] ?? false)) {
             throw ValidationException::withMessages([
                 'pass' => "The .{$fields['format']} file has no UVs, so a checker view would be one flat colour.",
@@ -60,7 +83,7 @@ class CustomViewController extends BaseController
         }
 
         $camera = $fields['camera'] + ['up' => [0, 1, 0]];
-        $fingerprint = CustomView::fingerprintOf($camera, $fields['pass']);
+        $fingerprint = CustomView::fingerprintOf($camera, $fields['pass'], $clip);
         $viewerId = (int) Auth::user()->getAuthIdentifier();
 
         $view = CustomView::firstOrCreate(
@@ -72,6 +95,7 @@ class CustomViewController extends BaseController
             [
                 'product_id' => $product->id,
                 'pass' => $fields['pass'],
+                'clip' => $clip,
                 'status' => CustomView::QUEUED,
                 'camera' => $camera,
                 'expires_at' => now()->addHours(CustomView::LIFETIME_HOURS),
@@ -88,7 +112,9 @@ class CustomViewController extends BaseController
         }
 
         if ($view->wasRecentlyCreated || $view->status === CustomView::QUEUED) {
-            RenderCustomView::dispatch($view->id)->afterCommit();
+            $view->isMoving()
+                ? RenderCustomClip::dispatch($view->id)->afterCommit()
+                : RenderCustomView::dispatch($view->id)->afterCommit();
         }
 
         return $this->describe($view->refresh());
@@ -184,6 +210,7 @@ class CustomViewController extends BaseController
             'id' => $view->id,
             'format' => $view->source?->format,
             'pass' => $view->pass,
+            'clip' => $view->clip,
             'status' => $view->status,
             'camera' => $view->camera,
             'url' => $view->url(),

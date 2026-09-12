@@ -23,7 +23,6 @@ import GltfModelDisplayer from '../../common/model-displayer/GltfModelDisplayer'
 import StlModelDisplayer from '../../common/model-displayer/StlModelDisplayer';
 import AttestedStills from '../../common/attested-stills/AttestedStills';
 import ModelFacts from '../../common/model-facts/ModelFacts';
-import ClipPlayer from '../../common/clip-player/ClipPlayer';
 import RequestView from './RequestView';
 import FileHistory from '../../common/file-history/FileHistory';
 import ReleaseStills from '../../common/release-stills/ReleaseStills';
@@ -200,12 +199,6 @@ const SingleProductView = () => {
             </div>
           )}
 
-          {!release && product.clips?.length > 0 && (
-            <div className={styles.section}>
-              <ClipPlayer clips={product.clips} />
-            </div>
-          )}
-
           {releases.length > 0 && (
             <div className={styles.section}>
               <FileHistory
@@ -265,6 +258,7 @@ const SingleProductView = () => {
                 format={measured.format}
                 bounds={measured.facts.bounds}
                 proxy={measured.proxy}
+                clips={product.clips ?? []}
                 hasUvs={Boolean(measured.facts.uvs)}
                 onPublished={() => dispatch(fetchProductById(productId))}
               />
