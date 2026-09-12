@@ -281,4 +281,103 @@ class MeshFactsTest extends TestCase
 
         return $path;
     }
+    /**
+     * The bug this guards: a 32-byte peek finds every PNG, because a PNG states
+     * its size at a fixed offset, and no JPEG at all, because a JPEG hides it
+     * behind a chain of segments. A 41 MB model reported nought textures.
+     */
+    public function test_it_measures_a_jpeg_kept_inside_a_glb(): void
+    {
+        $jpeg = $this->jpeg(640, 480);
+
+        // Asserted so this cannot pass on a short read by accident.
+        $this->assertGreaterThan(
+            32,
+            $this->startOfFrameAt($jpeg),
+            'the fixture JPEG states its size within 32 bytes, so it tests nothing'
+        );
+
+        $facts = MeshFacts::of($this->glbWithImage($jpeg), 'glb');
+
+        $this->assertSame([['width' => 640, 'height' => 480]], $facts->textures);
+    }
+
+    public function test_it_measures_a_jpeg_written_into_the_json(): void
+    {
+        $uri = 'data:image/jpeg;base64,'.base64_encode($this->jpeg(320, 200));
+
+        $facts = MeshFacts::of($this->glb([], [
+            'images' => [['uri' => $uri]],
+        ]), 'glb');
+
+        $this->assertSame([['width' => 320, 'height' => 200]], $facts->textures);
+    }
+
+    private function jpeg(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        ob_start();
+        imagejpeg($image);
+        imagedestroy($image);
+
+        return (string) ob_get_clean();
+    }
+
+    /** Where the marker carrying the dimensions actually begins. */
+    private function startOfFrameAt(string $jpeg): int
+    {
+        $at = 2;
+
+        while ($at + 9 < strlen($jpeg)) {
+            $marker = ord($jpeg[$at + 1]);
+
+            if ($marker >= 0xc0 && $marker <= 0xcf && ! in_array($marker, [0xc4, 0xc8, 0xcc], true)) {
+                return $at;
+            }
+
+            $at += 2 + unpack('n', substr($jpeg, $at + 2, 2))[1];
+        }
+
+        return -1;
+    }
+
+    private function glbWithImage(string $image): string
+    {
+        $positions = pack('g9', 0, 0, 0, 1, 0, 0, 0, 2, 0);
+        $bin = $positions.$image;
+
+        $gltf = json_encode([
+            'asset' => ['version' => '2.0'],
+            'scene' => 0,
+            'scenes' => [['nodes' => [0]]],
+            'nodes' => [['mesh' => 0]],
+            'meshes' => [['primitives' => [['attributes' => ['POSITION' => 0], 'mode' => 4]]]],
+            'accessors' => [[
+                'bufferView' => 0,
+                'componentType' => 5126,
+                'count' => 3,
+                'type' => 'VEC3',
+                'min' => [0, 0, 0],
+                'max' => [1, 2, 0],
+            ]],
+            'images' => [['bufferView' => 1, 'mimeType' => 'image/jpeg']],
+            'bufferViews' => [
+                ['buffer' => 0, 'byteOffset' => 0, 'byteLength' => strlen($positions)],
+                ['buffer' => 0, 'byteOffset' => strlen($positions), 'byteLength' => strlen($image)],
+            ],
+            'buffers' => [['byteLength' => strlen($bin)]],
+            'materials' => [[]],
+        ]);
+
+        $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
+        $padded = $bin.str_repeat("\0", (4 - (strlen($bin) % 4)) % 4);
+
+        $body = pack('VV', strlen($json), 0x4e4f534a).$json
+            .pack('VV', strlen($padded), 0x004e4942).$padded;
+
+        $path = $this->directory.'/textured.glb';
+        File::put($path, 'glTF'.pack('VV', 2, 12 + strlen($body)).$body);
+
+        return $path;
+    }
 }

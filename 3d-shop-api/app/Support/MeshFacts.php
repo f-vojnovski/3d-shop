@@ -21,6 +21,13 @@ class MeshFacts
 
     public const UNKNOWN = 'unknown';
 
+    /**
+     * Enough to walk a JPEG's segment chain to its start-of-frame. A PNG needs
+     * 24; a JPEG with colour profiles and thumbnails ahead of the frame can
+     * need hundreds, and reading short silently loses the whole texture.
+     */
+    private const HEADER_BYTES = 4096;
+
     public function __construct(
         public readonly ?int $vertices,
         public readonly ?int $faces,
@@ -737,14 +744,19 @@ class MeshFacts
         }
 
         $offset = $binOffset + (int) ($view['byteOffset'] ?? 0);
+        // Never past this image into the next one, and never past the chunk.
+        $available = min(
+            (int) ($view['byteLength'] ?? 0),
+            $binOffset + $binLength - $offset
+        );
 
-        if ($offset + 32 > $binOffset + $binLength) {
+        if ($available <= 0) {
             return null;
         }
 
         fseek($handle, $offset);
 
-        return (string) fread($handle, 32);
+        return (string) fread($handle, min(self::HEADER_BYTES, $available));
     }
 
     /** Only enough bytes to read a header out of: nothing here decodes an image. */
@@ -757,7 +769,10 @@ class MeshFacts
                 return null;
             }
 
-            return (string) base64_decode(substr($uri, $comma + 1, 64), true);
+            // Four base64 characters carry three bytes.
+            $wanted = (int) ceil(self::HEADER_BYTES / 3) * 4;
+
+            return (string) base64_decode(substr($uri, $comma + 1, $wanted), true);
         }
 
         if ($root === null) {
@@ -776,7 +791,7 @@ class MeshFacts
             return null;
         }
 
-        $header = (string) fread($handle, 32);
+        $header = (string) fread($handle, self::HEADER_BYTES);
         fclose($handle);
 
         return $header;
