@@ -2,7 +2,7 @@ import { Box3, Vector3 } from 'three';
 
 // Models arrive at any scale, so measure and refit. The default camera (z=5,
 // 75deg fov) sees ~7.7 units of height; 4.5 fills two thirds, leaving orbit room.
-export const TARGET_SIZE = 4.5;
+const TARGET_SIZE = 4.5;
 
 // Plain function, no React: the render harness imports it too.
 export function fitToView(object) {

@@ -97,14 +97,6 @@ export function postForBinary(URL, payload, token) {
     .then((response) => response.data);
 }
 
-export function patchRequest(URL, payload) {
-  return axiosClient.patch(`/${URL}`, payload).then((response) => response);
-}
-
-export function deleteRequest(URL) {
-  return axiosClient.delete(`/${URL}`).then((response) => response);
-}
-
 export function deleteRequestWithToken(URL, token) {
   return axiosClient
     .delete(`/${URL}`, { headers: { Authorization: `Bearer ${token}` } })

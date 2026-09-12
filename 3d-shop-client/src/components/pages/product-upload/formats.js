@@ -12,7 +12,7 @@ export const FORMATS = [
 export const MAX_MODEL_BYTES = 51200 * 1024;
 export const MAX_IMAGE_BYTES = 5120 * 1024;
 
-export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 
 const extensionOf = (file) => {
   const at = file.name.lastIndexOf('.');

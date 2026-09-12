@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../../service/util/formatPrice';
 import styles from './ProductOverview.module.css';
@@ -38,7 +39,7 @@ const ProductOverview = ({ id, name, priceCents, images = [] }) => {
               onClick={step(-1)}
               aria-label="Previous image"
             >
-              &#8249;
+              <MdChevronLeft aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -46,7 +47,7 @@ const ProductOverview = ({ id, name, priceCents, images = [] }) => {
               onClick={step(1)}
               aria-label="Next image"
             >
-              &#8250;
+              <MdChevronRight aria-hidden="true" />
             </button>
 
             <div className={styles.dots}>

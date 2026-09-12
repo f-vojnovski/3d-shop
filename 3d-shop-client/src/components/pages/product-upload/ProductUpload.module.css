@@ -232,17 +232,6 @@
   color: #06232e;
 }
 
-.thumbnailFlag {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 1px 6px;
-  border-radius: var(--radius);
-  background: var(--clr-accent);
-  color: #06232e;
-  font-size: 0.66rem;
-  font-weight: 700;
-}
 
 .details {
   display: flex;

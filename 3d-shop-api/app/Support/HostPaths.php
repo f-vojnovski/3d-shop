@@ -32,12 +32,6 @@ class HostPaths
         return $path;
     }
 
-    /** Test seam, and the escape hatch when the daemon cannot be asked. */
-    public static function using(?array $mounts): void
-    {
-        self::$mounts = $mounts;
-    }
-
     /** @return array<string, string> */
     private static function mounts(): array
     {

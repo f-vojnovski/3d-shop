@@ -3,7 +3,6 @@
 namespace App\Payments;
 
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Sale;
 use Illuminate\Support\Facades\DB;

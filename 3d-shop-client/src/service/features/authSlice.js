@@ -67,8 +67,6 @@ export const authSlice = createSlice({
 
 export default authSlice.reducer;
 
-export const selectAuthStatus = (state) => state.status;
-
 export const postLoginData = createAsyncThunk('auth/postLoginData', async (body) => {
   if (!checkIfUserConsentedToCookies()) {
     throw new Error('Please accept cookies before signing in.');

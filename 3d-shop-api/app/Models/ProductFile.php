@@ -88,11 +88,6 @@ class ProductFile extends Model
         return $query->whereNull('superseded_at');
     }
 
-    public function supersededBy(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'superseded_by_id');
-    }
-
     public function isSuperseded(): bool
     {
         return $this->superseded_at !== null;

@@ -22,11 +22,6 @@ class ModelFormats
         return array_keys(self::EXTENSIONS);
     }
 
-    public static function supports(string $format): bool
-    {
-        return array_key_exists($format, self::EXTENSIONS);
-    }
-
     /** @return list<string> */
     public static function extensionsFor(string $format): array
     {
@@ -55,11 +50,6 @@ class ModelFormats
     public static function rule(): string
     {
         return implode(',', self::all());
-    }
-
-    public static function extensionRule(string $format): string
-    {
-        return implode(',', self::extensionsFor($format));
     }
 
     /**

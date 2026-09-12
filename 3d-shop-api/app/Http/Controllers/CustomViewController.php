@@ -7,7 +7,6 @@ use App\Jobs\RenderProductPreviews;
 use App\Http\Resources\ProductResource;
 use App\Models\CustomView;
 use App\Models\Product;
-use App\Models\ProductFile;
 use App\Support\ModelFormats;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;

@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Jobs\RenderProductPreviews;
 use App\Jobs\ScaleThumbnail;
 use App\Models\ProductFile;
-use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
 use App\Support\ModelConverter;
 use App\Support\ModelFormats;
