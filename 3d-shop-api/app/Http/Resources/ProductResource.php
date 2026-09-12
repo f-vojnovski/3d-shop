@@ -31,6 +31,7 @@ class ProductResource extends JsonResource
             'previews' => $this->previewsByFormat($entitled ? $viewerId : null, $status === Product::STATUS_OWNER),
             'format_agreement' => FormatAgreement::of($this->currentDeliverables()),
             'seller_images' => $this->sellerImageList(),
+            'clips' => $this->clipList(),
             'preview_status' => $this->preview_status,
             'preview_error' => $this->preview_error,
             'unlisted' => $this->unlisted,
@@ -229,6 +230,36 @@ class ProductResource extends JsonResource
      *
      * @return list<array<string, mixed>>
      */
+    /**
+     * The model's animations, drawn. Grouped by clip, because the page offers
+     * the clip first and the way it is painted second.
+     */
+    private function clipList(): array
+    {
+        return $this->files
+            ->where('kind', ProductFile::KIND_CLIP)
+            ->reject(fn (ProductFile $file) => $file->isSuperseded())
+            ->groupBy(fn (ProductFile $file) => $file->meta['clip']['index'] ?? 0)
+            ->sortKeys()
+            ->map(fn (Collection $group) => [
+                'index' => $group->first()->meta['clip']['index'] ?? 0,
+                'name' => $group->first()->meta['clip']['name'] ?? null,
+                'seconds' => $group->first()->meta['clip']['seconds'] ?? null,
+                'frames' => $group->first()->meta['frames'] ?? null,
+                'passes' => $group
+                    ->sortBy('sort')
+                    ->map(fn (ProductFile $file) => [
+                        'pass' => $file->meta['pass'] ?? 'shaded',
+                        'url' => Storage::disk($file->disk)->url($file->path),
+                        'bytes' => $file->bytes,
+                    ])
+                    ->values()
+                    ->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
     private function thumbnailList(): array
     {
         return $this->files

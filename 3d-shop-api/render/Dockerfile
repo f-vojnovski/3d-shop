@@ -41,6 +41,9 @@ COPY 3d-shop-api/render/render.mjs /app/render.mjs
 # still is reproduced from, and nothing here should be able to disturb it.
 COPY 3d-shop-api/render/proxy.html /app/proxy.html
 COPY 3d-shop-api/render/proxy.mjs /app/proxy.mjs
+# Moving pictures likewise: a clip is drawn beside the still path, never through it.
+COPY 3d-shop-api/render/animate.html /app/animate.html
+COPY 3d-shop-api/render/animate.mjs /app/animate.mjs
 # The client's own module, so server renders frame a model as the viewer did.
 COPY 3d-shop-client/src/components/common/model-displayer/fitToView.js /app/fitToView.js
 COPY 3d-shop-client/src/components/common/model-displayer/simplify.js /app/simplify.js

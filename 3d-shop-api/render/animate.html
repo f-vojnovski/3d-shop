@@ -1,0 +1,288 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>clip harness</title>
+<style>html,body{margin:0;background:#b3b3b3;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { fitToView } from '/fitToView.js';
+
+const QUALITY = 0.75;
+
+const post = (path, body) =>
+  fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(body) });
+
+/** A stable colour per bone, spread round the wheel so neighbours differ. */
+function bonePalette(count) {
+  const out = [];
+
+  for (let i = 0; i < count; i += 1) {
+    out.push(new THREE.Color().setHSL(((i * 137.508) % 360) / 360, 0.62, 0.58));
+  }
+
+  return out;
+}
+
+function bonesOf(root) {
+  const bones = [];
+  root.traverse((node) => { if (node.isBone) bones.push(node); });
+
+  return bones;
+}
+
+/**
+ * Paints each vertex with the blend of bones pulling on it. A vertex no bone
+ * pulls on is painted magenta: that is a fault, not a colour.
+ */
+function paintInfluence(root) {
+  const bones = bonesOf(root);
+  const index = new Map(bones.map((bone, i) => [bone, i]));
+  const palette = bonePalette(Math.max(bones.length, 1));
+
+  root.traverse((mesh) => {
+    if (! mesh.isMesh || ! mesh.geometry) return;
+
+    const geometry = mesh.geometry;
+    const count = geometry.attributes.position.count;
+    const colours = new Float32Array(count * 3);
+    const joints = geometry.attributes.skinIndex;
+    const weights = geometry.attributes.skinWeight;
+
+    if (! mesh.isSkinnedMesh || ! joints || ! weights) {
+      colours.fill(0.3);
+      geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+
+      return;
+    }
+
+    for (let v = 0; v < count; v += 1) {
+      let r = 0, g = 0, b = 0, total = 0;
+
+      for (let k = 0; k < 4; k += 1) {
+        const weight = weights.getComponent(v, k);
+        if (weight <= 0.0001) continue;
+
+        const colour = palette[(index.get(mesh.skeleton.bones[joints.getComponent(v, k)]) ?? 0) % palette.length];
+        r += colour.r * weight;
+        g += colour.g * weight;
+        b += colour.b * weight;
+        total += weight;
+      }
+
+      if (total <= 0.0001) {
+        colours[v * 3] = 1;
+        colours[v * 3 + 2] = 0.85;
+
+        continue;
+      }
+
+      colours[v * 3] = r / total;
+      colours[v * 3 + 1] = g / total;
+      colours[v * 3 + 2] = b / total;
+    }
+
+    geometry.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+  });
+}
+
+/**
+ * Bone shapes in world space, not parented to the fitted model: they are placed
+ * from world matrices, so hanging them inside it would apply the fit twice.
+ */
+function skeletonShapes(root) {
+  const group = new THREE.Group();
+  const bones = bonesOf(root);
+  const palette = bonePalette(Math.max(bones.length, 1));
+
+  const spindle = new THREE.OctahedronGeometry(1, 0);
+  spindle.scale(1, 0.5, 1);
+  spindle.translate(0, 0.5, 0);
+
+  const boneMaterial = new THREE.MeshBasicMaterial({ color: 0xf4f4f4, depthTest: false });
+  const thickness = 0.045;
+  const pairs = [];
+
+  bones.forEach((bone, i) => {
+    const joint = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 10, 8),
+      new THREE.MeshBasicMaterial({ color: palette[i % palette.length], depthTest: false })
+    );
+    joint.scale.setScalar(0.042);
+    joint.renderOrder = 3;
+    group.add(joint);
+    pairs.push({ node: joint, bone, child: null });
+
+    for (const child of bone.children) {
+      if (! child.isBone) continue;
+
+      const shape = new THREE.Mesh(spindle, boneMaterial);
+      shape.renderOrder = 2;
+      group.add(shape);
+      pairs.push({ node: shape, bone, child });
+    }
+  });
+
+  const from = new THREE.Vector3();
+  const to = new THREE.Vector3();
+  const along = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0);
+
+  const update = () => {
+    for (const pair of pairs) {
+      from.setFromMatrixPosition(pair.bone.matrixWorld);
+
+      if (pair.child === null) {
+        pair.node.position.copy(from);
+
+        continue;
+      }
+
+      to.setFromMatrixPosition(pair.child.matrixWorld);
+      const length = from.distanceTo(to);
+      pair.node.visible = length > 1e-6;
+
+      if (! pair.node.visible) continue;
+
+      pair.node.position.copy(from);
+      pair.node.scale.set(thickness, length, thickness);
+      pair.node.quaternion.setFromUnitVectors(up, along.subVectors(to, from).normalize());
+    }
+  };
+
+  return { group, update };
+}
+
+async function main() {
+  const job = await (await fetch('/job.json')).json();
+  const width = job.output?.width ?? 512;
+  const height = job.output?.height ?? 512;
+  const frames = job.frames ?? 24;
+  const wanted = job.passes ?? ['shaded'];
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height);
+
+  const url = job.entry ? '/bundle/' + job.entry : '/model';
+  const gltf = await new Promise((done, fail) =>
+    new GLTFLoader().load(url, done, undefined, () => fail(new Error('The model could not be read.'))));
+
+  const clips = gltf.animations ?? [];
+
+  if (clips.length === 0) {
+    throw new Error('That model carries no animation.');
+  }
+
+  const at = Math.min(Math.max(job.clip ?? 0, 0), clips.length - 1);
+  const clip = clips[at];
+
+  const object = gltf.scene;
+  const scene = new THREE.Scene();
+
+  const { scale, center } = fitToView(object);
+  const outer = new THREE.Group();
+  const inner = new THREE.Group();
+  outer.scale.setScalar(scale);
+  inner.position.set(center[0], center[1], center[2]);
+  inner.add(object);
+  outer.add(inner);
+  scene.add(outer);
+
+  const mixer = new THREE.AnimationMixer(object);
+  mixer.clipAction(clip).play();
+
+  // Kept so a pass that swaps materials can put back what it found.
+  const original = new Map();
+  object.traverse((node) => {
+    if (node.isMesh) original.set(node, node.material);
+  });
+
+  const environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  const key = new THREE.DirectionalLight(0xffffff, 0.6);
+  key.position.set(4, 5, 3);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.2);
+  fill.position.set(-4, -2, -4);
+
+  const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+  const aim = job.camera ?? { position: [0, 1.5, 7.5], target: [0, 0, 0], fov: 40 };
+  camera.fov = aim.fov ?? 40;
+  camera.position.set(...aim.position);
+  camera.up.set(...(aim.up ?? [0, 1, 0]));
+  camera.lookAt(...(aim.target ?? [0, 0, 0]));
+  camera.updateProjectionMatrix();
+
+  let skeleton = null;
+
+  for (const pass of wanted) {
+    object.traverse((node) => {
+      if (node.isMesh) node.material = original.get(node);
+    });
+
+    scene.overrideMaterial = null;
+    scene.remove(key, fill);
+    scene.environment = null;
+    scene.background = new THREE.Color(0x121316);
+
+    if (skeleton) {
+      scene.remove(skeleton.group);
+      skeleton = null;
+    }
+
+    if (pass === 'shaded') {
+      scene.background = new THREE.Color(0xb3b3b3);
+      scene.environment = environment;
+      scene.add(key, fill);
+    } else if (pass === 'influence') {
+      paintInfluence(object);
+      scene.overrideMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    } else if (pass === 'bones') {
+      object.traverse((node) => {
+        if (! node.isMesh) return;
+
+        node.material = new THREE.MeshBasicMaterial({
+          color: 0xcdbd9f, transparent: true, opacity: 0.2,
+          depthWrite: false, side: THREE.DoubleSide,
+        });
+        node.renderOrder = 1;
+      });
+
+      skeleton = skeletonShapes(object);
+      scene.add(skeleton.group);
+    } else {
+      throw new Error('No such pass: ' + pass);
+    }
+
+    for (let i = 0; i < frames; i += 1) {
+      // Worked out from the frame number rather than added up: accumulating
+      // drifts, and a drifting clock means the same job stops giving the same
+      // pixels.
+      mixer.setTime((i / frames) * clip.duration);
+      scene.updateMatrixWorld(true);
+
+      if (skeleton) skeleton.update();
+
+      renderer.render(scene, camera);
+
+      await post('/frame', {
+        pass,
+        index: i,
+        webp: renderer.domElement.toDataURL('image/webp', QUALITY),
+      });
+    }
+  }
+
+  await post('/done', {
+    chosen: { index: at, name: clip.name || null, seconds: Number(clip.duration.toFixed(3)) },
+    clips: clips.map((one, i) => ({
+      index: i, name: one.name || null, seconds: Number(one.duration.toFixed(3)),
+    })),
+  });
+}
+
+main().catch((error) => post('/failed', { reason: String(error?.message ?? error) }));
+</script>

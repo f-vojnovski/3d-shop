@@ -24,6 +24,12 @@ class ProductFile extends Model
      */
     public const KIND_PROXY = 'proxy';
 
+    /**
+     * One animation clip drawn as a moving picture. Pixels, not motion: a walk
+     * cycle lifts onto somebody else's character, so it never leaves the server.
+     */
+    public const KIND_CLIP = 'clip';
+
     public const KIND_SELLER_IMAGE = 'seller_image';
     public const KIND_THUMBNAIL = 'thumbnail';
 
@@ -83,6 +89,13 @@ class ProductFile extends Model
             ->where('kind', self::KIND_PROXY)
             ->where('source_file_id', $this->id)
             ->first();
+    }
+
+    public function clips(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_file_id')
+            ->where('kind', self::KIND_CLIP)
+            ->orderBy('sort');
     }
 
     /** What the renderer actually opened, when the upload needed converting. */
