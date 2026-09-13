@@ -48,7 +48,10 @@ Route::post('/auth/login', [AuthController::class, 'login'])->middleware('thrott
 
 // Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function() {
-    Route::post('/products', [ProductController::class, 'store']);
+    // Reads and unpacks every byte of every model inside the request, so it is
+    // throttled the way the other endpoints that do container-shaped work are.
+    Route::post('/products', [ProductController::class, 'store'])
+        ->middleware('throttle:20,1');
     Route::put('/products/{id}', [ProductController::class, 'update'])
         ->where('id', '[0-9]+');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])

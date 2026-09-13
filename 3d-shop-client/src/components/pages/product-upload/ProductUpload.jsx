@@ -149,18 +149,28 @@ const ProductUploadPage = () => {
       keep={buyersSee === 'decimated' ? appliedRatio : 1}
       method={proxy.method}
       obscured={buyersSee === 'box'}
+      paused={!proxyShown}
       sync={{ stateRef: sharedCamera, id: 'proxy', activeRef: activeView }}
       onCounts={onCounts}
     />
   );
 
 
+  // Both urls: the converted copy is the one the viewers actually load, and it
+  // is a blob of its own. Releasing only what the seller dropped leaves that
+  // behind, and it is the larger of the two.
+  const releaseModel = useCallback((model) => {
+    for (const url of [model?.uri, model?.previewUri]) {
+      if (url) {
+        URL.revokeObjectURL(url);
+        clearModelCache(url);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (status === 'succeeded' && uploaded) {
-      Object.values(models).forEach((model) => {
-        URL.revokeObjectURL(model.uri);
-        clearModelCache(model.uri);
-      });
+      Object.values(models).forEach(releaseModel);
 
       dispatch(clearUploadState());
       dispatch(resetDraft());
@@ -174,7 +184,7 @@ const ProductUploadPage = () => {
       ));
       navigate(`/product/${uploaded.id}`);
     }
-  }, [status, uploaded, models, dispatch, navigate]);
+  }, [status, uploaded, models, dispatch, navigate, releaseModel]);
 
   useEffect(() => {
     if (status === 'failed') {
@@ -235,6 +245,7 @@ const ProductUploadPage = () => {
           continue;
         }
 
+        releaseModel(models[format]);
         dispatch(attachModel({ format, file, uri: URL.createObjectURL(file), bundle }));
 
         if (bundle || needsConverting(format)) {
@@ -261,7 +272,7 @@ const ProductUploadPage = () => {
 
       dispatch(notify('error', `${file.name} is not supported. Use ${SUPPORTED_SUMMARY}.`));
     }
-  }, [dispatch, convertForFraming]);
+  }, [dispatch, convertForFraming, models, releaseModel]);
 
   // A drop that misses the zone would otherwise be handled by the browser,
   // which opens the file and looks like the page silently ignoring it.
@@ -284,15 +295,6 @@ const ProductUploadPage = () => {
       window.removeEventListener('drop', anywhere);
     };
   }, [accept]);
-
-  const releaseModel = (format) => {
-    const url = models[format]?.uri;
-
-    if (url) {
-      URL.revokeObjectURL(url);
-      clearModelCache(url);
-    }
-  };
 
   const capture = () => {
     const taken = probe.current?.();
@@ -419,7 +421,7 @@ const ProductUploadPage = () => {
           type="button"
           className={styles.drop_}
           onClick={() => {
-            releaseModel(active);
+            releaseModel(models[active]);
             dispatch(dropModel(active));
           }}
         >

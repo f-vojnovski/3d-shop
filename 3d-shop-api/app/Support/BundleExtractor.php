@@ -15,7 +15,12 @@ use ZipArchive;
  */
 class BundleExtractor
 {
-    public const MAX_BYTES = 1_500 * 1024 * 1024;
+    /**
+     * Proportionate to the 50 MB an upload may be. Text compresses several
+     * times over and pictures barely at all, so a real archive of a model and
+     * its textures lands well below this.
+     */
+    public const MAX_BYTES = 400 * 1024 * 1024;
 
     /** Extensions that could be the thing being sold rather than a texture. */
     private const MODELS = ['obj', 'gltf', 'glb', 'stl', 'fbx'];

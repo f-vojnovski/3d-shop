@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -122,5 +123,49 @@ class PruneOrphanedFilesTest extends TestCase
             Storage::disk($disk)->path($path),
             now()->subDays($days)->getTimestamp()
         );
+    }
+
+    /**
+     * Every job unpacks into one of these and none of them is a disk, so
+     * nothing else ever looks at them. Each holds a whole copy of a model.
+     */
+    public function test_it_clears_scratch_a_finished_job_left_behind(): void
+    {
+        $stale = storage_path('app/private/convert/'.uniqid());
+        File::ensureDirectoryExists($stale, 0775, true);
+        file_put_contents($stale.'/model', str_repeat('x', 2048));
+        touch($stale, now()->subDays(5)->getTimestamp());
+
+        $this->artisan('files:prune')->assertSuccessful();
+
+        $this->assertDirectoryDoesNotExist($stale);
+    }
+
+    /** A job running right now owns its scratch. */
+    public function test_it_leaves_scratch_that_is_still_warm(): void
+    {
+        $fresh = storage_path('app/private/convert/'.uniqid());
+        File::ensureDirectoryExists($fresh, 0775, true);
+        file_put_contents($fresh.'/model', 'x');
+
+        $this->artisan('files:prune')->assertSuccessful();
+
+        $this->assertDirectoryExists($fresh);
+
+        File::deleteDirectory($fresh);
+    }
+
+    public function test_a_dry_run_leaves_scratch_alone(): void
+    {
+        $stale = storage_path('app/private/custom-clips/'.uniqid());
+        File::ensureDirectoryExists($stale, 0775, true);
+        file_put_contents($stale.'/model', 'x');
+        touch($stale, now()->subDays(5)->getTimestamp());
+
+        $this->artisan('files:prune --dry-run')->assertSuccessful();
+
+        $this->assertDirectoryExists($stale);
+
+        File::deleteDirectory($stale);
     }
 }

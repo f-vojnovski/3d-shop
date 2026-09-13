@@ -2,6 +2,10 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getRequestWithToken, postRequestWithToken } from '../api/axiosClient';
 
 const initialState = {
+  // Which product these belong to. A viewer can ask for a render on one product
+  // and open another before it lands, and a render arriving for the first must
+  // not appear under the second with a button offering to publish it there.
+  productId: null,
   views: [],
   status: 'idle',
   requesting: false,
@@ -67,13 +71,27 @@ export const customViewSlice = createSlice({
     },
     // Reverb pushes the finished view; fetching on open covers a missed event.
     customViewDrawn(state, action) {
+      const { productId } = action.payload;
+
+      if (productId != null && Number(productId) !== Number(state.productId)) {
+        return;
+      }
+
       put(state, action.payload);
     },
   },
   extraReducers(builder) {
     builder
-      .addCase(fetchCustomViews.pending, (state) => {
+      .addCase(fetchCustomViews.pending, (state, action) => {
         state.status = 'loading';
+
+        // Emptied here rather than on arrival: between opening a product and
+        // its views landing, the list on screen would otherwise be the last
+        // product's.
+        if (Number(action.meta.arg) !== Number(state.productId)) {
+          state.productId = action.meta.arg;
+          state.views = [];
+        }
       })
       .addCase(fetchCustomViews.fulfilled, (state, action) => {
         state.status = 'succeeded';

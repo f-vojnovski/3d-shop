@@ -22,10 +22,12 @@ class SandboxFlagsTest extends TestCase
         $this->assertSame([
             '--network=none',
             '--cap-drop=ALL',
+            '--security-opt=no-new-privileges',
+            '--read-only',
             '--memory=2g',
             '--cpus=2',
             '--pids-limit=256',
-            '--tmpfs', '/tmp:rw,size=512m',
+            '--tmpfs', '/tmp:rw,nosuid,noexec,size=512m',
         ], Sandbox::confinement('2g', '2'));
     }
 

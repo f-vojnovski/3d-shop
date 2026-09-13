@@ -1,7 +1,7 @@
 import styles from './SingleProductView.module.css';
 import { useParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   fetchProductById,
   publishProduct,
@@ -9,6 +9,8 @@ import {
   withdrawProduct,
 } from '../../../service/features/productSlice';
 import { createEcho } from '../../../service/realtime/echo';
+import { API_URL } from '../../../consts';
+import { clearModelCache } from '../../common/model-displayer/modelCache';
 import { ErrorBoundary } from 'react-error-boundary';
 import ModelLoaderErrorFallback from './ModelLoaderErrorFallback';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
@@ -58,6 +60,23 @@ const SingleProductView = () => {
   useEffect(() => {
     dispatch(fetchProductById(productId));
   }, [dispatch, productId]);
+
+  // Both loader caches are keyed on the url and never evict on their own, so
+  // every model this page opened would stay parsed for the life of the tab.
+  // Held in a ref and dropped on the way out: clearing on each change would
+  // evict what is still on screen.
+  const opened = useRef([]);
+
+  useEffect(() => {
+    opened.current = [
+      ...Object.values(product?.preview_urls ?? {}),
+      ...(product?.previews ?? []).map((preview) => preview.proxy?.url),
+    ].filter(Boolean);
+  }, [product]);
+
+  useEffect(() => () => {
+    opened.current.forEach((url) => clearModelCache(`${API_URL}${url}`));
+  }, []);
 
   const renderInProgress =
     product?.id === Number(productId) &&

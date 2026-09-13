@@ -450,6 +450,59 @@ class CustomViewTest extends TestCase
             ->assertJsonValidationErrors('pass');
     }
 
+    /**
+     * Each of these starts a container that can run for minutes, and the camera
+     * is ten free-floating numbers, so the fingerprint stops nobody asking for
+     * a thousand almost-identical views.
+     */
+    public function test_one_account_cannot_queue_renders_without_end(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        for ($made = 0; $made < CustomView::DAILY_LIMIT; $made++) {
+            CustomView::create([
+                'user_id' => $this->viewer->id,
+                'product_id' => $this->product->id,
+                'product_file_id' => $this->source->id,
+                'pass' => 'shaded',
+                'status' => CustomView::QUEUED,
+                'camera' => self::CAMERA,
+                'fingerprint' => hash('sha256', (string) $made),
+                'expires_at' => now()->addHours(CustomView::LIFETIME_HOURS),
+            ]);
+        }
+
+        $this->postJson($this->route(), $this->payload())
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('camera');
+
+        Queue::assertNotPushed(RenderCustomView::class);
+    }
+
+    /** Yesterday's asking is not today's. */
+    public function test_the_limit_is_a_day_long_and_then_lets_go(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        for ($made = 0; $made < CustomView::DAILY_LIMIT; $made++) {
+            CustomView::create([
+                'user_id' => $this->viewer->id,
+                'product_id' => $this->product->id,
+                'product_file_id' => $this->source->id,
+                'pass' => 'shaded',
+                'status' => CustomView::QUEUED,
+                'camera' => self::CAMERA,
+                'fingerprint' => hash('sha256', (string) $made),
+                'expires_at' => now()->addHours(CustomView::LIFETIME_HOURS),
+            ]);
+        }
+
+        // Eloquent stamps created_at itself, so it is moved afterwards.
+        CustomView::query()->update(['created_at' => now()->subDays(2)]);
+
+        $this->postJson($this->route(), $this->payload())->assertSuccessful();
+    }
+
     private function route(): string
     {
         return "/api/products/{$this->product->id}/views";

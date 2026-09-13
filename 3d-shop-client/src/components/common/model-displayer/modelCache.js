@@ -1,19 +1,30 @@
 import { useLoader } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
-// The loader cache is keyed on the url and never evicts on its own, so a
-// detached model would otherwise stay parsed in memory for the tab's life.
+// Every loader that any viewer here reaches for. drei and fiber keep separate
+// caches even for the same loader, and both are keyed on the url and never
+// evict, so a model left in either stays parsed for the life of the tab.
+const LOADERS = [GLTFLoader, OBJLoader, STLLoader];
+
 export const clearModelCache = (url) => {
-  try {
-    useGLTF.clear(url);
-  } catch {
-    // Only one of the two loaders holds any given url.
+  if (!url) {
+    return;
   }
 
   try {
-    useLoader.clear(OBJLoader, url);
+    useGLTF.clear(url);
   } catch {
-    // As above.
+    // Only whichever cache holds this url has anything to drop.
+  }
+
+  for (const loader of LOADERS) {
+    try {
+      useLoader.clear(loader, url);
+    } catch {
+      // As above.
+    }
   }
 };

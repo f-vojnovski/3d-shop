@@ -31,6 +31,8 @@ const RenderNotices = () => {
     echo.private(viewerChannel).listen('.custom.view.drawn', (event) => {
       dispatch(customViewDrawn({
         id: event.viewId,
+        productId: event.productId,
+        clip: event.clip,
         pass: event.pass,
         status: event.status,
         url: event.url,

@@ -16,7 +16,63 @@ const LOADERS = { gltf: GLTFLoader, obj: OBJLoader, stl: STLLoader };
 // Simplifying a large model takes a moment, and this panel is opened, closed and
 // swapped often. Keyed by what it was made from, so a ratio already seen comes
 // back instantly instead of being recomputed.
+//
+// Bounded, because the slider has a hundred stops and each one builds a scene
+// of its own. Oldest out first, and what it built goes with it.
 const made = new Map();
+
+const KEEP = 4;
+
+/** What a mesh already held, so a rebuild can tell its own work from the model's. */
+const resourcesOf = (root) => {
+  const seen = new Set();
+
+  root.traverse((node) => {
+    if (!node.isMesh) {
+      return;
+    }
+
+    seen.add(node.geometry);
+
+    for (const material of [node.material].flat()) {
+      if (!material) {
+        continue;
+      }
+
+      seen.add(material);
+
+      for (const value of Object.values(material)) {
+        if (value?.isTexture) {
+          seen.add(value);
+        }
+      }
+    }
+  });
+
+  return seen;
+};
+
+/**
+ * Frees what building this copy created, and only that. A copy asked to keep
+ * every triangle shares its geometry with the model it was cloned from, so
+ * disposing by traversal alone would empty the full-size view beside it.
+ */
+const release = (root, shared) => {
+  for (const thing of resourcesOf(root)) {
+    if (!shared.has(thing)) {
+      thing.dispose?.();
+    }
+  }
+};
+
+const forget = (key) => {
+  const entry = made.get(key);
+
+  if (entry) {
+    release(entry.scene, entry.shared);
+    made.delete(key);
+  }
+};
 
 /** Every loader answers with something different; the simplifier wants a scene. */
 const asScene = (loaded) => {
@@ -44,6 +100,16 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
     [original]
   );
 
+  // Copies of a model that is no longer on screen are worth nothing, and the
+  // seller has usually stopped at one ratio by the time they swap.
+  useEffect(() => {
+    for (const key of [...made.keys()]) {
+      if (!key.startsWith(uri + '|')) {
+        forget(key);
+      }
+    }
+  }, [uri]);
+
   useEffect(() => {
     if (obscured) {
       return undefined;
@@ -63,6 +129,7 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
 
       // Cloning shares geometry, and the simplifier returns new geometry
       // rather than editing in place, so the model being framed is untouched.
+      const shared = resourcesOf(original);
       const copy = original.clone(true);
       const before = trianglesIn(copy);
 
@@ -72,8 +139,12 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
       // textures a buyer is shown rather than the full-size ones.
       shrinkTextures(copy);
 
-      const entry = { scene: copy, counts: { before, after: trianglesIn(copy) } };
+      const entry = { scene: copy, shared, counts: { before, after: trianglesIn(copy) } };
       made.set(key, entry);
+
+      while (made.size > KEEP) {
+        forget(made.keys().next().value);
+      }
 
       return entry;
     };
@@ -132,8 +203,13 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
   );
 };
 
-const ProxyPreview = ({ format, uri, keep, method, obscured, onCounts, sync }) => (
-  <Canvas>
+/**
+ * `paused` stops the draw loop rather than unmounting: hiding this panel keeps
+ * its WebGL context alive on purpose, and a context that is alive but invisible
+ * was still drawing sixty times a second.
+ */
+const ProxyPreview = ({ format, uri, keep, method, obscured, paused, onCounts, sync }) => (
+  <Canvas frameloop={paused ? 'never' : 'always'}>
     <SceneLighting format={format} />
 
     <Suspense fallback={null}>

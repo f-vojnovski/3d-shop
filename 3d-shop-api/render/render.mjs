@@ -1,7 +1,7 @@
 // Reads /in/job.json and /in/model, writes PNGs and result.json to /out.
 // Chrome POSTs each image back, so completion is observed, not timed.
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -14,13 +14,32 @@ const PORT = 8710;
 const TIMEOUT_MS = Number(process.env.RENDER_TIMEOUT ?? 180) * 1000;
 const CHROME = process.env.CHROME_BIN ?? '/usr/bin/chromium';
 
-// Names the code that drew the pixels, not just the libraries: rebuild the
-// image from the pinned versions and this digest has to come out the same.
+/** Every file under a directory, in one order whatever the filesystem's is. */
+function filesUnder(directory) {
+  const found = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    found.push(...(entry.isDirectory() ? filesUnder(path) : [path]));
+  }
+
+  return found.sort();
+}
+
+// Names the code that drew the pixels. three.js is in here as well as the
+// harness: it is what turns the uploaded bytes into a scene, and a version
+// string is a label rather than a promise — two builds carrying the same label
+// and different bytes would otherwise draw different pixels under one digest.
 function harnessDigest() {
   try {
     const hash = createHash('sha256');
 
     for (const file of ['/app/harness.html', '/app/render.mjs', '/app/fitToView.js']) {
+      hash.update(readFileSync(file));
+    }
+
+    for (const file of filesUnder('/app/three')) {
+      hash.update(file);
       hash.update(readFileSync(file));
     }
 

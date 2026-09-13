@@ -82,9 +82,24 @@ class CustomViewController extends BaseController
             ]);
         }
 
+        $viewerId = (int) Auth::user()->getAuthIdentifier();
+
+        // Counted before the row is made, so a repeat of something already
+        // asked for still comes back rather than being turned away.
+        $asked = CustomView::query()
+            ->where('user_id', $viewerId)
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+
+        if ($asked >= CustomView::DAILY_LIMIT) {
+            throw ValidationException::withMessages([
+                'camera' => 'You have asked for as many renders as one account may in a day. '
+                    .'The ones you already have stay until they expire.',
+            ]);
+        }
+
         $camera = $fields['camera'] + ['up' => [0, 1, 0]];
         $fingerprint = CustomView::fingerprintOf($camera, $fields['pass'], $clip);
-        $viewerId = (int) Auth::user()->getAuthIdentifier();
 
         $view = CustomView::firstOrCreate(
             [

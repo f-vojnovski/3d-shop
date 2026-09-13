@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Events\CustomViewDrawn;
 use App\Models\CustomView;
+use App\Models\ProductFile;
 use App\Support\RenderInput;
 use App\Support\RenderRunner;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -60,6 +61,18 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
 
+        // Every way out of here, not just the one that worked: the scratch
+        // holds a whole copy of the model, and a model that reliably fails can
+        // be asked for again and again.
+        try {
+            $this->draw($view, $opened, $scratch, $runner, $log);
+        } finally {
+            $this->removeDirectory($scratch);
+        }
+    }
+
+    private function draw(CustomView $view, ProductFile $opened, string $scratch, $runner, $log): void
+    {
         try {
             $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
             RenderInput::fetch($opened, $modelPath);
@@ -98,7 +111,6 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
         }
 
         $this->store($view, $scratch, $result['images'][0], $log);
-        $this->removeDirectory($scratch);
         $this->announce($view, $log);
     }
 

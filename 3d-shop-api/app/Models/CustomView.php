@@ -42,6 +42,14 @@ class CustomView extends Model
     /** Long enough to look at, short enough not to become a gallery. */
     public const LIFETIME_HOURS = 2;
 
+    /**
+     * How many a person may ask for in a day. Each one starts a container that
+     * can run for minutes, and the camera is ten free-floating numbers, so the
+     * fingerprint that stops the same view being drawn twice does nothing to
+     * stop a thousand almost-identical ones.
+     */
+    public const DAILY_LIMIT = 60;
+
     protected $fillable = [
         'user_id',
         'product_id',
