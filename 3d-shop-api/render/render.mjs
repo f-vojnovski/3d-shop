@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
+import { cpus } from 'node:os';
 import { readFile, writeFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 
@@ -63,6 +64,8 @@ function rendererIdentity() {
     three: process.env.THREE_VERSION ?? 'unknown',
     browser,
     rasterizer: 'swiftshader',
+    // SwiftShader compiles its shaders for the host it runs on.
+    cpu: cpus()[0]?.model?.trim() ?? 'unknown',
     harness: harnessDigest(),
   };
 }

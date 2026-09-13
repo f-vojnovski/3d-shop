@@ -33,4 +33,7 @@ COPY docker/api-entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
 ENTRYPOINT ["entrypoint"]
+
+# PHP's built-in server: one request at a time. A deployment replaces this with
+# php-fpm behind nginx, the way client-nginx.conf already serves the client.
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

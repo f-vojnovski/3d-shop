@@ -137,7 +137,8 @@ services:
 
   worker:
     image: 3dshop-api:local
-    command: ["php", "artisan", "queue:work", "redis", "--tries=2"]
+    # Payments first: a render holds a worker for minutes.
+    command: ["php", "artisan", "queue:work", "redis", "--queue=payments,default", "--tries=2"]
     environment: *api-env
     volumes:
       - storage:/app/storage

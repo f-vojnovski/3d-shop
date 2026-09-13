@@ -19,6 +19,8 @@ class SandboxFlagsTest extends TestCase
 {
     public function test_the_confinement_is_exactly_this(): void
     {
+        $flags = Sandbox::confinement('2g', '2');
+
         $this->assertSame([
             '--network=none',
             '--cap-drop=ALL',
@@ -28,7 +30,32 @@ class SandboxFlagsTest extends TestCase
             '--cpus=2',
             '--pids-limit=256',
             '--tmpfs', '/tmp:rw,nosuid,noexec,size=512m',
-        ], Sandbox::confinement('2g', '2'));
+        ], array_values(array_filter(
+            $flags,
+            fn (string $flag) => ! str_starts_with($flag, '--cpuset-cpus=')
+        )));
+    }
+
+    /**
+     * A time budget alone leaves the container seeing every core, and
+     * SwiftShader starts a render thread for each of them.
+     */
+    public function test_the_container_is_pinned_to_as_many_cores_as_it_may_use(): void
+    {
+        $pinned = array_values(array_filter(
+            Sandbox::confinement('2g', '2'),
+            fn (string $flag) => str_starts_with($flag, '--cpuset-cpus=')
+        ));
+
+        if ($pinned === []) {
+            $this->markTestSkipped('This host does not report how many cores it has.');
+        }
+
+        $this->assertMatchesRegularExpression('/^--cpuset-cpus=\d+-\d+$/', $pinned[0]);
+
+        [$first, $last] = explode('-', substr($pinned[0], strlen('--cpuset-cpus=')));
+
+        $this->assertSame(2, (int) $last - (int) $first + 1, 'A 2-cpu job must be pinned to 2 cores.');
     }
 
     #[DataProvider('commands')]

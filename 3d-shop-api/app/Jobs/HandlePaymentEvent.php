@@ -21,9 +21,15 @@ class HandlePaymentEvent implements ShouldQueue
 {
     use Queueable;
 
+    /** Money waits behind nothing. A render takes minutes; this takes a moment. */
+    public const QUEUE = 'payments';
+
     public $tries = 3;
 
-    public function __construct(public PaymentEvent $event) {}
+    public function __construct(public PaymentEvent $event)
+    {
+        $this->onQueue(self::QUEUE);
+    }
 
     public function handle(Checkout $checkout, PaymentGateway $gateway): void
     {

@@ -24,7 +24,7 @@ class Sandbox
     /** @return list<string> */
     public static function confinement(string $memory, string $cpus): array
     {
-        return [
+        $flags = [
             '--network=none',
             '--cap-drop=ALL',
             // Nothing inside can come to hold more than it started with, so a
@@ -36,7 +36,53 @@ class Sandbox
             "--memory={$memory}",
             "--cpus={$cpus}",
             '--pids-limit='.self::PIDS,
-            '--tmpfs', self::TMPFS,
         ];
+
+        $cpuset = self::cpuset($cpus);
+
+        if ($cpuset !== null) {
+            $flags[] = "--cpuset-cpus={$cpuset}";
+        }
+
+        return [...$flags, '--tmpfs', self::TMPFS];
+    }
+
+    /**
+     * `--cpus` is only a time budget: the container still sees every core, and
+     * SwiftShader starts a render thread per core it sees. Offset by pid so two
+     * workers do not pin the same block.
+     */
+    private static function cpuset(string $cpus): ?string
+    {
+        $want = max(1, (int) $cpus);
+        $online = self::onlineCores();
+
+        if ($online === null || $online < $want) {
+            return null;
+        }
+
+        $blocks = intdiv($online, $want);
+        $first = (getmypid() % $blocks) * $want;
+
+        return $first.'-'.($first + $want - 1);
+    }
+
+    private static function onlineCores(): ?int
+    {
+        $windows = getenv('NUMBER_OF_PROCESSORS');
+
+        if ($windows !== false && (int) $windows > 0) {
+            return (int) $windows;
+        }
+
+        $cpuinfo = @file_get_contents('/proc/cpuinfo');
+
+        if ($cpuinfo === false) {
+            return null;
+        }
+
+        $count = preg_match_all('/^processor\s*:/m', $cpuinfo);
+
+        return $count > 0 ? $count : null;
     }
 }

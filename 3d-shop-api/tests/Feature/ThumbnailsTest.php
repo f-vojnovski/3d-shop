@@ -221,9 +221,8 @@ class ThumbnailsTest extends TestCase
     }
 
     /**
-     * 33 bytes of PNG header claiming 900 million pixels. A real picture that
-     * size asks GD for 3.6 GB, so the declared size is what has to be refused,
-     * before anything reaches the decoder.
+     * 33 bytes of PNG header claiming 900 million pixels. A real one asks GD
+     * for 3.6 GB, so the declared size is what gets refused.
      */
     public function test_a_small_file_claiming_an_enormous_picture_is_refused(): void
     {

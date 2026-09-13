@@ -38,9 +38,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $clientId = config('services.paypal.client_id');
 
-        // Payments were turned on deliberately. Falling back to the fake here
-        // would hand every buyer a paid file for nothing and say so nowhere,
-        // so a half-configured provider refuses instead of quietly granting.
+        // Half-configured refuses, rather than granting every paid file for nothing.
         if (blank($clientId)) {
             throw new RuntimeException(
                 'PAYMENTS_ENABLED is on but PAYPAL_CLIENT_ID is empty. Set the '

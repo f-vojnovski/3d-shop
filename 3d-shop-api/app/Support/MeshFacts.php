@@ -488,10 +488,8 @@ class MeshFacts
         $seen = [];
 
         $walk = function (int $index, array $parent, int $depth) use (&$walk, $nodes, &$found, &$seen): void {
-            // glTF requires the hierarchy to be a set of strict trees, so a node
-            // reached twice is malformed. Uploads are not trusted to be: a node
-            // holding itself as a child recurses until the worker dies, and it
-            // happens here, in the upload request, before any container exists.
+            // glTF requires strict trees, so a node reached twice is malformed. This
+            // runs in the upload request, before any container.
             if (isset($seen[$index]) || $depth > self::MAX_NODE_DEPTH) {
                 return;
             }

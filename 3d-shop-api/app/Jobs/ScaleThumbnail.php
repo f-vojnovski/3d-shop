@@ -22,8 +22,7 @@ class ScaleThumbnail implements ShouldQueue
     public const EDGE = 512;
 
     /**
-     * Generous for a real photograph, and far under what a 5 MB file can claim
-     * to hold. GD wants four bytes a pixel, so this is the memory ceiling.
+     * GD wants four bytes a pixel, so this is the memory ceiling.
      */
     public const MAX_PIXELS = 40_000_000;
 
@@ -90,9 +89,7 @@ class ScaleThumbnail implements ShouldQueue
             return null;
         }
 
-        // Read from the header before anything is decoded. A small file may
-        // declare an enormous picture, and GD allocates four bytes a pixel the
-        // moment it is handed the bytes.
+        // A small file may declare an enormous picture, and GD allocates on sight.
         if ((int) $size[0] * (int) $size[1] > self::MAX_PIXELS) {
             Log::warning('Thumbnail not scaled: the picture is too large to open.', [
                 'width' => $size[0],

@@ -213,9 +213,8 @@ class MeshFactsTest extends TestCase
     }
 
     /**
-     * A node holding itself as a child. 360 bytes of it exhausted a 64 MB
-     * process in under a second, and this runs in the upload request, before
-     * any container exists.
+     * 360 bytes of this exhausted a 64 MB process in under a second, in the
+     * upload request, before any container.
      */
     public function test_a_node_that_holds_itself_does_not_run_forever(): void
     {
@@ -256,8 +255,8 @@ class MeshFactsTest extends TestCase
 
     /**
      * The guard refuses a node it has already walked, so this proves it does
-     * not refuse a legitimate nested scene: the child's transform still has to
-     * reach the bounds.
+     * not refuse a real nested scene: the child's transform still reaches the
+     * bounds.
      */
     public function test_a_real_nested_hierarchy_is_still_measured_through_its_parents(): void
     {

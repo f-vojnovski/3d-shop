@@ -241,9 +241,8 @@ class CheckoutTest extends TestCase
     }
 
     /**
-     * The dangerous misconfiguration: payments switched on, credentials never
-     * filled in. Quietly falling back to the fake gateway would grant every
-     * paid file for nothing, and nothing would say so.
+     * Payments switched on, credentials never filled in. Falling back to the
+     * fake gateway here grants every paid file for nothing, silently.
      */
     public function test_payments_on_without_credentials_refuses_rather_than_granting(): void
     {

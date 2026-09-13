@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\HandlePaymentEvent;
+use App\Payments\PaymentEvent;
+use Illuminate\Support\Facades\Queue;
 use ReflectionClass;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
@@ -12,9 +15,8 @@ use Tests\TestCase;
  * a job is allowed to run longer than that, a second worker picks up work the
  * first is still doing: same scratch directory, same rows.
  *
- * This is invisible with one worker and certain with two. It has already gone
- * wrong once - `retry_after` named a 600s job in a comment while 900s jobs were
- * added beside it - so the rule is asserted rather than remembered.
+ * Invisible with one worker and certain with two, so the rule is asserted
+ * here rather than left to a comment beside the number.
  */
 class QueueTimingTest extends TestCase
 {
@@ -34,6 +36,23 @@ class QueueTimingTest extends TestCase
             (int) config('queue.connections.redis.retry_after'),
             "retry_after must exceed every job timeout; {$slowest} is allowed {$longest}s."
         );
+    }
+
+    /**
+     * A buyer who has paid should not wait behind a render.
+     */
+    public function test_money_does_not_queue_behind_renders(): void
+    {
+        Queue::fake();
+
+        HandlePaymentEvent::dispatch(new PaymentEvent(
+            id: 'evt_1',
+            kind: PaymentEvent::PAID,
+            providerType: 'checkout.session.completed',
+        ));
+
+        Queue::assertPushedOn(HandlePaymentEvent::QUEUE, HandlePaymentEvent::class);
+        $this->assertNotSame('default', HandlePaymentEvent::QUEUE);
     }
 
     /** @return array<class-string, int> */
