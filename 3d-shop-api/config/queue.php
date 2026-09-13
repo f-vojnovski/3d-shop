@@ -68,9 +68,11 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            // Must stay above RenderProductPreviews::$timeout (600s), or Redis
-            // hands a still-running render to a second worker.
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 660),
+            // Must stay above the LONGEST $timeout of any queued job, or Redis
+            // hands a still-running job to a second worker. QueueTimingTest
+            // asserts it, because the longest job has grown before now and this
+            // number did not follow it.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 960),
             'block_for' => null,
             'after_commit' => false,
         ],

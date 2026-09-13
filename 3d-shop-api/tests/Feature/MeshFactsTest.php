@@ -212,6 +212,67 @@ class MeshFactsTest extends TestCase
         $this->assertSame([3.0, 5.0, 0.0], $facts->bounds['size']);
     }
 
+    /**
+     * A node holding itself as a child. 360 bytes of it exhausted a 64 MB
+     * process in under a second, and this runs in the upload request, before
+     * any container exists.
+     */
+    public function test_a_node_that_holds_itself_does_not_run_forever(): void
+    {
+        $facts = MeshFacts::of($this->glb(['children' => [0]]), 'glb');
+
+        $this->assertSame(1, $facts->faces);
+        $this->assertSame([1.0, 2.0, 0.0], $facts->bounds['size']);
+    }
+
+    public function test_two_nodes_holding_each_other_do_not_run_forever(): void
+    {
+        $facts = MeshFacts::of($this->glb([], [
+            'nodes' => [
+                ['mesh' => 0, 'children' => [1]],
+                ['children' => [0]],
+            ],
+        ]), 'glb');
+
+        $this->assertSame(1, $facts->faces);
+    }
+
+    /** No cycle, just deeper than any real scene: the stack is finite too. */
+    public function test_a_hierarchy_deeper_than_the_cap_does_not_exhaust_the_stack(): void
+    {
+        $depth = 5000;
+        $nodes = [['mesh' => 0, 'children' => [1]]];
+
+        for ($at = 1; $at < $depth; $at++) {
+            $nodes[] = ['children' => [$at + 1]];
+        }
+
+        $nodes[] = [];
+
+        $facts = MeshFacts::of($this->glb([], ['nodes' => $nodes]), 'glb');
+
+        $this->assertSame(1, $facts->faces);
+    }
+
+    /**
+     * The guard refuses a node it has already walked, so this proves it does
+     * not refuse a legitimate nested scene: the child's transform still has to
+     * reach the bounds.
+     */
+    public function test_a_real_nested_hierarchy_is_still_measured_through_its_parents(): void
+    {
+        $facts = MeshFacts::of($this->glb([], [
+            'nodes' => [
+                ['children' => [1], 'translation' => [10.0, 0.0, 0.0]],
+                ['mesh' => 0, 'translation' => [0.0, 5.0, 0.0]],
+            ],
+        ]), 'glb');
+
+        $this->assertSame(1, $facts->faces);
+        $this->assertSame([10.0, 5.0, 0.0], $facts->bounds['min']);
+        $this->assertSame([11.0, 7.0, 0.0], $facts->bounds['max']);
+    }
+
     public function test_an_unreadable_file_measures_to_nothing_rather_than_throwing(): void
     {
         $facts = MeshFacts::of($this->obj('not a model at all'), 'obj');

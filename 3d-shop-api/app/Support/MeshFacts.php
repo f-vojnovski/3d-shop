@@ -28,6 +28,9 @@ class MeshFacts
      */
     private const HEADER_BYTES = 4096;
 
+    /** Deeper than any real scene graph, and shallow enough not to exhaust the stack. */
+    private const MAX_NODE_DEPTH = 256;
+
     public function __construct(
         public readonly ?int $vertices,
         public readonly ?int $faces,
@@ -482,8 +485,18 @@ class MeshFacts
         $nodes = $gltf['nodes'] ?? [];
         $scene = $gltf['scenes'][$gltf['scene'] ?? 0]['nodes'] ?? [];
         $found = [];
+        $seen = [];
 
-        $walk = function (int $index, array $parent) use (&$walk, $nodes, &$found): void {
+        $walk = function (int $index, array $parent, int $depth) use (&$walk, $nodes, &$found, &$seen): void {
+            // glTF requires the hierarchy to be a set of strict trees, so a node
+            // reached twice is malformed. Uploads are not trusted to be: a node
+            // holding itself as a child recurses until the worker dies, and it
+            // happens here, in the upload request, before any container exists.
+            if (isset($seen[$index]) || $depth > self::MAX_NODE_DEPTH) {
+                return;
+            }
+
+            $seen[$index] = true;
             $node = $nodes[$index] ?? [];
             $world = self::multiply($parent, self::localMatrix($node));
 
@@ -492,12 +505,12 @@ class MeshFacts
             }
 
             foreach ($node['children'] ?? [] as $child) {
-                $walk((int) $child, $world);
+                $walk((int) $child, $world, $depth + 1);
             }
         };
 
         foreach ($scene as $root) {
-            $walk((int) $root, self::identity());
+            $walk((int) $root, self::identity(), 0);
         }
 
         return $found;

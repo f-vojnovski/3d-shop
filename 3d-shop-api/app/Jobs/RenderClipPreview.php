@@ -6,6 +6,7 @@ use App\Models\ProductFile;
 use App\Support\AnimateRunner;
 use App\Support\ModelConverter;
 use App\Support\RenderInput;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\File;
@@ -18,13 +19,15 @@ use Illuminate\Support\Facades\Storage;
  * Kept off the render path deliberately: a failed clip costs a listing a moving
  * preview, while a failed render costs it its attested images.
  */
-class RenderClipPreview implements ShouldQueue
+class RenderClipPreview implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
     public int $tries = 2;
 
     public int $timeout = 900;
+
+    public int $uniqueFor = 1800;
 
     /**
      * @param  array{position: list<float>, target?: list<float>, up?: list<float>, fov?: float}  $camera
@@ -38,6 +41,12 @@ class RenderClipPreview implements ShouldQueue
         public int $frames = 24,
         public int $size = 512,
     ) {}
+
+    /** A seller asking twice is one clip, not two containers for the same work. */
+    public function uniqueId(): string
+    {
+        return 'clip:'.$this->sourceFileId.':'.$this->clip;
+    }
 
     public function handle(AnimateRunner $runner, ModelConverter $converter): void
     {

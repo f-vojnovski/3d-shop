@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,8 +38,14 @@ class AppServiceProvider extends ServiceProvider
     {
         $clientId = config('services.paypal.client_id');
 
+        // Payments were turned on deliberately. Falling back to the fake here
+        // would hand every buyer a paid file for nothing and say so nowhere,
+        // so a half-configured provider refuses instead of quietly granting.
         if (blank($clientId)) {
-            return $this->fake();
+            throw new RuntimeException(
+                'PAYMENTS_ENABLED is on but PAYPAL_CLIENT_ID is empty. Set the '
+                .'credentials, or set PAYMENTS_ENABLED=false to grant without charging.'
+            );
         }
 
         return new PayPalGateway(

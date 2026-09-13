@@ -240,6 +240,26 @@ class CheckoutTest extends TestCase
             ->assertStatus(401);
     }
 
+    /**
+     * The dangerous misconfiguration: payments switched on, credentials never
+     * filled in. Quietly falling back to the fake gateway would grant every
+     * paid file for nothing, and nothing would say so.
+     */
+    public function test_payments_on_without_credentials_refuses_rather_than_granting(): void
+    {
+        config([
+            'services.payments.enabled' => true,
+            'services.paypal.client_id' => '',
+        ]);
+
+        $this->app->forgetInstance(PaymentGateway::class);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('PAYMENTS_ENABLED is on but PAYPAL_CLIENT_ID is empty');
+
+        $this->app->make(PaymentGateway::class);
+    }
+
     private function open()
     {
         return $this->postJson('/api/checkout/session', [

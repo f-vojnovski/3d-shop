@@ -8,6 +8,7 @@ use App\Models\ProductFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -217,6 +218,56 @@ class ThumbnailsTest extends TestCase
         (new ScaleThumbnail($thumbnail->id))->handle();
 
         $this->assertSame($once->path, $thumbnail->fresh()->path);
+    }
+
+    /**
+     * 33 bytes of PNG header claiming 900 million pixels. A real picture that
+     * size asks GD for 3.6 GB, so the declared size is what has to be refused,
+     * before anything reaches the decoder.
+     */
+    public function test_a_small_file_claiming_an_enormous_picture_is_refused(): void
+    {
+        Log::spy();
+
+        $id = $this->publish(['thumbnails' => [UploadedFile::fake()->image('real.png', 900, 700)]]);
+        $thumbnail = Product::findOrFail($id)->thumbnails()->firstOrFail();
+
+        Storage::disk('public')->put($thumbnail->path, $this->pngClaiming(30000, 30000));
+
+        (new ScaleThumbnail($thumbnail->id))->handle();
+
+        $after = $thumbnail->fresh();
+
+        $this->assertSame($thumbnail->path, $after->path);
+        $this->assertTrue($after->meta['scaled']);
+
+        Log::shouldHaveReceived('warning')->withArgs(
+            fn ($message, $context = []) => is_string($message)
+                && str_contains($message, 'too large to open')
+                && ($context['width'] ?? null) === 30000
+        )->once();
+    }
+
+    /** A picture right on the limit still goes through, so the cap is not a wall. */
+    public function test_a_large_but_believable_picture_is_still_shrunk(): void
+    {
+        $id = $this->publish(['thumbnails' => [UploadedFile::fake()->image('big.png', 3000, 2000)]]);
+        $thumbnail = Product::findOrFail($id)->thumbnails()->firstOrFail();
+
+        (new ScaleThumbnail($thumbnail->id))->handle();
+
+        $size = getimagesizefromstring(Storage::disk('public')->get($thumbnail->fresh()->path));
+
+        $this->assertSame(ScaleThumbnail::EDGE, max($size[0], $size[1]));
+    }
+
+    /** Only a PNG header: enough for getimagesize, nothing anything can decode. */
+    private function pngClaiming(int $width, int $height): string
+    {
+        $header = pack('N', $width).pack('N', $height).pack('C5', 8, 2, 0, 0, 0);
+        $chunk = pack('N', 13).'IHDR'.$header.pack('N', crc32('IHDR'.$header));
+
+        return pack('C8', 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A).$chunk;
     }
 
     private function still(int $productId): ProductFile
