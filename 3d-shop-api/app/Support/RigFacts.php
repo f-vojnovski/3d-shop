@@ -7,9 +7,8 @@ namespace App\Support;
  * how many bones there really are, how many of them do any work, whether any of
  * the mesh is attached to nothing, and what each animation is called.
  *
- * Read from the file the same way the rest of MeshFacts reads it — the glTF
- * header for anything the JSON already says, and a streamed pass over the bone
- * weights for the rest, so a 600 MB model costs no more memory than a small one.
+ * Read straight from the glTF header, plus one streamed pass over the bone
+ * weights: no scene is built and nothing is held whole.
  */
 class RigFacts
 {
@@ -21,8 +20,6 @@ class RigFacts
     /**
      * Distinctive bone names, and what they say about where the rig came from.
      *
-     * Worth more to a buyer than any measurement here: a game developer who
-     * reads "Mixamo" knows every free Mixamo animation will drop straight on.
      * Only markers that belong to one family are listed; a plain `Hips` is
      * shared by too many to name anything.
      *
@@ -117,9 +114,6 @@ class RigFacts
     }
 
     /**
-     * One entry per animation: what it is called, how long it runs, how many
-     * things it moves, and whether the character travels or stays on the spot.
-     *
      * @param  array<string, mixed>  $gltf
      * @param  resource|null  $handle
      * @return list<array<string, mixed>>
@@ -169,10 +163,9 @@ class RigFacts
                 'nodes' => count($nodes),
                 'keys' => $keys,
                 'root_travel' => round($moved, 4),
-                // A walk that drives a character across the floor moves its root
-                // by most of a stride. A walk on the spot moves it by the sway of
-                // a torso. Told apart by the model's own size, because "0.07" is
-                // a long way for a coin and nothing at all for a dragon.
+                // A stride's worth of root movement, not a torso's sway. Measured
+                // against the model's own size: 0.07 is a long way for a coin and
+                // nothing for a dragon.
                 'travels' => $size === null || $size <= 0 ? null : $moved > $size * 0.1,
             ], fn ($value) => $value !== null);
         }
@@ -201,9 +194,9 @@ class RigFacts
             }
         }
 
-        // Whose child each node is. A skeleton's top bone is nearly always hung
-        // under an armature node, so "has no parent at all" finds nothing; what
-        // matters is having no parent that is itself a bone.
+        // A skeleton's top bone nearly always hangs under an armature node, so
+        // "no parent at all" finds nothing; what counts is no parent that is
+        // itself a bone.
         $parent = [];
 
         foreach ($gltf['nodes'] ?? [] as $at => $node) {
@@ -220,9 +213,8 @@ class RigFacts
     }
 
     /**
-     * How far a root bone's track carries it, corner to corner. A root is often
-     * given a track that barely leaves its starting point, which is not
-     * travelling however many keys it has.
+     * How far a root bone's track carries it, corner to corner. A track with
+     * many keys that barely leaves its start is not travelling.
      *
      * @param  array<string, mixed>|null  $accessor
      * @param  array<string, mixed>  $gltf
@@ -258,8 +250,7 @@ class RigFacts
     }
 
     /**
-     * The one pass that costs real work: every skinned vertex's four bones and
-     * their four pulls.
+     * The one pass that costs real work: every skinned vertex's four bones.
      *
      * @param  array<string, mixed>  $gltf
      * @param  resource  $handle
@@ -341,9 +332,8 @@ class RigFacts
         $scale = self::SCALES[$weightsAccessor['componentType'] ?? 5126] ?? 1.0;
         $done = 0;
 
-        // Both attributes are walked together, a batch at a time. Holding
-        // either one whole would cost hundreds of megabytes on a real
-        // character, which is the thing this class promises not to do.
+        // Walked together a batch at a time: holding either whole costs
+        // hundreds of megabytes on a real character.
         while ($done < $count) {
             $batch = min($count - $done, 4096);
 
@@ -449,8 +439,6 @@ class RigFacts
     }
 
     /**
-     * Reads up to `$limit` elements of an accessor, in batches, as a flat list.
-     *
      * @param  array<string, mixed>  $accessor
      * @param  array<string, mixed>  $gltf
      * @param  resource  $handle

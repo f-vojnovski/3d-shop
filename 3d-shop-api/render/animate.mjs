@@ -58,8 +58,6 @@ function confinedRoute(path, prefix, root, types) {
   return [resolved, types[extname(resolved).toLowerCase()] ?? 'application/octet-stream'];
 }
 
-// ------------------------------------------------------------- animated webp
-
 /**
  * The pixels of one still WebP, without its file wrapper.
  *
@@ -150,8 +148,6 @@ function animatedWebp(stills, width, height, frameMs) {
 
   return Buffer.concat([riff, body]);
 }
-
-// ------------------------------------------------------------------- serving
 
 const server = createServer(async (request, response) => {
   const path = request.url.split('?')[0];

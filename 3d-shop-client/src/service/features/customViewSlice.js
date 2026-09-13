@@ -85,9 +85,8 @@ export const customViewSlice = createSlice({
       .addCase(fetchCustomViews.pending, (state, action) => {
         state.status = 'loading';
 
-        // Emptied here rather than on arrival: between opening a product and
-        // its views landing, the list on screen would otherwise be the last
-        // product's.
+        // Emptied here rather than on arrival, or the list on screen between
+        // opening a product and its views landing is the last product's.
         if (Number(action.meta.arg) !== Number(state.productId)) {
           state.productId = action.meta.arg;
           state.views = [];

@@ -6,9 +6,8 @@ namespace App\Support;
  * The `.mtl` beside an `.obj`, and the images it names.
  *
  * A bare `.obj` upload carries none of this, which is why the measurement
- * reports nothing for it. A bundle does carry it, so the buyer can be told how
- * many materials and what resolution the textures are — the same facts a glTF
- * gives up on its own.
+ * reports nothing for it. A bundle does, so it can give up the same facts a
+ * glTF gives up on its own.
  */
 class MaterialLibrary
 {

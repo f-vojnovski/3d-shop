@@ -33,10 +33,10 @@ async function main() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  // A bundle is served as a folder, so the model keeps its neighbours and the
-  // loaders resolve relative references themselves. A single file is /model.
-  // Textures load asynchronously: a loader hands back a Texture at once and
-  // fills in its image later, so rendering straight after parse draws black.
+  // A bundle is served as a folder so the loaders resolve relative references
+  // themselves; a single file is /model. Textures load asynchronously -- a
+  // loader hands back a Texture at once and fills in its image later, so
+  // rendering straight after parse draws black.
   const manager = new THREE.LoadingManager();
   let queued = 0;
   manager.onStart = () => { queued += 1; };
@@ -243,18 +243,11 @@ async function materialsFor(text, base, manager) {
   return library;
 }
 
-/**
- * Squares in UV space, so a stretched or overlapping unwrap shows as stretched
- * or overlapping squares. Nearest filtering keeps the edges hard, which is what
- * makes the distortion legible.
- */
-// A matcap is a picture of a lit sphere. three.js picks the colour by which way
-// the surface faces, so one small image lights the whole model with no lights
-// and no UVs. That is the point of the pass: nothing the seller did to the
-// textures can flatter the mesh.
-//
-// Generated from the sphere's own maths rather than drawn on a canvas, for the
-// same reason the checker is.
+// A matcap is a picture of a lit sphere: three.js picks the colour by which
+// way the surface faces, so one small image lights the whole model with no
+// lights and no UVs. Nothing the seller did to the textures can flatter the
+// mesh. Generated from maths rather than a canvas, for the same reason the
+// checker is.
 function matcapTexture() {
   const size = 256;
   const pixels = new Uint8Array(size * size * 4);
@@ -291,8 +284,8 @@ function matcapTexture() {
       const filled = Math.max(0, nx * bounce[0] + ny * bounce[1] + nz * bounce[2]);
       const shine = Math.pow(Math.max(0, nx * half[0] + ny * half[1] + nz * half[2]), 48);
       const rim = Math.pow(1 - nz, 4);
-      // Kept off the ceiling deliberately: a blown-out highlight is a patch of
-      // flat white, and flat white is exactly what this pass exists to remove.
+      // Kept off the ceiling: a blown-out highlight is a patch of flat white,
+      // which is what this pass exists to remove.
       const value = Math.min(0.94, 0.17 + 0.5 * lit + 0.13 * filled + 0.24 * shine + 0.09 * rim);
       const byte = Math.round(value * 255);
 
@@ -309,6 +302,10 @@ function matcapTexture() {
   return texture;
 }
 
+/**
+ * Squares in UV space, so a stretched or overlapping unwrap shows as stretched
+ * or overlapping squares. Nearest filtering keeps the edges hard.
+ */
 function checkerTexture() {
   const size = 64;
   const pixels = new Uint8Array(size * size * 4);

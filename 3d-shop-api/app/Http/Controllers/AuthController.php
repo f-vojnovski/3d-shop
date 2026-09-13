@@ -48,8 +48,8 @@ class AuthController extends BaseController
         $user = User::where('name', $fields['name'])->first();
 
         // One answer for a wrong name and a wrong password, and a hash check
-        // either way: a faster refusal for names that do not exist answers the
-        // same question the message used to.
+        // either way: a faster refusal for names that do not exist would answer
+        // the question the message refuses to.
         if (!Hash::check($fields['password'], $user->password ?? self::ABSENT_USER_HASH)) {
             return response([
                 'message' => 'Those credentials do not match our records.'

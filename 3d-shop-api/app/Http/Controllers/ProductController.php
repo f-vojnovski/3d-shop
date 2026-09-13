@@ -61,20 +61,20 @@ class ProductController extends BaseController
             'name' => 'required|max:255',
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
-            // Left out, this still means `interactive`, which hands the browser
-            // the real file. The model defaults the other way; agreeing would
-            // oblige every upload to arrive with a camera angle.
+            // Left out, this means `interactive`. The model defaults the other
+            // way on purpose: agreeing would oblige every upload to arrive with
+            // a camera angle.
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
-            // Off by default: a listing goes up when the seller says so, not
-            // while its pictures are still being rendered.
+            // A listing goes up when the seller says so, not while its pictures
+            // are still rendering.
             'publish' => 'sometimes|boolean',
             // What a buyer aims a camera at: a copy cut down to `proxy_ratio`,
             // or nothing but the bounding box.
             'proxy_mode' => 'sometimes|in:model,box',
             'proxy_ratio' => 'sometimes|numeric|between:0,1',
-            // How hard the cutter may work: careful never removes a whole
-            // piece, parts may, which is the only way a model built from many
-            // small pieces reaches the ratio at all.
+            // How hard the cutter may work. `careful` never removes a whole
+            // piece; `parts` may, which is the only way a model built of many
+            // small pieces reaches the ratio.
             'proxy_method' => 'sometimes|in:careful,parts',
             ...self::modelRules(),
             'thumbnails' => 'sometimes|array|max:8',
@@ -109,8 +109,7 @@ class ProductController extends BaseController
             ]);
         }
 
-        // Outside the transaction: this reads every byte of every model, and a
-        // 25 MB .obj takes about a fifth of a second.
+        // Outside the transaction: this reads every byte of every model.
         $uploads = $this->readModels($models);
 
         $this->guardInteractiveBundles(
@@ -185,11 +184,10 @@ class ProductController extends BaseController
 
     /**
      * Hands back a browser-readable copy of a format no browser can open, so
-     * the seller can frame their own angles instead of being given eight.
+     * the seller can frame their own angles.
      *
-     * The copy is the one the renderer will make for itself later: the
-     * conversion is deterministic for a given file and image, so the camera the
-     * seller aims here lands where they aimed it.
+     * It is the same copy the renderer will make later, and the conversion is
+     * deterministic, so the camera lands where the seller aimed it.
      */
     public function convert(Request $request, ModelConverter $converter)
     {
@@ -203,9 +201,8 @@ class ProductController extends BaseController
         try {
             File::ensureDirectoryExists($scratch, 0775, true);
 
-            // The other thing a browser cannot open. Flattened into one .glb
-            // it frames like any other model, so a seller can keep their
-            // textures instead of uploading the model bare.
+            // Flattened into one .glb it frames like any other model, so a
+            // seller can keep their textures instead of uploading bare.
             if ($scan->format === 'zip') {
                 $unpacked = RenderInput::unpack($source, $scratch);
 
@@ -342,10 +339,8 @@ class ProductController extends BaseController
             $current->wireframes()->update($supersede);
             $current->derived()->update($supersede);
 
-            // The aim-the-camera copy belongs to the file it was cut from, and
-            // the settings it was cut with live on that file's record. Carried
-            // over, or a seller fixing a mesh silently loses the viewer and
-            // nothing left behind says how to build it again.
+            // Carried over, or a seller fixing a mesh silently loses the viewer
+            // with nothing left saying how to build it again.
             $wanted = $current->meta['proxy'] ?? null;
 
             if ($wanted !== null) {
@@ -386,8 +381,7 @@ class ProductController extends BaseController
         }
 
         // A live listing with no picture is a blank card in the grid. Angles
-        // turn into one once the render lands, so this is usually a matter of
-        // waiting rather than of doing anything.
+        // become one once the render lands, so this is usually just waiting.
         if ($product->thumbnails()->count() === 0) {
             throw ValidationException::withMessages([
                 'listing' => 'This listing has no picture yet. Wait for the render to finish, or add a thumbnail.',
@@ -531,13 +525,8 @@ class ProductController extends BaseController
     }
 
     /**
-     * Every format a buyer can pick needs an angle, or that tab shows an empty
-     * gallery with nothing to explain it.
-     */
-    /**
-     * A listing with no angle has nothing to show and no way to get anything,
-     * so the seller frames at least one. What a buyer cannot see from those is
-     * what the request-a-view button is for.
+     * A listing with no angle has nothing to show, so the seller frames at
+     * least one. The request-a-view button covers what those miss.
      */
     private function guardAnglesForMode(string $mode, array $formats, array $angles): void
     {
@@ -776,8 +765,7 @@ class ProductController extends BaseController
 
         // Derived here, never from the client's filename: a real PNG called
         // `x.php` passes image validation and would land on the public disk
-        // under a name a web server may hand to an interpreter. A bundle keeps
-        // its own extension because the archive is what the buyer downloads.
+        // under a name a web server may hand to an interpreter.
         $extension = match (true) {
             $upload === null => $file->extension(),
             $upload->isBundle() => 'zip',
@@ -800,10 +788,8 @@ class ProductController extends BaseController
                 'facts' => $upload->facts->toArray(),
                 'angles' => $angles,
                 'render' => ['status' => $angles === [] ? 'none' : 'queued', 'error' => null],
-                // Only a bundle has these, and they say what the images were
-                // drawn from when one file's checksum no longer can.
-                // Named at upload rather than after a render, so a seller can
-                // fix the paths before anyone browses the listing.
+                // Only a bundle has these. Named at upload rather than after a
+                // render, so a seller can fix the paths before anyone looks.
                 'textures' => $upload->textureReport !== null
                     && ($upload->textureReport['missing'] !== [] || $upload->textureReport['unused'] !== [])
                     ? $upload->textureReport

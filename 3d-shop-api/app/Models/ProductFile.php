@@ -137,9 +137,9 @@ class ProductFile extends Model
     }
 
     /**
-     * Merges against the row as it is now, not as this instance remembers it: a
-     * render settling after the seller edited the angles used to write the old
-     * angles back over the new ones.
+     * Merges against the row as it is now, not as this instance remembers it, or
+     * a render settling after the seller edits the angles writes the old ones
+     * back over the new.
      */
     public function withMeta(array $values): void
     {

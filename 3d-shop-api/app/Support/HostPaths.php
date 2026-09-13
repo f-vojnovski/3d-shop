@@ -6,11 +6,10 @@ namespace App\Support;
  * Translates a path inside this container into the path the Docker daemon
  * knows it by.
  *
- * The renderer runs as a sibling container, so the `-v` arguments are resolved
- * by the host's daemon and not by us. `/app/storage/...` means nothing to it.
- * Rather than asking the operator to supply the host path, the worker asks the
- * daemon what it mounted where — over the same socket it already needs to start
- * a container at all.
+ * The renderer runs as a sibling container, so `-v` arguments are resolved by
+ * the host's daemon, to which `/app/storage/...` means nothing. The host path
+ * is asked of the daemon rather than of the operator, over the socket already
+ * needed to start a container.
  */
 class HostPaths
 {

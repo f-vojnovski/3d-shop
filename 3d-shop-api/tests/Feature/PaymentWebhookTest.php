@@ -453,8 +453,6 @@ class PaymentWebhookTest extends TestCase
         $this->assertSame(Order::PENDING, $this->order->fresh()->status);
     }
 
-    // ------------------------------------------------------------------ helpers
-
     private function completed(array $overrides = []): array
     {
         return array_replace_recursive($this->event('checkout.session.completed', [

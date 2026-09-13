@@ -13,10 +13,7 @@ import { shrinkTextures } from './shrinkTextures';
 
 const LOADERS = { gltf: GLTFLoader, obj: OBJLoader, stl: STLLoader };
 
-// Simplifying a large model takes a moment, and this panel is opened, closed and
-// swapped often. Keyed by what it was made from, so a ratio already seen comes
-// back instantly instead of being recomputed.
-//
+// Keyed by what it was made from, so a ratio already seen comes back instantly.
 // Bounded, because the slider has a hundred stops and each one builds a scene
 // of its own. Oldest out first, and what it built goes with it.
 const made = new Map();
@@ -100,8 +97,7 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
     [original]
   );
 
-  // Copies of a model that is no longer on screen are worth nothing, and the
-  // seller has usually stopped at one ratio by the time they swap.
+  // Copies of a model no longer on screen are worth nothing.
   useEffect(() => {
     for (const key of [...made.keys()]) {
       if (!key.startsWith(uri + '|')) {
@@ -157,8 +153,8 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
       setProxy(entry.scene);
       onCounts(entry.counts);
     }, (error) => {
-      // Without this the panel sits on "working it out" forever and the reason
-      // never reaches anyone: a rejection here has nothing else listening.
+      // A rejection here has nothing else listening, and the panel would sit on
+      // "working it out" forever with the reason reaching nobody.
       console.error('The buyer preview could not be built.', error);
 
       if (live) {
@@ -170,13 +166,13 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
     };
   }, [original, uri, keep, method, obscured, onCounts]);
 
-  // Fitted to the full model, not to itself: simplifying can nibble the
-  // silhouette, and a proxy that re-fits would sit at a different size from the
-  // model it is meant to be compared against.
+  // Fitted to the full model, not to itself: simplifying nibbles the
+  // silhouette, and a proxy that re-fits would not line up with the model it
+  // is being compared against.
   const { scale, center } = useFitToView(original);
 
-  // Obscured is the older answer: buyers get the bounding box and nothing of
-  // the shape. Drawn here too, because this panel is what they will see.
+  // Obscured means buyers get the bounding box and nothing of the shape.
+  // Drawn here too, because this panel is what they will see.
   if (obscured) {
     return (
       <group scale={scale}>

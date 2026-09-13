@@ -93,9 +93,8 @@ const ProductUploadPage = () => {
   const activeView = useRef('model');
   const [proxyShown, setProxyShown] = useState(true);
   // An .fbx has no browser loader and an archive cannot be opened at all, so
-  // both are framed from a .glb the server flattens for them. What is on screen
-  // is then a .glb whatever the seller uploaded, and every viewer has to be told
-  // that rather than the format on the tab.
+  // both are framed from a .glb the server flattens for them. Every viewer
+  // has to be told that rather than the format on the tab.
   const framedFromCopy = active && (needsConverting(active) || models[active]?.bundle);
   const framedFormat = framedFromCopy ? 'gltf' : active;
   const framingUri = active
@@ -156,9 +155,8 @@ const ProductUploadPage = () => {
   );
 
 
-  // Both urls: the converted copy is the one the viewers actually load, and it
-  // is a blob of its own. Releasing only what the seller dropped leaves that
-  // behind, and it is the larger of the two.
+  // Both urls: the converted copy is a blob of its own and the larger of the
+  // two, so releasing only what the seller dropped leaves it behind.
   const releaseModel = useCallback((model) => {
     for (const url of [model?.uri, model?.previewUri]) {
       if (url) {

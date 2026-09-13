@@ -3,9 +3,8 @@
 namespace App\Support;
 
 /**
- * Counts geometry without parsing it. Measured at 0.13s for a 106 MB OBJ and
- * 2.7s for 929 MB, against 4.8s and 72s to parse the same files, so this runs
- * before a render worker is committed to anything.
+ * Counts geometry without parsing it: seconds rather than minutes on a large
+ * file, so this runs before a render worker is committed to anything.
  */
 class MeshPrescan
 {

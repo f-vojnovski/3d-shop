@@ -148,13 +148,10 @@ class HandlePaymentEvent implements ShouldQueue
     }
 
     /**
-     * The record of "we have seen this one" is also what makes us answer
-     * "already received" to the provider's retry. If this event is never going
-     * to be handled, that record has to go, or the retry — the one mechanism
-     * built to recover from this — is swallowed and a refund never lands.
-     *
-     * Re-running is safe: fulfilling and refunding both lock the order and are
-     * idempotent.
+     * The "we have seen this one" record is also what answers "already received"
+     * to the provider's retry, so an event that will never be handled has to drop
+     * it or the retry is swallowed and a refund never lands. Re-running is safe:
+     * fulfilling and refunding both lock the order and are idempotent.
      */
     public function failed(?Throwable $exception): void
     {

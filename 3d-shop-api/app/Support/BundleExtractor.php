@@ -7,18 +7,15 @@ use ZipArchive;
 /**
  * Writes the entries an inspection allowed, and nothing else.
  *
- * Streamed rather than handed to ZipArchive::extractTo, which flattens paths,
- * stops halfway on a bad entry and silently drops a case collision. Streaming
- * also gives the byte cap somewhere honest to live: a central directory can
- * declare ten bytes and produce four thousand, so the limit is counted as the
- * bytes arrive.
+ * Streamed rather than handed to ZipArchive::extractTo, for the reasons in
+ * BundleInspector, and because a central directory can declare ten bytes and
+ * produce four thousand: the cap is counted as the bytes arrive.
  */
 class BundleExtractor
 {
     /**
-     * Proportionate to the 50 MB an upload may be. Text compresses several
-     * times over and pictures barely at all, so a real archive of a model and
-     * its textures lands well below this.
+     * Proportionate to the 50 MB an upload may be: pictures barely compress, so
+     * a real model and its textures land well below this.
      */
     public const MAX_BYTES = 400 * 1024 * 1024;
 
@@ -67,9 +64,8 @@ class BundleExtractor
         foreach ($inspection->entries as $name => $entry) {
             $destination = self::destinationFor($root, $entry);
 
-            // Belt and braces. The inspection already refused every way a name
-            // can climb, so this cannot fire; it is here because the day it
-            // does, writing the file is the wrong thing to do.
+            // Cannot fire: the inspection refused every way a name can climb.
+            // Here because the day it does, writing the file is wrong.
             if ($destination === null) {
                 $zip->close();
                 self::remove($root);
@@ -138,7 +134,7 @@ class BundleExtractor
 
     /**
      * Which entries could be the model. Junk a packer adds is ignored rather
-     * than refused: it is harmless to keep and only confuses this choice.
+     * than refused: it is harmless to keep.
      *
      * @return list<string>
      */

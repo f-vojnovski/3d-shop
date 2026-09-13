@@ -12,9 +12,6 @@ use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SalesController;
 
-// Public routes
-
-// Products
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show'])
     ->where('id', '[0-9]+');
@@ -40,13 +37,11 @@ Route::get('/previews/{preview}/attestation', [AttestationController::class, 'sh
 Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])
     ->withoutMiddleware(['throttle:api']);
 
-// Auth
 // Login refuses a wrong name and a wrong password identically, which only
 // slows an attacker down if the guesses are also rate limited.
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-// Protected routes
 Route::group(['middleware' => ['auth:sanctum']], function() {
     // Reads and unpacks every byte of every model inside the request, so it is
     // throttled the way the other endpoints that do container-shaped work are.
@@ -68,8 +63,7 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
         ->where('id', '[0-9]+');
     Route::delete('/products/{id}/thumbnails/{file}', [ProductController::class, 'removeThumbnail'])
         ->where(['id' => '[0-9]+', 'file' => '[0-9]+']);
-    // Starts a container per call, so it is rate limited more tightly than the
-    // rest of the upload flow.
+    // Starts a container per call, so it is throttled like a render.
     Route::post('/uploads/convert', [ProductController::class, 'convert'])
         ->middleware('throttle:10,1');
     Route::get('/current-user-products', [ProductController::class, 'getCurrentUserProducts']);

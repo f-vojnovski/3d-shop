@@ -1,9 +1,8 @@
 // Reads /in/job.json and /in/model, writes /out/proxy.glb and result.json.
 //
-// A separate entrypoint from render.mjs on purpose: an attested still has to be
-// reproducible from the pinned image, and nothing here should be able to change
-// what that path does. The page POSTs the finished glb back, so completion is
-// observed rather than timed.
+// A separate entrypoint from render.mjs on purpose: an attested still has to
+// be reproducible from the pinned image, so nothing here may change that
+// path. The page POSTs the finished glb back, so completion is observed.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';

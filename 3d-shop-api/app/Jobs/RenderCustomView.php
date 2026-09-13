@@ -61,9 +61,8 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
         $this->removeDirectory($scratch);
         @mkdir($scratch, 0775, true);
 
-        // Every way out of here, not just the one that worked: the scratch
-        // holds a whole copy of the model, and a model that reliably fails can
-        // be asked for again and again.
+        // Every way out, not just the one that worked: the scratch holds a whole
+        // copy of the model, and one that reliably fails is asked for again.
         try {
             $this->draw($view, $opened, $scratch, $runner, $log);
         } finally {

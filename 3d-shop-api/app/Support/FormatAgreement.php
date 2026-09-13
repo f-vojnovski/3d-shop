@@ -46,9 +46,8 @@ class FormatAgreement
 
     /**
      * Only comparable when the formats agree on what a face is. Most exporters
-     * triangulate on the way out, so an honest pair of one .obj of quads and
-     * one .glb differs by a factor of two by construction — the same trap the
-     * vertex comparison was dropped for.
+     * triangulate on the way out, so an honest pair of one .obj of quads and one
+     * .glb differs by a factor of two by construction.
      *
      * @param  Collection<int, ProductFile>  $measured
      */

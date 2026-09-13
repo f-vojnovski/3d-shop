@@ -7,10 +7,9 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
  * How hard the cutter is allowed to work. CAREFUL never removes a whole piece,
- * which on a model built from many separate parts can mean the slider barely
- * moves: almost every edge is a border and a border cannot be collapsed. PARTS
- * lets it drop small pieces outright, so the slider does what it says at the
- * cost of the smallest details.
+ * so on a model of many separate parts the slider barely moves: almost every
+ * edge is a border and a border cannot be collapsed. PARTS drops small pieces
+ * outright, at the cost of the smallest details.
  */
 export const CAREFUL = 'careful';
 
@@ -38,9 +37,9 @@ export const trianglesIn = (object) => {
 };
 
 /**
- * Cuts one geometry down to `keep` of its triangles. This is what three's
- * SimplifyModifier does, reimplemented only because that one gives no way to
- * pass meshoptimizer a flag, and the flag is the whole difference above.
+ * Cuts one geometry down to `keep` of its triangles. Reimplemented rather than
+ * using three's SimplifyModifier, which gives no way to pass meshoptimizer the
+ * flag that is the whole difference above.
  */
 const simplifyGeometry = async (input, keep, method) => {
   await MeshoptSimplifier.ready;
@@ -97,8 +96,8 @@ const simplifyGeometry = async (input, keep, method) => {
   let indices = cut(FLAGS[method] ?? []);
 
   // Dropping pieces can take the last one: a mesh of parts that are all alike
-  // either keeps them or loses the lot. An empty proxy is nothing to aim at, so
-  // that mesh falls back to the cut that cannot delete anything.
+  // either keeps them or loses the lot, so it falls back to the cut that
+  // cannot delete anything.
   if (indices.length < 3 && method !== CAREFUL) {
     indices = cut(FLAGS[CAREFUL]);
   }

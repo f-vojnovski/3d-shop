@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * A thumbnail is stored at whatever size the seller had, then shrunk here. A
- * listing card draws it about 300px wide, and a phone camera picture is several
- * megabytes, so the grid used to pull far more than it drew. Doing it in the
- * request would make the seller wait on work the upload does not need finished.
+ * listing card draws it about 300px wide and a phone picture is several
+ * megabytes, so the grid would otherwise pull far more than it draws. Doing
+ * it in the request makes the seller wait on work the upload does not need.
  */
 class ScaleThumbnail implements ShouldQueue
 {

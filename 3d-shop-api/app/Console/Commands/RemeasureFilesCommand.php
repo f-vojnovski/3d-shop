@@ -12,9 +12,8 @@ use Throwable;
 
 /**
  * Measuring happens once, at upload, so a listing keeps whatever the reader
- * could work out on the day it arrived. When the reader learns something new —
- * a texture size it used to miss, a rig it used to report as a bare yes — the
- * files already sold keep the old answer until someone asks for it again.
+ * could work out on the day it arrived. When the reader learns to measure
+ * something new, files already sold keep the old answer until asked again.
  *
  * Nothing here re-renders or re-publishes. It replaces one field of one record.
  */

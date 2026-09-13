@@ -162,8 +162,6 @@ class RigFactsTest extends TestCase
         $this->assertNull(RigFacts::of(['nodes' => [], 'meshes' => []], $handle, 0));
     }
 
-    // ------------------------------------------------------------- fixtures
-
     /**
      * @param  array<string, mixed>  $rig
      * @return array<string, mixed>

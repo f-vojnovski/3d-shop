@@ -102,8 +102,6 @@ class MeshFacts
         return new self(null, null, self::UNKNOWN, false, false, null, [], null, false, false);
     }
 
-    // ---------------------------------------------------------------- .stl
-
     /**
      * An .stl is a flat list of triangles and nothing else: no UVs, no
      * materials, no scene graph. Every absence below is a fact about the
@@ -256,8 +254,6 @@ class MeshFacts
         );
     }
 
-    // ---------------------------------------------------------------- .obj
-
     private static function fromObj(string $path): self
     {
         $handle = fopen($path, 'rb');
@@ -275,7 +271,6 @@ class MeshFacts
         $corners = [];
 
         while (($line = fgets($handle)) !== false) {
-            // Cheapest possible discrimination: almost every line is v or f.
             $kind = substr($line, 0, 2);
 
             if ($kind === 'v ') {
@@ -300,9 +295,8 @@ class MeshFacts
                 $faces++;
                 $corners[substr_count(trim($line), ' ')] = true;
 
-                // Declaring `vt` and `vn` blocks proves nothing: a face has to
-                // reference them, and `f 1 2 3` references neither however many
-                // texture coordinates sit above it in the file.
+                // A `vt` block proves nothing: `f 1 2 3` references no texture
+                // coordinate however many sit above it in the file.
                 if (! $uvs || ! $normals) {
                     $corner = strtok(substr($line, 2), " 	
 ");
@@ -313,8 +307,6 @@ class MeshFacts
 
                 continue;
             }
-
-
         }
 
         fclose($handle);
@@ -325,9 +317,8 @@ class MeshFacts
             topology: self::topologyOf(array_keys($corners)),
             normals: $normals,
             uvs: $uvs,
-            // Left unreported rather than guessed: an .obj keeps its materials
-            // in a .mtl, which a single-file upload never carries, so any
-            // number here would describe something the buyer does not receive.
+            // An .obj keeps its materials in a .mtl that a single-file upload
+            // never carries, so any number here would describe nothing.
             materials: null,
             textures: [],
             bounds: self::boundsOf($min, $max),
@@ -353,8 +344,6 @@ class MeshFacts
 
         return self::MIXED;
     }
-
-    // --------------------------------------------------------------- glTF
 
     private static function fromGltf(string $path, bool $binary, ?string $root = null): self
     {
@@ -560,8 +549,8 @@ class MeshFacts
     }
 
     /**
-     * Exact from vertex positions where they are reachable. The shortcut of
-     * rotating a box's corners over-estimates: 17cm too wide on the test car.
+     * Exact from vertex positions where they are reachable: rotating a box's
+     * corners instead over-estimates.
      *
      * @param  list<float>  $min
      * @param  list<float>  $max
@@ -710,8 +699,8 @@ class MeshFacts
     }
 
     /**
-     * Image dimensions from their headers alone — no decoding, and only the
-     * first few bytes of each texture are ever read.
+     * Read from image headers alone: nothing here decodes an image, and only
+     * the first few bytes of each texture are ever touched.
      *
      * @param  resource  $handle
      * @return list<array{width: int, height: int}>
@@ -766,7 +755,6 @@ class MeshFacts
         return (string) fread($handle, min(self::HEADER_BYTES, $available));
     }
 
-    /** Only enough bytes to read a header out of: nothing here decodes an image. */
     private static function headerOfNamed(string $uri, string $path, ?string $root): ?string
     {
         if (str_starts_with($uri, 'data:')) {

@@ -35,13 +35,11 @@ class PaymentWebhookController extends BaseController
             return response()->json(['message' => 'Signature could not be verified.'], 400);
         }
 
-        // Providers retry, so seeing an event twice is normal. Inserting on
-        // conflict keeps that race-safe and leaves no failed statement behind
-        // to poison a surrounding transaction.
-        //
-        // Both in one transaction: the row is what makes us answer "already
-        // received", so writing it without queueing the work would turn away
-        // every retry of an event nobody handled.
+        // Providers retry, so seeing an event twice is normal; inserting on
+        // conflict keeps that race-safe. Both writes in one transaction, because
+        // the row is what answers "already received" to the next retry, and one
+        // written without its queued work would turn away every retry of an
+        // event nobody handled.
         $accepted = DB::transaction(function () use ($event) {
             $accepted = WebhookEvent::query()->insertOrIgnore([
                 'id' => $event->id,

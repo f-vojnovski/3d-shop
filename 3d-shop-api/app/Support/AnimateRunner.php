@@ -86,9 +86,8 @@ class AnimateRunner
     }
 
     /**
-     * What the container is asked for. Separate from run() so the suite can
-     * check it without starting a container: a pass the page cannot paint must
-     * be dropped here, and that is worth a test of its own.
+     * What the container is asked for. Separate from run() so the suite can check
+     * it without starting a container.
      *
      * @param  array{position: list<float>, target?: list<float>, up?: list<float>, fov?: float}  $camera
      * @param  list<string>  $passes
@@ -116,8 +115,8 @@ class AnimateRunner
 
     /**
      * Separated for the same reason as RenderRunner::commandFor(): the suite
-     * substitutes this class wherever a clip is drawn, leaving the argv the one
-     * part of the sandbox nothing else sees.
+     * substitutes this class wherever a clip is drawn, so the argv would
+     * otherwise be the one part of the sandbox nothing sees.
      *
      * @return list<string>
      */

@@ -61,10 +61,9 @@ const SingleProductView = () => {
     dispatch(fetchProductById(productId));
   }, [dispatch, productId]);
 
-  // Both loader caches are keyed on the url and never evict on their own, so
-  // every model this page opened would stay parsed for the life of the tab.
-  // Held in a ref and dropped on the way out: clearing on each change would
-  // evict what is still on screen.
+  // Both loader caches are keyed on the url and never evict, so every model
+  // this page opened would stay parsed for the life of the tab. Dropped on the
+  // way out rather than on each change, which would evict what is on screen.
   const opened = useRef([]);
 
   useEffect(() => {
@@ -82,8 +81,8 @@ const SingleProductView = () => {
     product?.id === Number(productId) &&
     ['queued', 'rendering'].includes(product?.preview_status);
 
-  // The render announces itself. Polling for it used to blank the page every
-  // three seconds, because every request put the whole view back into loading.
+  // The render announces itself. Polling for it blanks the page every three
+  // seconds, because every request puts the whole view back into loading.
   useEffect(() => {
     if (!renderInProgress) {
       return undefined;
@@ -106,10 +105,9 @@ const SingleProductView = () => {
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';
 
   // The stills gallery owns the format the buyer is looking at; the viewer's
-  // own picker owns it in interactive mode.
-  // The seller's own pictures are not a format, but what is measured below is
-  // a fact about the product rather than about which tab is open. Letting this
-  // go null emptied half the rail whenever the gallery switched.
+  // own picker owns it in interactive mode. The seller's pictures are not a
+  // format, so this holds the last real one: the facts below describe the
+  // product, not whichever tab is open.
   const measuredFormat =
     (product?.preview_mode === 'attested_stills' ? shownFormat : selectedFileType)
     ?? product?.previews?.[0]?.format

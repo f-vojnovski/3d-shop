@@ -6,7 +6,6 @@ const axiosClient = axios.create();
 // axios normalises either against this base into an absolute path.
 axiosClient.defaults.baseURL = '/';
 
-// Default timeout for requests in miliseconds
 axiosClient.defaults.timeout = 15000;
 
 axiosClient.defaults.withCredentials = true;

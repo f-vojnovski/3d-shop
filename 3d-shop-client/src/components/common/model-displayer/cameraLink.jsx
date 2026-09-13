@@ -1,13 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 
 /**
- * Keeps two canvases looking at the same thing from the same place, with either
- * one draggable. The canvas the pointer is over is authoritative; the other
- * follows it.
+ * Keeps two canvases looking at the same thing from the same place. The one
+ * the pointer is over is authoritative; the other follows.
  *
  * Ownership is decided by the pointer rather than by OrbitControls' start/end
- * events: a wheel zoom fires both of those before the dolly is applied, so the
- * follower used to overwrite the zoom on the very next frame.
+ * events: a wheel zoom fires both before the dolly is applied, which leaves
+ * the follower overwriting the zoom on the very next frame.
  *
  * Position and orbit target travel rather than the camera's transform, because
  * OrbitControls rebuilds the camera from those two on every update — writing a

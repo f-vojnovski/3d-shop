@@ -39,10 +39,9 @@ class PreviewRenderFinished implements ShouldBroadcastNow
     }
 
     /**
-     * The seller's own channel carries the notice; the product's carries the
-     * fact, because anyone looking at a listing mid-render needs to know it
-     * finished and only the seller can join a private channel. Every field here
-     * is already on the public listing.
+     * The seller's own channel carries the notice; the product's carries the fact,
+     * because anyone watching a listing mid-render needs to know it finished and
+     * only the seller can join a private channel. Every field here is public.
      */
     public function broadcastOn(): array
     {

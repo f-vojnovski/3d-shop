@@ -18,10 +18,9 @@ use ZipArchive;
 class BundleInspector
 {
     /**
-     * Composer's thresholds, hardened across millions of installs, rather than
-     * numbers of our own. A first filter only: the central directory is
-     * attacker-controlled and an entry declaring 10 bytes can stream 4096, so
-     * the real cap is counted during extraction.
+     * Composer's thresholds rather than numbers of our own. A first filter only:
+     * the central directory is attacker-controlled, so the real cap is counted
+     * during extraction.
      */
     private const RATIO = 100;
 
@@ -42,8 +41,8 @@ class BundleInspector
 
     /**
      * Never opened. Real downloads routinely carry the original project as
-     * `source/whatever.zip`, so refusing the upload over one would turn away a
-     * large share of genuine bundles; not recursing is the defence.
+     * `source/whatever.zip`, so not recursing is the defence rather than
+     * refusing the upload.
      */
     private const ARCHIVES = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'];
 

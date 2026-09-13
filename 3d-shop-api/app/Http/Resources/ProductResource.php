@@ -78,7 +78,6 @@ class ProductResource extends JsonResource
                 // The other half of the diagnosis, and only useful to whoever
                 // can fix it.
                 'unused_images' => $isOwner ? ($file->meta['textures']['unused'] ?? null) : null,
-                // What the buyer actually receives, named before they pay.
                 // What a buyer aims at when they ask for a view.
                 'proxy' => $this->proxyOf($file),
                 // No browser opens an .fbx, so its pictures were drawn from a
@@ -127,9 +126,9 @@ class ProductResource extends JsonResource
     }
 
     /**
-     * The archive's contents, or null for a bare model file. Checksums are the
-     * per-file half of what the images were attested against, so they are sent
-     * whole rather than shortened for display.
+     * The archive's contents, or null for a bare model file. Checksums are what
+     * the images were attested against, so they are sent whole rather than
+     * shortened for display.
      *
      * @return array{entry: string, digest: string, bytes: int, files: list<array{path: string, sha256: string, bytes: int}>}|null
      */
@@ -229,11 +228,6 @@ class ProductResource extends JsonResource
     }
 
     /**
-     * The cart and the checkout lines take the first of these.
-     *
-     * @return list<array<string, mixed>>
-     */
-    /**
      * The model's animations, drawn. Grouped by clip, because the page offers
      * the clip first and the way it is painted second.
      */
@@ -263,6 +257,11 @@ class ProductResource extends JsonResource
             ->all();
     }
 
+    /**
+     * The cart and the checkout lines take the first of these.
+     *
+     * @return list<array<string, mixed>>
+     */
     private function thumbnailList(): array
     {
         return $this->files
@@ -296,9 +295,9 @@ class ProductResource extends JsonResource
         return $urls;
     }
 
-    // A short-lived capability, like a presigned URL: it cannot be forged or
-    // altered, it expires, and it is only ever issued to someone entitled.
-    // Anyone holding the link can use it until it expires.
+    // A short-lived capability, like a presigned URL: unforgeable, expiring,
+    // issued only to someone entitled, and usable by anyone holding it until
+    // it expires.
     private function downloadUrls(array $formats, ?int $viewerId): array
     {
         $urls = [];

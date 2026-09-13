@@ -4,11 +4,10 @@ import styles from './ProductUpload.module.css';
 
 const count = (value) => value.toLocaleString('en-US');
 
-// Three answers to one question, so they belong in one control. Handing over
+// Three answers to one question, so they belong in one control: handing over
 // the real model and cutting a copy down are alternatives, not settings that
-// stack.
-// Worded as well as drawn: the first of these lets a buyer keep the model, so
-// it is not a choice to make from three pictures alone.
+// stack. Worded as well as drawn, because the first lets a buyer keep the
+// model and that is not clear from a picture.
 const MODES = [
   { key: 'model', Icon: MdVisibility, word: 'Real model', label: 'Buyers spin the real model' },
   { key: 'decimated', Icon: MdBlurOn, word: 'Cut down', label: 'Buyers aim at a cut-down copy' },

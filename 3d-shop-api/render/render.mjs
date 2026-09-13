@@ -26,10 +26,9 @@ function filesUnder(directory) {
   return found.sort();
 }
 
-// Names the code that drew the pixels. three.js is in here as well as the
-// harness: it is what turns the uploaded bytes into a scene, and a version
-// string is a label rather than a promise — two builds carrying the same label
-// and different bytes would otherwise draw different pixels under one digest.
+// Names the code that drew the pixels, three.js included: a version string is
+// a label rather than a promise, and two builds sharing one label would
+// otherwise draw different pixels under the same digest.
 function harnessDigest() {
   try {
     const hash = createHash('sha256');
@@ -86,10 +85,10 @@ const ASSET_TYPES = {
 // appear, which is the seller's problem to hear about rather than ours to hide.
 const asked = [];
 
-// The browser normalises "../" out of a URL before sending it, so a texture
-// path that climbs out of the bundle arrives as a plain request for another
-// route and never reaches the containment check below. Once the harness has
-// what it needs, nothing but the bundle is served.
+// The browser normalises "../" out of a URL before sending it, so a path that
+// climbs out of the bundle arrives as a plain request for another route and
+// never reaches the containment check. Once the harness has what it needs,
+// nothing but the bundle is served.
 let sealed = false;
 
 // Chrome asks for this unprompted; it is not a reference the model made.

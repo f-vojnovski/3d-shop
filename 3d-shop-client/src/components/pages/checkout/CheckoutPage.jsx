@@ -24,10 +24,9 @@ const CheckoutPage = () => {
 
   const navigate = useNavigate();
 
-  // A settled order outlives the click that opened it, in memory and until
-  // recently in storage. Leaving for the gateway has to be caused by this
-  // visit's button press, or arriving at the cart any later way reads the same
-  // state and bounces the buyer straight back out.
+  // A settled order outlives the click that opened it, so leaving for the
+  // gateway has to be caused by this visit's button press. Otherwise reaching
+  // the cart any other way reads the same state and bounces the buyer out.
   const leavingToPay = useRef(false);
 
   const onCheckoutButtonClick = () => {

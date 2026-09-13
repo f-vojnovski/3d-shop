@@ -16,10 +16,9 @@ class AuditStoredFilesCommand extends Command
     protected $description = 'Re-hash every stored file and compare it to the checksum recorded for it';
 
     /**
-     * The checksum column is written once, at upload. Every claim this project
-     * makes about a preview depending on a particular model rests on the bytes
-     * behind that row still being the bytes that were hashed, and nothing
-     * except reading them back can establish that.
+     * The checksum column is written once, at upload. Every claim about a preview
+     * depending on a particular model rests on the bytes behind that row still
+     * being the ones hashed, and only reading them back establishes that.
      */
     public function handle(): int
     {

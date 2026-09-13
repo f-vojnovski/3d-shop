@@ -29,13 +29,10 @@ class ModelConverter
     }
 
     /**
+     * @param  string|null  $root  the folder the model was unpacked into, when it
+     *                             came from an archive. An .obj keeps its materials
+     *                             beside it, so mounting the model alone loses them.
      * @return array{status: string, path?: string, tool?: string, reason?: string, retryable?: bool}
-     */
-    /**
-     * @param  string|null  $root  the folder the model was unpacked into, when
-     *                             it came from an archive. An .obj keeps its
-     *                             materials and textures in files beside it, so
-     *                             mounting the model alone loses them.
      */
     public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
     {
