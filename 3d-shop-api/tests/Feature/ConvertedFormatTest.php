@@ -174,7 +174,7 @@ class ConvertedFormatTest extends TestCase
                 parent::__construct();
             }
 
-            public function toGlb(string $sourcePath, string $scratchDir): array
+            public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
             {
                 if (! $this->converts) {
                     return [

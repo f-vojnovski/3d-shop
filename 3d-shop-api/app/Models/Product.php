@@ -34,9 +34,8 @@ class Product extends Model
     // DB defaults are invisible on a freshly created instance.
     protected $attributes = [
         'currency' => 'USD',
-        // The safe one. An interactive preview hands the browser the real file,
-        // which is the seller's whole product, so it is only ever chosen on
-        // purpose — never arrived at by leaving a field out.
+        // An interactive preview hands the browser the real file, so it is
+        // chosen on purpose rather than arrived at by leaving a field out.
         'preview_mode' => self::PREVIEW_ATTESTED_STILLS,
         'unlisted' => false,
     ];

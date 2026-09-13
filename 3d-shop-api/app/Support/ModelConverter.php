@@ -31,12 +31,18 @@ class ModelConverter
     /**
      * @return array{status: string, path?: string, tool?: string, reason?: string, retryable?: bool}
      */
-    public function toGlb(string $sourcePath, string $scratchDir): array
+    /**
+     * @param  string|null  $root  the folder the model was unpacked into, when
+     *                             it came from an archive. An .obj keeps its
+     *                             materials and textures in files beside it, so
+     *                             mounting the model alone loses them.
+     */
+    public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
     {
         $target = $scratchDir.DIRECTORY_SEPARATOR.'converted.glb';
         @unlink($target);
 
-        $process = new Process($this->commandFor($sourcePath, $scratchDir));
+        $process = new Process($this->commandFor($sourcePath, $scratchDir, $root));
 
         $process->setTimeout($this->timeoutSeconds + 60);
         $process->run();
@@ -86,16 +92,28 @@ class ModelConverter
      *
      * @return list<string>
      */
-    public function commandFor(string $sourcePath, string $scratchDir): array
+    public function commandFor(string $sourcePath, string $scratchDir, ?string $root = null): array
     {
+        // Read-only either way. With a root the whole unpacked folder goes in,
+        // so the model can reach the files it names; without one it is a single
+        // file and there is nothing beside it to reach.
+        [$mount, $inside] = $root === null
+            ? [$this->hostPath($sourcePath).':/in/model:ro', '/in/model']
+            : [
+                $this->hostPath($root).':/in/bundle:ro',
+                '/in/bundle/'.str_replace(DIRECTORY_SEPARATOR, '/', ltrim(
+                    substr($sourcePath, strlen($root)), DIRECTORY_SEPARATOR.'/'
+                )),
+            ];
+
         return [
             'docker', 'run', '--rm',
             ...Sandbox::confinement($this->memory, $this->cpus),
             '--entrypoint', 'assimp',
-            '-v', $this->hostPath($sourcePath).':/in/model:ro',
+            '-v', $mount,
             '-v', $this->hostPath($scratchDir).':/out',
             RenderRunner::IMAGE,
-            'export', '/in/model', '/out/converted.glb',
+            'export', $inside, '/out/converted.glb',
         ];
     }
 

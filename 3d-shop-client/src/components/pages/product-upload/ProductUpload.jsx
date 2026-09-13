@@ -46,10 +46,12 @@ import {
   SUPPORTED_SUMMARY,
   formatOf,
   isImage,
+  isArchive,
   needsConverting,
   labelFor,
   megabytes,
 } from './formats';
+import { formatInsideZip } from './zipContents';
 import styles from './ProductUpload.module.css';
 
 const ATTESTED = 'attested_stills';
@@ -90,8 +92,14 @@ const ProductUploadPage = () => {
   const sharedCamera = useRef(null);
   const activeView = useRef('model');
   const [proxyShown, setProxyShown] = useState(true);
+  // An .fbx has no browser loader and an archive cannot be opened at all, so
+  // both are framed from a .glb the server flattens for them. What is on screen
+  // is then a .glb whatever the seller uploaded, and every viewer has to be told
+  // that rather than the format on the tab.
+  const framedFromCopy = active && (needsConverting(active) || models[active]?.bundle);
+  const framedFormat = framedFromCopy ? 'gltf' : active;
   const framingUri = active
-    ? (needsConverting(active) ? models[active]?.previewUri : models[active]?.uri)
+    ? (framedFromCopy ? models[active]?.previewUri : models[active]?.uri)
     : null;
 
   const dispatch = useDispatch();
@@ -127,7 +135,7 @@ const ProductUploadPage = () => {
 
   const modelView = framingUri && (
     <ModelView
-      format={active}
+      format={framedFormat}
       uri={framingUri}
       probe={probe}
       sync={{ stateRef: sharedCamera, id: 'model', activeRef: activeView }}
@@ -136,7 +144,7 @@ const ProductUploadPage = () => {
 
   const proxyView = framingUri && (
     <ProxyPreview
-      format={models[active].previewUri ? 'gltf' : active}
+      format={framedFormat}
       uri={framingUri}
       keep={buyersSee === 'decimated' ? appliedRatio : 1}
       method={proxy.method}
@@ -195,7 +203,29 @@ const ProductUploadPage = () => {
 
   const accept = useCallback(async (files, into = 'thumbnails') => {
     for (const file of files) {
-      const format = formatOf(file);
+      let format = formatOf(file);
+      let bundle = false;
+
+      // Which format field an archive belongs in is read out of the archive:
+      // its name cannot say, and the server decides the same way.
+      if (! format && isArchive(file)) {
+        const inside = await formatInsideZip(file);
+
+        if (inside.found.length > 1) {
+          dispatch(notify('error',
+            `${file.name} holds more than one model (${inside.found.join(' and ')}). Pack one model per archive.`));
+          continue;
+        }
+
+        if (! inside.format) {
+          dispatch(notify('error',
+            `${file.name} holds no model this site sells. Use ${SUPPORTED_SUMMARY}.`));
+          continue;
+        }
+
+        format = inside.format;
+        bundle = true;
+      }
 
       if (format) {
         if (file.size > MAX_MODEL_BYTES) {
@@ -205,9 +235,9 @@ const ProductUploadPage = () => {
           continue;
         }
 
-        dispatch(attachModel({ format, file, uri: URL.createObjectURL(file) }));
+        dispatch(attachModel({ format, file, uri: URL.createObjectURL(file), bundle }));
 
-        if (needsConverting(format)) {
+        if (bundle || needsConverting(format)) {
           convertForFraming(format, file);
         }
 
@@ -449,8 +479,10 @@ const ProductUploadPage = () => {
 
           {models[active].previewUri && (
             <p className={styles.converted}>
-              No browser opens a {labelFor(active)}, so this is the .glb our server will render.
-              Frame it and the camera lands where you aimed it.
+              {models[active].bundle
+                ? `Your archive is unpacked into one .glb to frame; buyers still download the archive you uploaded.`
+                : `No browser opens a ${labelFor(active)}, so this is the .glb our server will render.`}
+              {' '}Frame it and the camera lands where you aimed it.
             </p>
           )}
         </>
@@ -585,6 +617,14 @@ const ProductUploadPage = () => {
         >
           Upload model
         </SubmitButton>
+
+        {!ready && (
+          <ul className={styles.blockers}>
+            {Object.entries(problems).map(([field, problem]) => (
+              <li key={field}>{problem}</li>
+            ))}
+          </ul>
+        )}
 
         <p className={styles.afterUpload}>
           It stays private until you publish it, so you can see the rendered

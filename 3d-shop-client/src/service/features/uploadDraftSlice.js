@@ -22,9 +22,11 @@ export const uploadDraftSlice = createSlice({
   initialState,
   reducers: {
     attachModel: (state, action) => {
-      const { format, file, uri } = action.payload;
+      const { format, file, uri, bundle = false } = action.payload;
 
-      state.models[format] = { file, uri, name: file.name };
+      // A bundle cannot be opened in the browser, so like an .fbx it is framed
+      // from a copy the server flattens for it.
+      state.models[format] = { file, uri, name: file.name, bundle };
       state.shots[format] = state.shots[format] ?? [];
 
       // Focus what was just attached: it has no angles yet, and publishing is

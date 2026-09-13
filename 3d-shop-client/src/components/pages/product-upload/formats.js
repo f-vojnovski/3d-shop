@@ -31,13 +31,19 @@ export const isImage = (file) => IMAGE_EXTENSIONS.includes(extensionOf(file));
 // Extensions plus MIME types: browsers filter the picker on one or the other.
 export const acceptAttribute = [
   ...FORMATS.flatMap((format) => format.extensions),
+  // A model packed with its textures; zipContents works out which format.
+  '.zip',
   'model/gltf-binary',
   'model/gltf+json',
+  'application/zip',
   ...IMAGE_EXTENSIONS,
   'image/*',
 ].join(',');
 
-export const SUPPORTED_SUMMARY = `${FORMATS.flatMap((format) => format.extensions).join(', ')} or an image`;
+export const isArchive = (file) => extensionOf(file) === '.zip';
+
+export const SUPPORTED_SUMMARY =
+  `${FORMATS.flatMap((format) => format.extensions).join(', ')}, a .zip of a model and its textures, or an image`;
 
 export const labelFor = (key) => FORMATS.find((format) => format.key === key)?.label ?? key;
 

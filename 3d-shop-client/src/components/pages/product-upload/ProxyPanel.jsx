@@ -7,10 +7,12 @@ const count = (value) => value.toLocaleString('en-US');
 // Three answers to one question, so they belong in one control. Handing over
 // the real model and cutting a copy down are alternatives, not settings that
 // stack.
+// Worded as well as drawn: the first of these lets a buyer keep the model, so
+// it is not a choice to make from three pictures alone.
 const MODES = [
-  { key: 'model', Icon: MdVisibility, label: 'Buyers spin the real model' },
-  { key: 'decimated', Icon: MdBlurOn, label: 'Buyers aim at a cut-down copy' },
-  { key: 'box', Icon: MdVisibilityOff, label: 'Buyers see only an outline box' },
+  { key: 'model', Icon: MdVisibility, word: 'Real model', label: 'Buyers spin the real model' },
+  { key: 'decimated', Icon: MdBlurOn, word: 'Cut down', label: 'Buyers aim at a cut-down copy' },
+  { key: 'box', Icon: MdVisibilityOff, word: 'Box only', label: 'Buyers see only an outline box' },
 ];
 
 // A model built from many separate parts has almost no edges left to collapse,
@@ -72,7 +74,7 @@ const ProxyPanel = ({
       </div>
 
       <div className={styles.insetModes}>
-        {MODES.map(({ key, Icon, label }) => (
+        {MODES.map(({ key, Icon, word, label }) => (
           <button
             key={key}
             type="button"
@@ -83,6 +85,7 @@ const ProxyPanel = ({
             onClick={() => onMode(key)}
           >
             <Icon aria-hidden="true" />
+            <span>{word}</span>
           </button>
         ))}
       </div>

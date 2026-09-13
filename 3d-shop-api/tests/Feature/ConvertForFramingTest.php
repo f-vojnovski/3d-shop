@@ -29,7 +29,7 @@ class ConvertForFramingTest extends TestCase
     {
         $this->app->instance(ModelConverter::class, new class extends ModelConverter
         {
-            public function toGlb(string $sourcePath, string $scratchDir): array
+            public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
             {
                 $path = $scratchDir.DIRECTORY_SEPARATOR.'converted.glb';
                 file_put_contents($path, 'glTF-BINARY-BYTES');
@@ -50,7 +50,7 @@ class ConvertForFramingTest extends TestCase
     {
         $this->app->instance(ModelConverter::class, new class extends ModelConverter
         {
-            public function toGlb(string $sourcePath, string $scratchDir): array
+            public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
             {
                 $path = $scratchDir.DIRECTORY_SEPARATOR.'converted.glb';
                 file_put_contents($path, 'glTF');
@@ -75,7 +75,7 @@ class ConvertForFramingTest extends TestCase
     {
         $this->app->instance(ModelConverter::class, new class extends ModelConverter
         {
-            public function toGlb(string $sourcePath, string $scratchDir): array
+            public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
             {
                 return ['status' => 'failed', 'reason' => 'That file could not be read for rendering.'];
             }

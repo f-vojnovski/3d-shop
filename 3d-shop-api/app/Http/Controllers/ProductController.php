@@ -12,6 +12,7 @@ use App\Support\MeshPrescan;
 use App\Support\ModelConverter;
 use App\Support\ModelFormats;
 use App\Support\ModelUpload;
+use App\Support\RenderInput;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller as BaseController;
@@ -194,23 +195,39 @@ class ProductController extends BaseController
     {
         $request->validate(['model' => 'required|file|max:51200']);
 
-        $scan = MeshPrescan::of($request->file('model')->getRealPath());
-
-        if (! ModelConverter::needsConverting($scan->format)) {
-            throw ValidationException::withMessages([
-                'model' => "A .{$scan->format} opens in the browser as it is.",
-            ]);
-        }
-
-        if ($refusal = $scan->rejection()) {
-            throw ValidationException::withMessages(['model' => $refusal]);
-        }
-
+        $source = $request->file('model')->getRealPath();
+        $scan = MeshPrescan::of($source);
         $scratch = storage_path('app/private/convert/'.bin2hex(random_bytes(8)));
+        $root = null;
 
         try {
             File::ensureDirectoryExists($scratch, 0775, true);
-            $result = $converter->toGlb($request->file('model')->getRealPath(), $scratch);
+
+            // The other thing a browser cannot open. Flattened into one .glb
+            // it frames like any other model, so a seller can keep their
+            // textures instead of uploading the model bare.
+            if ($scan->format === 'zip') {
+                $unpacked = RenderInput::unpack($source, $scratch);
+
+                if (is_string($unpacked)) {
+                    throw ValidationException::withMessages(['model' => $unpacked]);
+                }
+
+                $root = $unpacked['dir'];
+                $source = $root.DIRECTORY_SEPARATOR
+                    .str_replace('/', DIRECTORY_SEPARATOR, $unpacked['entry']);
+                $scan = MeshPrescan::of($source);
+            } elseif (! ModelConverter::needsConverting($scan->format)) {
+                throw ValidationException::withMessages([
+                    'model' => "A .{$scan->format} opens in the browser as it is.",
+                ]);
+            }
+
+            if ($refusal = $scan->rejection()) {
+                throw ValidationException::withMessages(['model' => $refusal]);
+            }
+
+            $result = $converter->toGlb($source, $scratch, $root);
 
             if (($result['status'] ?? 'failed') !== 'ok') {
                 throw ValidationException::withMessages([

@@ -39,10 +39,9 @@ class PaymentWebhookController extends BaseController
         // conflict keeps that race-safe and leaves no failed statement behind
         // to poison a surrounding transaction.
         //
-        // Both together, because the row is what makes us answer "already
-        // received": written on its own, a queue that refuses the job would
-        // leave us silently turning away every retry of an event nobody
-        // handled.
+        // Both in one transaction: the row is what makes us answer "already
+        // received", so writing it without queueing the work would turn away
+        // every retry of an event nobody handled.
         $accepted = DB::transaction(function () use ($event) {
             $accepted = WebhookEvent::query()->insertOrIgnore([
                 'id' => $event->id,
