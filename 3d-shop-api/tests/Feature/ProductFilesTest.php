@@ -50,11 +50,17 @@ class ProductFilesTest extends TestCase
         $this->assertSame(['a.png', 'b.png'], $product->previewImages->pluck('path')->all());
     }
 
-    public function test_products_default_to_interactive_preview(): void
+    /**
+     * Code that creates a product without saying which preview it wants gets
+     * the one that keeps the file. The upload endpoint still answers to an
+     * older contract and passes `interactive` when the field is left out; this
+     * is the floor under everything that does not.
+     */
+    public function test_a_product_made_without_a_choice_keeps_its_file(): void
     {
         $product = $this->productWithFiles();
 
-        $this->assertSame(Product::PREVIEW_INTERACTIVE, $product->fresh()->preview_mode);
+        $this->assertSame(Product::PREVIEW_ATTESTED_STILLS, $product->fresh()->preview_mode);
     }
 
     public function test_deleting_a_product_removes_its_files(): void

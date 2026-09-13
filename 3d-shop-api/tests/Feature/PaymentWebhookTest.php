@@ -6,11 +6,13 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
+use App\Jobs\HandlePaymentEvent;
 use App\Models\WebhookEvent;
 use App\Payments\FakeGateway;
 use App\Payments\PaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -257,6 +259,54 @@ class PaymentWebhookTest extends TestCase
         $this->assertSame(0, Sale::count());
         $this->getJson("/api/products-authenticated/{$this->product->id}")
             ->assertJsonPath('product_status', 'not-purchased');
+    }
+
+    /**
+     * The record of having seen an event is also what makes us turn away the
+     * provider's retry. If the work never happened, turning the retry away
+     * means a refunded buyer keeps their download for good.
+     */
+    public function test_a_retry_is_accepted_after_the_work_was_given_up_on(): void
+    {
+        $this->send($this->completed())->assertSuccessful();
+        $this->order->update(['payment_intent_id' => 'pi_refunded']);
+
+        $refund = $this->event('charge.refunded', [
+            'id' => 'ch_test',
+            'payment_intent' => 'pi_refunded',
+        ]);
+
+        // Accepted, then the job exhausts its tries and gives up.
+        $this->send($refund)->assertSuccessful();
+        WebhookEvent::whereKey($refund['id'])->update(['handled_at' => null]);
+        (new HandlePaymentEvent(app(PaymentGateway::class)->parseEvent(
+            json_encode($refund),
+            ['stripe-signature' => $this->signature(json_encode($refund), self::SECRET)]
+        )))->failed(new RuntimeException('the queue gave up'));
+
+        $this->assertSame(0, WebhookEvent::whereKey($refund['id'])->count());
+
+        $this->send($refund)
+            ->assertSuccessful()
+            ->assertJsonPath('message', 'Received.');
+
+        $this->assertSame(Order::REFUNDED, $this->order->fresh()->status);
+        $this->assertSame(0, Sale::count());
+    }
+
+    /** A handled event still turns its retry away; that is the whole point. */
+    public function test_a_retry_of_work_that_was_done_is_still_turned_away(): void
+    {
+        $event = $this->completed();
+
+        $this->send($event)->assertSuccessful();
+        (new HandlePaymentEvent(app(PaymentGateway::class)->parseEvent(
+            json_encode($event),
+            ['stripe-signature' => $this->signature(json_encode($event), self::SECRET)]
+        )))->failed(new RuntimeException('too late, it already worked'));
+
+        $this->assertSame(1, WebhookEvent::whereKey($event['id'])->count());
+        $this->send($event)->assertJsonPath('message', 'Already received.');
     }
 
     public function test_a_refund_for_an_order_that_never_paid_is_harmless(): void

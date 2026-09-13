@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * One fulfilment path for every provider: the gateway has already translated
@@ -144,6 +145,26 @@ class HandlePaymentEvent implements ShouldQueue
         return $this->event->paymentId === null
             ? null
             : Order::with('items')->firstWhere('payment_intent_id', $this->event->paymentId);
+    }
+
+    /**
+     * The record of "we have seen this one" is also what makes us answer
+     * "already received" to the provider's retry. If this event is never going
+     * to be handled, that record has to go, or the retry — the one mechanism
+     * built to recover from this — is swallowed and a refund never lands.
+     *
+     * Re-running is safe: fulfilling and refunding both lock the order and are
+     * idempotent.
+     */
+    public function failed(?Throwable $exception): void
+    {
+        WebhookEvent::whereKey($this->event->id)->whereNull('handled_at')->delete();
+
+        Log::error('Gave up on a payment event; the provider may retry it.', [
+            'event' => $this->event->id,
+            'type' => $this->event->providerType,
+            'message' => $exception?->getMessage(),
+        ]);
     }
 
     private function done(): void

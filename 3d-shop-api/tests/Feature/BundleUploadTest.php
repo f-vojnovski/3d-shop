@@ -62,6 +62,34 @@ class BundleUploadTest extends TestCase
         $this->assertSame(3, $file->facts()['vertices']);
     }
 
+    /**
+     * An interactive preview hands the browser the deliverable. For a bundle
+     * the deliverable is the archive, so that option would give away the
+     * textures and everything else packed beside the model — which is not what
+     * "buyers spin the real model" says it does.
+     */
+    public function test_a_bundle_cannot_be_offered_as_a_model_buyers_spin(): void
+    {
+        $this->postJson('/api/products', array_merge($this->payload($this->bundle()), [
+            'preview_mode' => 'interactive',
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('objModel');
+    }
+
+    /** A model on its own is the seller's to give away if they choose to. */
+    public function test_a_lone_model_may_still_be_offered_that_way(): void
+    {
+        $this->postJson('/api/products', array_merge($this->payload(
+            UploadedFile::fake()->createWithContent('car.obj', "v 0 0 0
+v 1 0 0
+v 0 1 0
+f 1 2 3
+")
+        ), ['preview_mode' => 'interactive']))
+            ->assertSuccessful();
+    }
+
     public function test_the_record_names_every_file_the_bundle_holds(): void
     {
         $id = $this->publish($this->bundle());

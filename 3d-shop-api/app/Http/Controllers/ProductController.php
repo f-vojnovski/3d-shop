@@ -60,6 +60,9 @@ class ProductController extends BaseController
             'name' => 'required|max:255',
             'description' => 'nullable|max:1000',
             'price' => 'required|numeric|min:0|max:999999.99',
+            // Left out, this still means `interactive`, which hands the browser
+            // the real file. The model defaults the other way; agreeing would
+            // oblige every upload to arrive with a camera angle.
             'preview_mode' => 'sometimes|in:interactive,attested_stills',
             // Off by default: a listing goes up when the seller says so, not
             // while its pictures are still being rendered.
@@ -108,6 +111,11 @@ class ProductController extends BaseController
         // Outside the transaction: this reads every byte of every model, and a
         // 25 MB .obj takes about a fifth of a second.
         $uploads = $this->readModels($models);
+
+        $this->guardInteractiveBundles(
+            $request->input('preview_mode', Product::PREVIEW_INTERACTIVE),
+            $uploads
+        );
 
         return DB::transaction(function () use ($request, $models, $angles, $uploads) {
             $product = Product::create([
@@ -317,6 +325,18 @@ class ProductController extends BaseController
             $current->wireframes()->update($supersede);
             $current->derived()->update($supersede);
 
+            // The aim-the-camera copy belongs to the file it was cut from, and
+            // the settings it was cut with live on that file's record. Carried
+            // over, or a seller fixing a mesh silently loses the viewer and
+            // nothing left behind says how to build it again.
+            $wanted = $current->meta['proxy'] ?? null;
+
+            if ($wanted !== null) {
+                $replacement->withMeta(['proxy' => $wanted]);
+            }
+
+            $current->proxy()?->update($supersede);
+
             $current->update([
                 'superseded_at' => now(),
                 'superseded_by_id' => $replacement->id,
@@ -324,6 +344,10 @@ class ProductController extends BaseController
             ]);
 
             RenderProductPreviews::dispatch($product->id, $fields['format'])->afterCommit();
+
+            if ($wanted !== null) {
+                BuildViewerProxy::dispatch($replacement->id)->afterCommit();
+            }
 
             return new ProductResource($product->load('files'));
         });
@@ -546,6 +570,36 @@ class ProductController extends BaseController
         }
 
         return $uploads;
+    }
+
+    /**
+     * An interactive preview hands the browser the deliverable itself. For a
+     * single model that is the seller's choice to make. For a bundle the
+     * deliverable is the archive, so the same choice gives away the textures
+     * and everything else packed beside them — which is not what the option
+     * says, and not what anyone would pick knowingly.
+     *
+     * @param  array<string, \App\Support\ModelUpload>  $uploads
+     */
+    private function guardInteractiveBundles(string $mode, array $uploads): void
+    {
+        if ($mode !== Product::PREVIEW_INTERACTIVE) {
+            return;
+        }
+
+        $fields = ModelFormats::fields();
+
+        foreach ($uploads as $format => $upload) {
+            if (! $upload->isBundle()) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                $fields[$format] => 'This .'.$format.' arrived as an archive, so letting buyers '
+                    .'spin the real model would hand them the textures too. Choose '
+                    .'server-rendered pictures, or upload the model on its own.',
+            ]);
+        }
     }
 
     private function refuseSettledFields(Request $request): void

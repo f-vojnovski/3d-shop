@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\BuildViewerProxy;
 use App\Jobs\RenderProductPreviews;
 use App\Models\Product;
 use App\Models\ProductFile;
@@ -100,6 +101,66 @@ class ReplaceFileTest extends TestCase
             fn (RenderProductPreviews $job) => $job->productId === $this->product->id
                 && $job->format === 'obj'
         );
+    }
+
+    /**
+     * The aim-the-camera copy is cut from a particular file with settings the
+     * seller chose. Fixing a mesh should not quietly cost the listing its
+     * viewer, and should not leave the settings behind where nothing can find
+     * them to build it again.
+     */
+    public function test_the_aiming_copy_is_rebuilt_for_the_new_file(): void
+    {
+        $current = $this->product->deliverableFor('obj');
+        $current->withMeta(['proxy' => ['mode' => 'model', 'ratio' => 0.2, 'method' => 'parts']]);
+
+        $this->replace()->assertSuccessful();
+
+        $replacement = $this->product->fresh()->load('files')->deliverableFor('obj');
+
+        $this->assertSame(
+            ['mode' => 'model', 'ratio' => 0.2, 'method' => 'parts'],
+            $replacement->meta['proxy']
+        );
+
+        Queue::assertPushed(
+            BuildViewerProxy::class,
+            fn (BuildViewerProxy $job) => $job->sourceFileId === $replacement->id
+        );
+    }
+
+    /** The old one stops being the listing's, rather than lingering as a second. */
+    public function test_the_old_aiming_copy_leaves_the_listing(): void
+    {
+        $current = $this->product->deliverableFor('obj');
+        $current->withMeta(['proxy' => ['mode' => 'model', 'ratio' => 0.2]]);
+
+        $old = $this->product->files()->create([
+            'source_file_id' => $current->id,
+            'kind' => ProductFile::KIND_PROXY,
+            'format' => 'glb',
+            'disk' => 'models',
+            'path' => 'proxies/old.glb',
+            'bytes' => 10,
+            'checksum' => hash('sha256', 'old'),
+        ]);
+
+        $this->replace()->assertSuccessful();
+
+        $this->assertNotNull($old->fresh()->superseded_at);
+    }
+
+    /** "No shape at all" is a choice too, and it carries over unchanged. */
+    public function test_a_seller_who_wanted_only_an_outline_box_keeps_that(): void
+    {
+        $current = $this->product->deliverableFor('obj');
+        $current->withMeta(['proxy' => ['mode' => 'box', 'ratio' => 0.1]]);
+
+        $this->replace()->assertSuccessful();
+
+        $replacement = $this->product->fresh()->load('files')->deliverableFor('obj');
+
+        $this->assertSame('box', $replacement->meta['proxy']['mode']);
     }
 
     public function test_the_old_previews_leave_the_listing_but_stay_on_the_record(): void
