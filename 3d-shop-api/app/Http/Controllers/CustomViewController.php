@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ProductResource;
 use App\Jobs\RenderCustomClip;
 use App\Jobs\RenderCustomView;
 use App\Jobs\RenderProductPreviews;
-use App\Http\Resources\ProductResource;
 use App\Models\CustomView;
 use App\Models\Product;
+use App\Models\RenderRun;
 use App\Support\ModelFormats;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
@@ -95,6 +96,21 @@ class CustomViewController extends BaseController
             throw ValidationException::withMessages([
                 'camera' => 'You have asked for as many renders as one account may in a day. '
                     .'The ones you already have stay until they expire.',
+            ]);
+        }
+
+        // What those asks actually cost, rather than how many there were. A
+        // heavy model is worth ten light ones, so the count alone lets a script
+        // pointed at the biggest file spend ten times what the limit assumed.
+        $spent = (float) RenderRun::query()
+            ->where('user_id', $viewerId)
+            ->where('created_at', '>=', now()->subDay())
+            ->sum('vcpu_seconds');
+
+        if ($spent >= CustomView::DAILY_BUDGET_VCPU_SECONDS) {
+            throw ValidationException::withMessages([
+                'camera' => 'Your renders have used as much machine time as one account '
+                    .'may in a day. The ones you already have stay until they expire.',
             ]);
         }
 

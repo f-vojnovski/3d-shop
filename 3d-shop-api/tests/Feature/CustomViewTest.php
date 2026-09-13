@@ -8,6 +8,7 @@ use App\Jobs\RenderProductPreviews;
 use App\Models\CustomView;
 use App\Models\Product;
 use App\Models\ProductFile;
+use App\Models\RenderRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -477,6 +478,51 @@ class CustomViewTest extends TestCase
             ->assertJsonValidationErrors('camera');
 
         Queue::assertNotPushed(RenderCustomView::class);
+    }
+
+    /**
+     * The hole a count alone leaves: few asks, all of them expensive. Ten of the
+     * heaviest model cost what sixty of a light one would, and the count is
+     * nowhere near its limit.
+     */
+    public function test_a_few_expensive_renders_are_stopped_as_surely_as_many_cheap_ones(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        RenderRun::create([
+            'kind' => 'render',
+            'scratch' => 'custom-views/1',
+            'user_id' => $this->viewer->id,
+            'asked_at' => now(),
+            'vcpu_seconds' => CustomView::DAILY_BUDGET_VCPU_SECONDS,
+            'status' => 'ran',
+        ]);
+
+        $this->assertSame(0, CustomView::count(), 'the count limit is nowhere near reached');
+
+        $this->postJson($this->route(), $this->payload())
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('camera');
+
+        Queue::assertNotPushed(RenderCustomView::class);
+    }
+
+    public function test_machine_time_spent_yesterday_does_not_count_against_today(): void
+    {
+        Sanctum::actingAs($this->viewer);
+
+        $spent = RenderRun::create([
+            'kind' => 'render',
+            'scratch' => 'custom-views/1',
+            'user_id' => $this->viewer->id,
+            'asked_at' => now(),
+            'vcpu_seconds' => CustomView::DAILY_BUDGET_VCPU_SECONDS,
+            'status' => 'ran',
+        ]);
+
+        $spent->forceFill(['created_at' => now()->subDays(2)])->save();
+
+        $this->postJson($this->route(), $this->payload())->assertSuccessful();
     }
 
     /** Yesterday's asking is not today's. */
