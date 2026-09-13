@@ -15,8 +15,7 @@ use Tests\TestCase;
  * a job is allowed to run longer than that, a second worker picks up work the
  * first is still doing: same scratch directory, same rows.
  *
- * Invisible with one worker and certain with two, so the rule is asserted
- * here rather than left to a comment beside the number.
+ * Invisible with one worker and certain with two.
  */
 class QueueTimingTest extends TestCase
 {

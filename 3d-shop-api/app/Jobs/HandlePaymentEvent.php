@@ -21,7 +21,6 @@ class HandlePaymentEvent implements ShouldQueue
 {
     use Queueable;
 
-    /** Money waits behind nothing. A render takes minutes; this takes a moment. */
     public const QUEUE = 'payments';
 
     public $tries = 3;
