@@ -18,6 +18,10 @@ describe('persisted state', () => {
       if (predicate()) return;
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
+
+    // Giving up quietly here made the next assertion fail with a message about
+    // the wrong thing, on a busy machine, once in a few dozen runs.
+    throw new Error('redux-persist did not write within two seconds.');
   };
 
   const persisted = () =>
@@ -35,14 +39,17 @@ describe('persisted state', () => {
       error: { message: 'Those credentials do not match our records.' },
     });
     await persistor.flush();
-    await settled(() => persisted().includes('token'));
+    await settled(() => persisted().includes('user'));
 
     expect(store.getState().auth.error).toBe('Those credentials do not match our records.');
     expect(persisted()).not.toContain('do not match our records');
     expect(persisted()).not.toContain('failed');
   });
 
-  it('still keeps the session itself', async () => {
+  /**
+   * Storage may remember who you were, never anything that proves it.
+   */
+  it('remembers who you are without storing anything that signs you in', async () => {
     const { store, persistor } = await import('./store');
     const { postLoginData } = await import('./features/authSlice');
 
@@ -51,8 +58,10 @@ describe('persisted state', () => {
       payload: { user: { id: 1, name: 'seller' }, token: 'abc123' },
     });
     await persistor.flush();
-    await settled(() => persisted().includes('abc123'));
+    await settled(() => persisted().includes('seller'));
 
-    expect(persisted()).toContain('abc123');
+    expect(persisted()).toContain('seller');
+    expect(persisted()).not.toContain('abc123');
+    expect(persisted()).not.toContain('token');
   });
 });

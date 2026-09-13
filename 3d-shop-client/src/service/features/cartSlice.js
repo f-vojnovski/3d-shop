@@ -1,5 +1,5 @@
 import { createAction, createSlice, createAsyncThunk, isAnyOf } from '@reduxjs/toolkit';
-import { postRequestWithToken } from '../api/axiosClient';
+import { postRequest } from '../api/axiosClient';
 import { logoutUser, sessionExpired } from './authSlice';
 
 const endsASession = isAnyOf(logoutUser.fulfilled, logoutUser.rejected, sessionExpired);
@@ -102,11 +102,7 @@ export const checkoutCart = createAsyncThunk(
     const state = getState();
     const products = state.cart.products.map((product) => ({ id: product.id }));
 
-    const response = await postRequestWithToken(
-      'api/checkout/session',
-      { products },
-      state.auth.token
-    );
+    const response = await postRequest('api/checkout/session', { products });
 
     return response.data;
   }

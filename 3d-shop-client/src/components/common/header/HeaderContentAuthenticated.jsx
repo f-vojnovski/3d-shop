@@ -35,7 +35,7 @@ const HeaderContentAuthenticated = () => {
 
         <MenuDivider />
 
-        <MenuItem danger onClick={() => dispatch(logoutUser(auth.token))}>
+        <MenuItem danger onClick={() => dispatch(logoutUser())}>
           <MdLogout /> Logout
         </MenuItem>
       </DropdownMenu>

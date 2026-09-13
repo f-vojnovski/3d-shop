@@ -1,10 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getRequest, postRequest, postRequestWithToken } from '../api/axiosClient';
+import { getRequest, postRequest } from '../api/axiosClient';
 import checkIfUserConsentedToCookies from '../cookies/cookiesConsentChecker';
 import cookies from '../cookies/cookiesWrapper';
 
+// No token: the session is an httpOnly cookie the browser sends on its own.
 const initialState = {
-  token: null,
   user: null,
   status: 'idle',
   error: null,
@@ -15,7 +15,6 @@ export const authSlice = createSlice({
   initialState: initialState,
   reducers: {
     sessionExpired: (state) => {
-      state.token = null;
       state.user = null;
       state.status = 'idle';
       state.error = null;
@@ -29,7 +28,6 @@ export const authSlice = createSlice({
       .addCase(postLoginData.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload.user;
-        state.token = action.payload.token;
       })
       .addCase(postLoginData.rejected, (state, action) => {
         state.status = 'failed';
@@ -40,13 +38,11 @@ export const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state, action) => {
         state.status = 'idle';
-        state.token = null;
         state.user = null;
         state.error = null;
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.status = 'idle';
-        state.token = null;
         state.user = null;
         state.error = null;
       })
@@ -56,7 +52,6 @@ export const authSlice = createSlice({
       .addCase(postRegisterData.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload.user;
-        state.token = action.payload.token;
       })
       .addCase(postRegisterData.rejected, (state, action) => {
         state.status = 'failed';
@@ -72,25 +67,25 @@ export const postLoginData = createAsyncThunk('auth/postLoginData', async (body)
     throw new Error('Please accept cookies before signing in.');
   }
 
-  if (!cookies.get('XSRF-TOKEN')) {
-    await getRequest(`sanctum/csrf-cookie`, null, {
-      withCredentials: true,
-    });
-  }
+  await csrfCookie();
 
   const response = await postRequest('api/auth/login', body);
   return response.data;
 });
 
+/** Laravel refuses a write without this, and registering is a write now too. */
+async function csrfCookie() {
+  if (!cookies.get('XSRF-TOKEN')) {
+    await getRequest('sanctum/csrf-cookie', null, { withCredentials: true });
+  }
+}
+
 export const { sessionExpired } = authSlice.actions;
 
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
-  async (arg, { getState }) => {
-    const state = getState();
-    const token = state.auth.token;
-
-    const response = await postRequestWithToken('api/auth/logout', null, token);
+  async () => {
+    const response = await postRequest('api/auth/logout', null);
     return response.data;
   }
 );
@@ -98,6 +93,8 @@ export const logoutUser = createAsyncThunk(
 export const postRegisterData = createAsyncThunk(
   'auth/postRegisterData',
   async (body) => {
+    await csrfCookie();
+
     const response = await postRequest('api/auth/register', body);
     return response.data;
   }

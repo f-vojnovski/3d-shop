@@ -5,16 +5,15 @@ import { customViewDrawn } from '../../../service/features/customViewSlice';
 import { createEcho } from '../../../service/realtime/echo';
 
 const RenderNotices = () => {
-  const token = useSelector((state) => state.auth.token);
   const userId = useSelector((state) => state.auth.user?.id);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (!token || !userId) {
+    if (!userId) {
       return undefined;
     }
 
-    const echo = createEcho(token);
+    const echo = createEcho();
     const channel = `sellers.${userId}`;
 
     echo.private(channel).listen('.preview.render.finished', (event) => {
@@ -49,7 +48,7 @@ const RenderNotices = () => {
       echo.leave(viewerChannel);
       echo.disconnect();
     };
-  }, [token, userId, dispatch]);
+  }, [userId, dispatch]);
 
   return null;
 };

@@ -66,38 +66,20 @@ export function getRequest(URL) {
   return axiosClient.get(`${URL}`).then((response) => response);
 }
 
-export function getRequestWithToken(URL, token) {
-  return axiosClient
-    .get(`${URL}`, { headers: { Authorization: `Bearer ${token}` } })
-    .then((response) => response);
-}
-
 export function postRequest(URL, payload) {
   return axiosClient.post(`/${URL}`, payload).then((response) => response);
-}
-
-export function postRequestWithToken(URL, payload, token) {
-  return axiosClient
-    .post(`/${URL}`, payload, { headers: { Authorization: `Bearer ${token}` } })
-    .then((response) => response);
 }
 
 /**
  * A conversion starts a container, so it outlives the default timeout, and the
  * reply is a model file rather than JSON.
  */
-export function postForBinary(URL, payload, token) {
+export function postForBinary(URL, payload) {
   return axiosClient
-    .post(`/${URL}`, payload, {
-      responseType: 'arraybuffer',
-      timeout: 120000,
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    .post(`/${URL}`, payload, { responseType: 'arraybuffer', timeout: 120000 })
     .then((response) => response.data);
 }
 
-export function deleteRequestWithToken(URL, token) {
-  return axiosClient
-    .delete(`/${URL}`, { headers: { Authorization: `Bearer ${token}` } })
-    .then((response) => response);
+export function deleteRequest(URL) {
+  return axiosClient.delete(`/${URL}`).then((response) => response);
 }

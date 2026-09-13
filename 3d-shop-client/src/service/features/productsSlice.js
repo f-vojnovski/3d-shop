@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getRequest, getRequestWithToken } from '../api/axiosClient';
+import { getRequest } from '../api/axiosClient';
 
 const initialState = {
   // The catalogue, your uploads and your purchases all write to this one list.
@@ -104,28 +104,16 @@ export const fetchProducts = createAsyncThunk(
 
 export const fetchUploadedProductsForCurrentUser = createAsyncThunk(
   'products/getUploadedProductsForCurrentUser',
-  async (pageNumber, { getState }) => {
-    const state = getState();
-    const token = state.auth.token;
-
-    const response = await getRequestWithToken(
-      `api/current-user-products?page=${pageNumber}`,
-      token
-    );
+  async (pageNumber) => {
+    const response = await getRequest(`api/current-user-products?page=${pageNumber}`);
     return response.data;
   }
 );
 
 export const fetchPurchasedProductsForCurrentUser = createAsyncThunk(
   'products/getPurchasedProductsForCurrentUser',
-  async (pageNumber, { getState }) => {
-    const state = getState();
-    const token = state.auth.token;
-
-    const response = await getRequestWithToken(
-      `api/owned-products?page=${pageNumber}`,
-      token
-    );
+  async (pageNumber) => {
+    const response = await getRequest(`api/owned-products?page=${pageNumber}`);
     return response.data;
   }
 );

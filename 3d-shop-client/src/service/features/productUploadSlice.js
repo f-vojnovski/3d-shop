@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { postRequestWithToken } from '../api/axiosClient';
+import { postRequest } from '../api/axiosClient';
 
 const initialState = {
   status: 'idle',
@@ -40,10 +40,9 @@ export const { clearUploadState } = productUploadSlice.actions;
 export const uploadProduct = createAsyncThunk(
   'product/upload',
   async (body, { getState, rejectWithValue }) => {
-    const token = getState().auth.token;
 
     try {
-      const response = await postRequestWithToken('api/products', body, token);
+      const response = await postRequest('api/products', body);
 
       return response.data;
     } catch (failure) {

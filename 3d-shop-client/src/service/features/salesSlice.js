@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getRequestWithToken } from '../api/axiosClient';
+import { getRequest } from '../api/axiosClient';
 
 const initialState = {
   sales: [],
@@ -29,10 +29,8 @@ export const salesSlice = createSlice({
 
 export default salesSlice.reducer;
 
-export const fetchSales = createAsyncThunk('sales/fetch', async (arg, { getState }) => {
-  const state = getState();
-  const token = state.auth.token;
+export const fetchSales = createAsyncThunk('sales/fetch', async () => {
+  const response = await getRequest('api/sales');
 
-  const resposne = await getRequestWithToken('api/sales', token);
-  return resposne.data;
+  return response.data;
 });

@@ -29,8 +29,35 @@ class AuthTest extends TestCase
     {
         $this->postJson('/api/auth/login', ['name' => 'Filip', 'password' => 'password123'])
             ->assertSuccessful()
-            ->assertJsonPath('user.name', 'Filip')
-            ->assertJsonStructure(['token']);
+            ->assertJsonPath('user.name', 'Filip');
+
+        $this->assertAuthenticated();
+    }
+
+    /**
+     * A token in the body ends up in storage, which is where it was.
+     */
+    public function test_signing_in_hands_back_no_token(): void
+    {
+        $body = $this->postJson('/api/auth/login', ['name' => 'Filip', 'password' => 'password123'])
+            ->assertSuccessful()
+            ->json();
+
+        $this->assertSame(['user'], array_keys($body));
+        $this->assertArrayNotHasKey('token', $body);
+        $this->assertSame(0, $this->user()->tokens()->count());
+    }
+
+    /** A session id handed out before signing in must not be the one that ends up signed in. */
+    public function test_the_session_id_changes_on_the_way_in(): void
+    {
+        $this->get('/api/products');
+        $before = session()->getId();
+
+        $this->postJson('/api/auth/login', ['name' => 'Filip', 'password' => 'password123'])
+            ->assertSuccessful();
+
+        $this->assertNotSame($before, session()->getId());
     }
 
     /**
@@ -76,25 +103,29 @@ class AuthTest extends TestCase
             'email' => 'newcomer@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-        ])->assertStatus(201)->assertJsonStructure(['token', 'user' => ['id', 'name']]);
+        ])->assertStatus(201)->assertJsonStructure(['user' => ['id', 'name']]);
+
+        $this->assertAuthenticated();
     }
 
-    public function test_logging_out_revokes_only_the_token_that_was_used(): void
+    public function test_logging_out_ends_the_session(): void
     {
-        $user = User::firstWhere('name', 'Filip');
-        $phone = $user->createToken('phone')->plainTextToken;
-        $laptop = $user->createToken('laptop')->plainTextToken;
-
-        $this->withHeader('Authorization', "Bearer {$laptop}")
-            ->postJson('/api/auth/logout')
+        $this->postJson('/api/auth/login', ['name' => 'Filip', 'password' => 'password123'])
             ->assertSuccessful();
 
-        // The guard resolves once per process, not once per request as it would
-        // over HTTP, so it has to be cleared to see the revocation.
-        $this->app['auth']->forgetGuards();
-        $this->withHeader('Authorization', "Bearer {$laptop}")->getJson('/api/user')->assertStatus(401);
+        $this->assertAuthenticated();
 
+        $this->postJson('/api/auth/logout')->assertSuccessful();
+
+        // The guard resolves once per process, not once per request as it would
+        // over HTTP, so it has to be cleared to see the session end.
         $this->app['auth']->forgetGuards();
-        $this->withHeader('Authorization', "Bearer {$phone}")->getJson('/api/user')->assertSuccessful();
+
+        $this->assertGuest();
+    }
+
+    private function user(): User
+    {
+        return User::firstWhere('name', 'Filip');
     }
 }

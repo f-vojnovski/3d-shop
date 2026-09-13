@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { getRequestWithToken, postRequestWithToken } from '../api/axiosClient';
+import { getRequest, postRequest } from '../api/axiosClient';
 
 const initialState = {
   // Which product these belong to. A viewer can ask for a render on one product
@@ -15,10 +15,7 @@ const initialState = {
 export const fetchCustomViews = createAsyncThunk(
   'customViews/fetch',
   async (productId, { getState }) => {
-    const response = await getRequestWithToken(
-      `/api/products/${productId}/views`,
-      getState().auth.token,
-    );
+    const response = await getRequest(`/api/products/${productId}/views`);
 
     return response.data.views;
   },
@@ -27,11 +24,12 @@ export const fetchCustomViews = createAsyncThunk(
 export const requestCustomView = createAsyncThunk(
   'customViews/request',
   async ({ productId, format, pass, clip = null, camera }, { getState }) => {
-    const response = await postRequestWithToken(
-      `api/products/${productId}/views`,
-      { format, pass, clip, camera },
-      getState().auth.token,
-    );
+    const response = await postRequest(`api/products/${productId}/views`, {
+      format,
+      pass,
+      clip,
+      camera,
+    });
 
     return response.data;
   },
@@ -40,11 +38,7 @@ export const requestCustomView = createAsyncThunk(
 export const publishCustomView = createAsyncThunk(
   'customViews/publish',
   async ({ productId, viewId }, { getState }) => {
-    const response = await postRequestWithToken(
-      `api/products/${productId}/views/${viewId}/publish`,
-      {},
-      getState().auth.token,
-    );
+    const response = await postRequest(`api/products/${productId}/views/${viewId}/publish`, {});
 
     return response.data;
   },

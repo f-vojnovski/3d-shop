@@ -9,7 +9,7 @@ name: 3dshop
 x-api-env: &api-env
   APP_NAME: "3D Shop"
   APP_ENV: local
-  APP_KEY: base64:Zm9yLXRoZS1kZW1vLW9ubHktbm90LWEtc2VjcmV0MDA9
+  APP_KEY: base64:Zm9yLXRoZS1kZW1vLW9ubHktbm90LWEtc2VjcmV0MDA=
   APP_DEBUG: "false"
   APP_URL: http://localhost:${API_PORT:-8000}
   FRONTEND_URL: http://localhost:${CLIENT_PORT:-3000}

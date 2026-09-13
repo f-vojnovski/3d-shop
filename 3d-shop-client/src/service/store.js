@@ -90,7 +90,7 @@ let persistor = persistStore(store);
 // A token the API no longer accepts leaves the client signed in as far as it
 // knows, so the session is ended here rather than on the next failed action.
 registerUnauthorizedHandler(() => {
-  if (store.getState().auth.token === null) {
+  if (store.getState().auth.user === null) {
     return;
   }
 

@@ -36,6 +36,7 @@ import { notify } from '../../../service/features/toastSlice';
 import SubmitButton from '../../common/submit-button/SubmitButton';
 import CameraRoll from './CameraRoll';
 import ModelView from './ModelView';
+import BackLink from '../../common/back-link/BackLink';
 import DropZone from './DropZone';
 import ProxyPanel from './ProxyPanel';
 import ProxyPreview from '../../common/model-displayer/ProxyPreview';
@@ -76,7 +77,6 @@ const ProductUploadPage = () => {
     thumbnails,
     proxy,
   } = useSelector((state) => state.uploadDraft);
-  const token = useSelector((state) => state.auth.token);
   const attached = useSelector(selectAttachedFormats);
   const activeShots = useSelector(selectActiveShots);
 
@@ -199,7 +199,7 @@ const ProductUploadPage = () => {
     form.append('model', file);
 
     try {
-      const bytes = await postForBinary('api/uploads/convert', form, token);
+      const bytes = await postForBinary('api/uploads/convert', form);
       const previewUri = URL.createObjectURL(new Blob([bytes], { type: 'model/gltf-binary' }));
 
       dispatch(convertedPreview({ format, previewUri }));
@@ -207,7 +207,7 @@ const ProductUploadPage = () => {
       dispatch(conversionFailed(format));
       dispatch(notify('error', `${labelFor(format)} could not be prepared for framing.`));
     }
-  }, [dispatch, token]);
+  }, [dispatch]);
 
   const accept = useCallback(async (files, into = 'thumbnails') => {
     for (const file of files) {
@@ -400,6 +400,7 @@ const ProductUploadPage = () => {
 
   return (
     <div className={styles.page}>
+      <BackLink to="/products">Leave without publishing</BackLink>
       <div className={styles.tabs}>
         {attached.map((format) => (
           <button

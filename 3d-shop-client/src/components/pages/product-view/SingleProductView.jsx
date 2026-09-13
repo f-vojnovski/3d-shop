@@ -54,8 +54,7 @@ const SingleProductView = () => {
   const [viewingRelease, setViewingRelease] = useState(null);
   const replacing = useSelector((state) => state.product.replacing);
   const publishing = useSelector((state) => state.product.publishing);
-  const token = useSelector((state) => state.auth.token);
-  const signedIn = Boolean(token);
+  const signedIn = useSelector((state) => state.auth.user) !== null;
 
   useEffect(() => {
     dispatch(fetchProductById(productId));
@@ -88,7 +87,7 @@ const SingleProductView = () => {
       return undefined;
     }
 
-    const echo = createEcho(token);
+    const echo = createEcho();
     const channel = `products.${productId}`;
 
     echo.channel(channel).listen('.preview.render.finished', () => {
@@ -99,7 +98,7 @@ const SingleProductView = () => {
       echo.leave(channel);
       echo.disconnect();
     };
-  }, [renderInProgress, dispatch, productId, token]);
+  }, [renderInProgress, dispatch, productId]);
 
   const formats = product?.formats ?? [];
   const selectedFileType = formats.includes(chosenFileType) ? chosenFileType : formats[0] ?? 'obj';

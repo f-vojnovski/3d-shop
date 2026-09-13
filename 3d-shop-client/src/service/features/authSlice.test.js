@@ -8,10 +8,10 @@ const { default: reducer, postLoginData, logoutUser } = await import('./authSlic
 
 describe('auth reducer', () => {
   it('starts logged out and idle', () => {
-    expect(reducer(undefined, { type: '@@INIT' })).toMatchObject({
-      token: null,
+    expect(reducer(undefined, { type: '@@INIT' })).toEqual({
       user: null,
       status: 'idle',
+      error: null,
     });
   });
 
@@ -22,7 +22,7 @@ describe('auth reducer', () => {
 
     await thunk(
       (action) => dispatched.push(action),
-      () => ({ auth: { token: null } }),
+      () => ({ auth: { user: null } }),
       undefined
     );
 
@@ -36,14 +36,13 @@ describe('auth reducer', () => {
   });
 
   it('does not keep an error from a failed logout', () => {
-    const loggedIn = { token: 'abc', user: { id: 1 }, status: 'succeeded', error: null };
+    const loggedIn = { user: { id: 1 }, status: 'succeeded', error: null };
 
     const state = reducer(loggedIn, {
       type: logoutUser.rejected.type,
       error: { message: 'Network Error' },
     });
 
-    expect(state.token).toBeNull();
     expect(state.user).toBeNull();
     expect(state.error).toBeNull();
     expect(state.status).toBe('idle');

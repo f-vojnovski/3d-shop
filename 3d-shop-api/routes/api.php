@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
 use App\Support\ModelFormats;
@@ -37,8 +38,12 @@ Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])
 
 // Login refuses a wrong name and a wrong password identically, which only
 // slows an attacker down if the guesses are also rate limited.
-Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
-Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+// A session whether or not the caller looked like the frontend: without it a
+// request with no Origin gets a 500 rather than an answer.
+Route::middleware(StartSession::class)->group(function () {
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+});
 
 Route::group(['middleware' => ['auth:sanctum']], function() {
     // Reads and unpacks every byte of every model inside the request, so it is
@@ -68,7 +73,7 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/owned-products', [ProductController::class, 'getPurchasedProductsForUser']);
     Route::get('/products-authenticated/{id}', [ProductController::class, 'show']);
 
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware(StartSession::class);
 
     Route::post('/checkout/session', [CheckoutController::class, 'session']);
     Route::get('/products/{id}/views', [CustomViewController::class, 'index'])

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getRequestWithToken } from '../../../service/api/axiosClient';
-import { useSelector } from 'react-redux';
+import { getRequest } from '../../../service/api/axiosClient';
 import { orderSettled } from '../../../service/features/cartSlice';
 import { notify } from '../../../service/features/toastSlice';
 import LoadingSpinner from '../../common/spinner/LoadingSpinner';
@@ -19,20 +18,19 @@ const SETTLED = ['paid', 'failed', 'expired', 'refunded'];
 const OrderComplete = () => {
   const [params] = useSearchParams();
   const orderId = params.get('order');
-  const token = useSelector((state) => state.auth.token);
   const dispatch = useDispatch();
 
   const [order, setOrder] = useState(null);
   const [gaveUp, setGaveUp] = useState(false);
 
   const poll = useCallback(async () => {
-    const response = await getRequestWithToken(`/api/orders/${orderId}`, token);
+    const response = await getRequest(`/api/orders/${orderId}`);
 
     return response.data;
-  }, [orderId, token]);
+  }, [orderId]);
 
   useEffect(() => {
-    if (!orderId || !token) {
+    if (!orderId) {
       return undefined;
     }
 
@@ -79,7 +77,7 @@ const OrderComplete = () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [orderId, token, poll, dispatch]);
+  }, [orderId, poll, dispatch]);
 
   if (!orderId) {
     return <p className={styles.page}>No order to show.</p>;

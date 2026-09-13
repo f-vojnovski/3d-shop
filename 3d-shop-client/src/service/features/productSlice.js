@@ -1,10 +1,5 @@
 import { createAsyncThunk, createSlice, isAnyOf } from '@reduxjs/toolkit';
-import {
-  deleteRequestWithToken,
-  getRequest,
-  getRequestWithToken,
-  postRequestWithToken,
-} from '../api/axiosClient';
+import { deleteRequest, getRequest, postRequest } from '../api/axiosClient';
 
 const initialState = {
   product: null,
@@ -89,13 +84,12 @@ export default productSlice.reducer;
 
 export const { resetProduct } = productSlice.actions;
 
-export const fetchProductById = createAsyncThunk('/product/getById', async (productId, {getState}) => {
-  const state = getState();
-  const token = state.auth.token;
+export const fetchProductById = createAsyncThunk('/product/getById', async (productId, { getState }) => {
+  const signedIn = getState().auth.user !== null;
 
   let response;
-  if (token) {
-    response = await getRequestWithToken(`/api/products-authenticated/${productId}`, token);
+  if (signedIn) {
+    response = await getRequest(`/api/products-authenticated/${productId}`);
   } else {
     response = await getRequest(`/api/products/${productId}`);
   }
@@ -105,14 +99,9 @@ export const fetchProductById = createAsyncThunk('/product/getById', async (prod
 /** Puts a listing on sale, whether it has never been up or was taken down. */
 export const publishProduct = createAsyncThunk(
   '/product/publish',
-  async (productId, { getState }) => {
-    const token = getState().auth.token;
-
-    const response = await postRequestWithToken(
-      `api/products/${productId}/publish`,
-      {},
-      token
-    );
+  async (productId) => {
+    const response = await postRequest(`api/products/${productId}/publish`,
+      {});
 
     return response.data;
   }
@@ -121,9 +110,7 @@ export const publishProduct = createAsyncThunk(
 export const withdrawProduct = createAsyncThunk(
   '/product/withdraw',
   async (productId, { getState }) => {
-    const token = getState().auth.token;
-
-    await deleteRequestWithToken(`api/products/${productId}`, token);
+    await deleteRequest(`api/products/${productId}`);
 
     return productId;
   }
@@ -136,17 +123,13 @@ export const withdrawProduct = createAsyncThunk(
 export const addThumbnails = createAsyncThunk(
   '/product/addThumbnails',
   async ({ productId, files = [], from = [] }, { getState }) => {
-    const token = getState().auth.token;
     const form = new FormData();
 
     files.forEach((file) => form.append('images[]', file));
     from.forEach((id) => form.append('from[]', id));
 
-    const response = await postRequestWithToken(
-      `api/products/${productId}/thumbnails`,
-      form,
-      token
-    );
+    const response = await postRequest(`api/products/${productId}/thumbnails`,
+      form);
 
     return response.data;
   }
@@ -155,12 +138,7 @@ export const addThumbnails = createAsyncThunk(
 export const removeThumbnail = createAsyncThunk(
   '/product/removeThumbnail',
   async ({ productId, fileId }, { getState }) => {
-    const token = getState().auth.token;
-
-    const response = await deleteRequestWithToken(
-      `api/products/${productId}/thumbnails/${fileId}`,
-      token
-    );
+    const response = await deleteRequest(`api/products/${productId}/thumbnails/${fileId}`);
 
     return response.data;
   }
@@ -168,7 +146,6 @@ export const removeThumbnail = createAsyncThunk(
 export const replaceFile = createAsyncThunk(
   '/product/replaceFile',
   async ({ productId, format, file, note }, { getState }) => {
-    const token = getState().auth.token;
     const form = new FormData();
 
     form.append('format', format);
@@ -178,7 +155,7 @@ export const replaceFile = createAsyncThunk(
       form.append('note', note);
     }
 
-    const response = await postRequestWithToken(`api/products/${productId}/replace`, form, token);
+    const response = await postRequest(`api/products/${productId}/replace`, form);
 
     return response.data;
   }
