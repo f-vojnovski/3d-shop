@@ -6,9 +6,13 @@ use App\Jobs\BuildViewerProxy;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
+use App\Support\ContainerCommand;
+use App\Support\ContainerJob;
+use App\Support\ModelConverter;
 use App\Support\ProxyRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -49,7 +53,7 @@ class ViewerProxyTest extends TestCase
         // to do, so a seller changing their mind later needs no new dispatch.
         (new BuildViewerProxy($source->id))->handle(
             $this->createMock(ProxyRunner::class),
-            app(\App\Support\ModelConverter::class)
+            app(ModelConverter::class)
         );
 
         $this->assertNull($source->fresh()->proxy());
@@ -148,7 +152,13 @@ class ViewerProxyTest extends TestCase
     /** The sandbox is argv, so nothing else in the suite would notice it going. */
     public function test_the_simplifier_runs_confined(): void
     {
-        $argv = (new ProxyRunner())->commandFor('/s/model', '/s/job.json', '/s/out');
+        $scratch = storage_path('app/private/proxy-scratch/1186');
+        File::ensureDirectoryExists($scratch, 0775, true);
+
+        $argv = ContainerCommand::for(
+            ContainerJob::from(['kind' => 'proxy', 'scratch' => 'proxy-scratch/1186', 'source' => 'model']),
+            storage_path('app/private')
+        );
 
         $this->assertContains('--network=none', $argv);
         $this->assertContains('--cap-drop=ALL', $argv);
@@ -165,6 +175,8 @@ class ViewerProxyTest extends TestCase
             collect($argv)->contains(fn ($one) => str_ends_with((string) $one, ':/in/model:ro')),
             'the model is not mounted read-only'
         );
+
+        File::deleteDirectory($scratch);
     }
 
     private function giveItAProxy(int $productId): ProductFile

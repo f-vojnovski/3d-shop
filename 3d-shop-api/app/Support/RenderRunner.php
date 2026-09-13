@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
 
 class RenderRunner
 {
@@ -11,8 +10,7 @@ class RenderRunner
 
     public function __construct(
         private readonly int $timeoutSeconds = 180,
-        private readonly string $memory = '2g',
-        private readonly string $cpus = '2',
+        private readonly ContainerBroker $broker = new ContainerBroker,
     ) {}
 
     /**
@@ -40,14 +38,18 @@ class RenderRunner
 
         file_put_contents($jobFile, json_encode($request, JSON_PRETTY_PRINT));
 
-        $process = new Process($this->commandFor($modelPath, $jobFile, $outDir, $bundleDir));
-
-        $process->setTimeout($this->timeoutSeconds + 60);
-        $process->run();
+        $answer = $this->broker->run([
+            'kind' => ContainerJob::RENDER,
+            'scratch' => ContainerBroker::scratchName($scratchDir),
+            'source' => basename($bundleDir ?? $modelPath),
+            'bundle' => $bundleDir !== null,
+        ], $this->timeoutSeconds + 120);
 
         Log::channel('render')->debug('Renderer exited.', [
-            'exit_code' => $process->getExitCode(),
-            'stderr' => substr(trim($process->getErrorOutput()), -600) ?: null,
+            'status' => $answer['status'],
+            'exit_code' => $answer['exit'] ?? null,
+            'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600) ?: null,
+            'reason' => $answer['reason'] ?? null,
         ]);
 
         $resultFile = $outDir.DIRECTORY_SEPARATOR.'result.json';
@@ -57,8 +59,8 @@ class RenderRunner
                 'status' => 'failed',
                 'reason' => 'The renderer produced no result.',
                 'retryable' => true,
-                'exit_code' => $process->getExitCode(),
-                'stderr' => substr(trim($process->getErrorOutput()), -600),
+                'exit_code' => $answer['exit'] ?? null,
+                'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600),
             ];
         }
 
@@ -67,44 +69,5 @@ class RenderRunner
             'reason' => 'The renderer result could not be read.',
             'retryable' => true,
         ];
-    }
-
-    /**
-     * Separate from run() so a test can read the confinement back: the suite
-     * substitutes this class wherever a render happens, leaving the argv the
-     * one part of the sandbox nothing else sees.
-     *
-     * @return list<string>
-     */
-    public function commandFor(string $modelPath, string $jobFile, string $outDir, ?string $bundleDir = null): array
-    {
-        // A bundle arrives as a folder so the model keeps its neighbours; a
-        // bare model is one file. Read-only either way: the renderer never
-        // writes to what it was given.
-        $source = $bundleDir === null
-            ? $this->hostPath($modelPath).':/in/model:ro'
-            : $this->hostPath($bundleDir).':/in/bundle:ro';
-
-        return [
-            'docker', 'run', '--rm',
-            ...Sandbox::confinement($this->memory, $this->cpus),
-            '-e', "RENDER_TIMEOUT={$this->timeoutSeconds}",
-            '-v', $source,
-            '-v', $this->hostPath($jobFile).':/in/job.json:ro',
-            '-v', $this->hostPath($outDir).':/out',
-            self::IMAGE,
-        ];
-    }
-
-    /** Docker on Windows wants //d/path, not D:\path. */
-    private function hostPath(string $absolute): string
-    {
-        $absolute = HostPaths::translate($absolute);
-
-        if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {
-            return $absolute;
-        }
-
-        return '//'.strtolower($matches[1]).'/'.str_replace('\\', '/', $matches[2]);
     }
 }

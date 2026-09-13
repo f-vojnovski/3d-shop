@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
 
 /**
  * Draws one animation clip as a moving picture, so a buyer can watch a model
@@ -19,8 +18,7 @@ class AnimateRunner
 
     public function __construct(
         private readonly int $timeoutSeconds = 600,
-        private readonly string $memory = '3g',
-        private readonly string $cpus = '2',
+        private readonly ContainerBroker $broker = new ContainerBroker,
     ) {}
 
     /**
@@ -56,14 +54,18 @@ class AnimateRunner
             JSON_PRETTY_PRINT
         ));
 
-        $process = new Process($this->commandFor($modelPath, $jobFile, $outDir, $bundleDir));
-
-        $process->setTimeout($this->timeoutSeconds + 60);
-        $process->run();
+        $answer = $this->broker->run([
+            'kind' => ContainerJob::ANIMATE,
+            'scratch' => ContainerBroker::scratchName($scratchDir),
+            'source' => basename($bundleDir ?? $modelPath),
+            'bundle' => $bundleDir !== null,
+        ], $this->timeoutSeconds + 120);
 
         Log::channel('render')->debug('Clip harness exited.', [
-            'exit_code' => $process->getExitCode(),
-            'stderr' => substr(trim($process->getErrorOutput()), -600) ?: null,
+            'status' => $answer['status'],
+            'exit_code' => $answer['exit'] ?? null,
+            'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600) ?: null,
+            'reason' => $answer['reason'] ?? null,
         ]);
 
         $resultFile = $outDir.DIRECTORY_SEPARATOR.'result.json';
@@ -73,8 +75,8 @@ class AnimateRunner
                 'status' => 'failed',
                 'reason' => 'The clip harness produced no result.',
                 'retryable' => true,
-                'exit_code' => $process->getExitCode(),
-                'stderr' => substr(trim($process->getErrorOutput()), -600),
+                'exit_code' => $answer['exit'] ?? null,
+                'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600),
             ];
         }
 
@@ -111,43 +113,5 @@ class AnimateRunner
             'format' => $format,
             'entry' => $entry,
         ], fn ($value) => $value !== null);
-    }
-
-    /**
-     * Separated for the same reason as RenderRunner::commandFor(): the suite
-     * substitutes this class wherever a clip is drawn, so the argv would
-     * otherwise be the one part of the sandbox nothing sees.
-     *
-     * @return list<string>
-     */
-    public function commandFor(string $modelPath, string $jobFile, string $outDir, ?string $bundleDir = null): array
-    {
-        $source = $bundleDir === null
-            ? $this->hostPath($modelPath).':/in/model:ro'
-            : $this->hostPath($bundleDir).':/in/bundle:ro';
-
-        return [
-            'docker', 'run', '--rm',
-            ...Sandbox::confinement($this->memory, $this->cpus),
-            '-e', "ANIMATE_TIMEOUT={$this->timeoutSeconds}",
-            '--entrypoint', 'node',
-            '-v', $source,
-            '-v', $this->hostPath($jobFile).':/in/job.json:ro',
-            '-v', $this->hostPath($outDir).':/out',
-            RenderRunner::IMAGE,
-            '/app/animate.mjs',
-        ];
-    }
-
-    /** Docker on Windows wants //d/path, not D:\path. */
-    private function hostPath(string $absolute): string
-    {
-        $absolute = HostPaths::translate($absolute);
-
-        if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {
-            return $absolute;
-        }
-
-        return '//'.strtolower($matches[1]).'/'.str_replace('\\', '/', $matches[2]);
     }
 }

@@ -140,14 +140,31 @@ services:
     # Payments first: a render holds a worker for minutes.
     command: ["php", "artisan", "queue:work", "redis", "--queue=payments,default", "--tries=2"]
     environment: *api-env
+    # No Docker socket. This is the container that opens uploaded archives, so
+    # it is the one that must not be able to start anything.
     volumes:
       - storage:/app/storage
-      # The renderer is a sibling container, not a child. This is the whole
-      # reason the worker can start one, and the reason only the worker gets it.
-      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       api:
         condition: service_started
+      broker:
+        condition: service_started
+      render-image:
+        condition: service_completed_successfully
+
+  # The only thing here that may talk to Docker. It takes a described job off a
+  # Redis list and builds the command itself, so a worker that has been taken
+  # over can ask for a render of a directory it already owns and nothing else.
+  broker:
+    image: 3dshop-api:local
+    command: ["php", "artisan", "broker:work"]
+    environment: *api-env
+    volumes:
+      - storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      redis:
+        condition: service_healthy
       render-image:
         condition: service_completed_successfully
 

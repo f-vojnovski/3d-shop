@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\Process;
 
 /**
  * Cuts a deliverable down to the share of detail the seller chose, so buyers
@@ -16,8 +15,7 @@ class ProxyRunner
 {
     public function __construct(
         private readonly int $timeoutSeconds = 180,
-        private readonly string $memory = '2g',
-        private readonly string $cpus = '2',
+        private readonly ContainerBroker $broker = new ContainerBroker,
     ) {}
 
     /**
@@ -53,14 +51,18 @@ class ProxyRunner
             JSON_PRETTY_PRINT
         ));
 
-        $process = new Process($this->commandFor($modelPath, $jobFile, $outDir, $bundleDir));
-
-        $process->setTimeout($this->timeoutSeconds + 60);
-        $process->run();
+        $answer = $this->broker->run([
+            'kind' => ContainerJob::PROXY,
+            'scratch' => ContainerBroker::scratchName($scratchDir),
+            'source' => basename($bundleDir ?? $modelPath),
+            'bundle' => $bundleDir !== null,
+        ], $this->timeoutSeconds + 120);
 
         Log::channel('render')->debug('Simplifier exited.', [
-            'exit_code' => $process->getExitCode(),
-            'stderr' => substr(trim($process->getErrorOutput()), -600) ?: null,
+            'status' => $answer['status'],
+            'exit_code' => $answer['exit'] ?? null,
+            'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600) ?: null,
+            'reason' => $answer['reason'] ?? null,
         ]);
 
         $resultFile = $outDir.DIRECTORY_SEPARATOR.'result.json';
@@ -70,8 +72,8 @@ class ProxyRunner
                 'status' => 'failed',
                 'reason' => 'The simplifier produced no result.',
                 'retryable' => true,
-                'exit_code' => $process->getExitCode(),
-                'stderr' => substr(trim($process->getErrorOutput()), -600),
+                'exit_code' => $answer['exit'] ?? null,
+                'stderr' => substr(trim((string) ($answer['error'] ?? '')), -600),
             ];
         }
 
@@ -80,43 +82,5 @@ class ProxyRunner
             'reason' => 'The simplifier result could not be read.',
             'retryable' => true,
         ];
-    }
-
-    /**
-     * Separate from run() for the same reason as RenderRunner::commandFor():
-     * the suite substitutes this class, so argv is the one part of the sandbox
-     * nothing else would see.
-     *
-     * @return list<string>
-     */
-    public function commandFor(string $modelPath, string $jobFile, string $outDir, ?string $bundleDir = null): array
-    {
-        $source = $bundleDir === null
-            ? $this->hostPath($modelPath).':/in/model:ro'
-            : $this->hostPath($bundleDir).':/in/bundle:ro';
-
-        return [
-            'docker', 'run', '--rm',
-            ...Sandbox::confinement($this->memory, $this->cpus),
-            '-e', "PROXY_TIMEOUT={$this->timeoutSeconds}",
-            '-v', $source,
-            '-v', $this->hostPath($jobFile).':/in/job.json:ro',
-            '-v', $this->hostPath($outDir).':/out',
-            '--entrypoint', 'node',
-            RenderRunner::IMAGE,
-            '/app/proxy.mjs',
-        ];
-    }
-
-    /** Docker on Windows wants //d/path, not D:\path. */
-    private function hostPath(string $absolute): string
-    {
-        $absolute = HostPaths::translate($absolute);
-
-        if (! preg_match('/^([A-Za-z]):[\\\\\\/](.*)$/', $absolute, $matches)) {
-            return $absolute;
-        }
-
-        return '//'.strtolower($matches[1]).'/'.str_replace('\\', '/', $matches[2]);
     }
 }

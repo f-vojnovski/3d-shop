@@ -3,14 +3,17 @@
 namespace Tests\Feature;
 
 use App\Jobs\RenderClipPreview;
-use App\Support\MeshFacts;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
 use App\Support\AnimateRunner;
+use App\Support\ContainerCommand;
+use App\Support\ContainerJob;
+use App\Support\MeshFacts;
 use App\Support\ModelConverter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -112,7 +115,13 @@ class ClipPreviewTest extends TestCase
     /** The sandbox is argv, so nothing else in the suite would notice it going. */
     public function test_a_clip_is_drawn_confined(): void
     {
-        $argv = (new AnimateRunner())->commandFor('/s/model', '/s/job.json', '/s/out');
+        $scratch = storage_path('app/private/clip-scratch/1186-0');
+        File::ensureDirectoryExists($scratch, 0775, true);
+
+        $argv = ContainerCommand::for(
+            ContainerJob::from(['kind' => 'animate', 'scratch' => 'clip-scratch/1186-0', 'source' => 'model']),
+            storage_path('app/private')
+        );
 
         $this->assertContains('--network=none', $argv);
         $this->assertContains('--cap-drop=ALL', $argv);
@@ -128,6 +137,8 @@ class ClipPreviewTest extends TestCase
             collect($argv)->contains(fn ($one) => str_ends_with((string) $one, ':/in/model:ro')),
             'the model is not mounted read-only'
         );
+
+        File::deleteDirectory($scratch);
     }
 
     public function test_a_seller_can_ask_for_a_clip(): void
