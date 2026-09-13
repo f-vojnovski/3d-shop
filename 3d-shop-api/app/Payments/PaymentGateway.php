@@ -6,6 +6,9 @@ use App\Models\Order;
 
 interface PaymentGateway
 {
+    /** Recorded against the order and the event, so a row says what handled it. */
+    public function name(): string;
+
     /** Hosted checkout for one order: where to send the buyer, and its id. */
     public function createSession(Order $order, string $successUrl, string $cancelUrl): CheckoutSession;
 
@@ -19,8 +22,8 @@ interface PaymentGateway
     public function parseEvent(string $payload, array $headers): PaymentEvent;
 
     /**
-     * Takes the money the buyer approved. Stripe's hosted checkout has already
-     * done this by the time it tells us; PayPal has not.
+     * Takes the money the buyer approved. A hosted checkout may have done this
+     * by the time it sends the notification; PayPal has not.
      */
     public function capture(string $sessionId): bool;
 

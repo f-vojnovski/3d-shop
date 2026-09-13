@@ -5,10 +5,9 @@ namespace App\Payments;
 use App\Models\Order;
 
 /**
- * Stands in for a provider in tests and when nothing is configured. It speaks
- * Stripe's wire format with a local secret, so verification and translation are
- * the real code: the signature is the security boundary, and a test that stubs
- * past it proves nothing.
+ * Stands in for a provider in tests and when nothing is configured. Its
+ * webhook is signed with a local secret and parsed by the same code path a
+ * live provider goes through.
  */
 class FakeGateway implements PaymentGateway
 {
@@ -21,11 +20,16 @@ class FakeGateway implements PaymentGateway
     /** @var list<string> */
     public array $captured = [];
 
-    private readonly StripeEvents $events;
+    private readonly SignedEvents $events;
 
     public function __construct(string $webhookSecret = 'whsec_test')
     {
-        $this->events = new StripeEvents($webhookSecret);
+        $this->events = new SignedEvents($webhookSecret);
+    }
+
+    public function name(): string
+    {
+        return 'fake';
     }
 
     public function createSession(Order $order, string $successUrl, string $cancelUrl): CheckoutSession

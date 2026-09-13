@@ -51,7 +51,7 @@ x-api-env: &api-env
 
   PAYMENTS_ENABLED: "false"
   COMMISSION_BPS: "1500"
-  STRIPE_WEBHOOK_SECRET: whsec_demo
+  PAYMENTS_WEBHOOK_SECRET: whsec_demo
 
 services:
   postgres:

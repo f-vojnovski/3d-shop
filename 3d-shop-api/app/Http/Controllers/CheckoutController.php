@@ -29,7 +29,7 @@ class CheckoutController extends BaseController
         $order = $this->checkout->open($buyerId, array_column($fields['products'], 'id'));
 
         // Nothing to charge: a free product, or a build with payments switched
-        // off. Both grant straight away rather than opening a session Stripe
+        // off. Both grant straight away rather than opening a session a provider
         // would refuse.
         if ($order->subtotal_cents === 0 || ! config('services.payments.enabled')) {
             $this->checkout->fulfil($order);

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->char('currency', 3)->default('USD');
             $table->unsignedBigInteger('subtotal_cents');
             $table->unsignedBigInteger('commission_cents');
-            $table->string('gateway')->default('stripe');
+            $table->string('gateway')->default('paypal');
             $table->string('session_id')->nullable()->unique();
             $table->string('payment_intent_id')->nullable()->index();
             $table->timestamp('paid_at')->nullable();
@@ -45,12 +45,12 @@ return new class extends Migration
             $table->unique(['order_id', 'product_id']);
         });
 
-        // Stripe retries, so the event id is the primary key: a replay is a
+        // Providers retry, so the event id is the primary key: a replay is a
         // duplicate insert rather than a second fulfilment.
         Schema::create('webhook_events', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('type');
-            $table->string('gateway')->default('stripe');
+            $table->string('gateway')->default('paypal');
             $table->timestamp('received_at')->useCurrent();
             $table->timestamp('handled_at')->nullable();
         });

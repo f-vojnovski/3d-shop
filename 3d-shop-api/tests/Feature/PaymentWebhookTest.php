@@ -16,9 +16,9 @@ use RuntimeException;
 use Tests\TestCase;
 
 /**
- * The payloads are signed with the real Stripe scheme and verified by the real
- * Stripe code. The signature is the only thing standing between a stranger and
- * a free download, so no test here goes around it.
+ * The payloads are signed and verified by the real code, never stubbed. The
+ * signature is the only thing standing between a stranger and a free download,
+ * so no test here goes around it.
  */
 class PaymentWebhookTest extends TestCase
 {
@@ -37,7 +37,7 @@ class PaymentWebhookTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.payments.enabled' => true, 'services.stripe.webhook_secret' => self::SECRET]);
+        config(['services.payments.enabled' => true, 'services.payments.webhook_secret' => self::SECRET]);
         $this->app->instance(PaymentGateway::class, new FakeGateway(self::SECRET));
 
         $this->seller = $this->user('seller');
@@ -87,7 +87,7 @@ class PaymentWebhookTest extends TestCase
         $this->assertNotNull($stored->handled_at);
     }
 
-    /** Stripe retries. The second delivery must change nothing. */
+    /** Providers retry. The second delivery must change nothing. */
     public function test_the_same_event_twice_grants_once(): void
     {
         $event = $this->completed();
@@ -145,7 +145,7 @@ class PaymentWebhookTest extends TestCase
         $tampered = str_replace('14900', '29800', $body);
 
         $this->call('POST', '/api/payments/webhook', [], [], [], [
-            'HTTP_STRIPE_SIGNATURE' => $signature,
+            'HTTP_X_SIGNATURE' => $signature,
             'CONTENT_TYPE' => 'application/json',
         ], $tampered)->assertStatus(400);
     }
@@ -155,7 +155,7 @@ class PaymentWebhookTest extends TestCase
         $body = json_encode($this->completed());
 
         $this->call('POST', '/api/payments/webhook', [], [], [], [
-            'HTTP_STRIPE_SIGNATURE' => $this->signature($body, self::SECRET, now()->subHour()->timestamp),
+            'HTTP_X_SIGNATURE' => $this->signature($body, self::SECRET, now()->subHour()->timestamp),
             'CONTENT_TYPE' => 'application/json',
         ], $body)->assertStatus(400);
     }
@@ -165,12 +165,12 @@ class PaymentWebhookTest extends TestCase
         $body = 'not json at all';
 
         $this->call('POST', '/api/payments/webhook', [], [], [], [
-            'HTTP_STRIPE_SIGNATURE' => $this->signature($body, self::SECRET),
+            'HTTP_X_SIGNATURE' => $this->signature($body, self::SECRET),
             'CONTENT_TYPE' => 'application/json',
         ], $body)->assertStatus(400);
     }
 
-    /** Another environment can share a Stripe account; that is not our error. */
+    /** Another environment can share a provider account; that is not our error. */
     public function test_an_event_for_an_unknown_order_is_accepted_and_ignored(): void
     {
         $this->send($this->completed(['data' => ['object' => [
@@ -281,7 +281,7 @@ class PaymentWebhookTest extends TestCase
         WebhookEvent::whereKey($refund['id'])->update(['handled_at' => null]);
         (new HandlePaymentEvent(app(PaymentGateway::class)->parseEvent(
             json_encode($refund),
-            ['stripe-signature' => $this->signature(json_encode($refund), self::SECRET)]
+            ['x-signature' => $this->signature(json_encode($refund), self::SECRET)]
         )))->failed(new RuntimeException('the queue gave up'));
 
         $this->assertSame(0, WebhookEvent::whereKey($refund['id'])->count());
@@ -302,7 +302,7 @@ class PaymentWebhookTest extends TestCase
         $this->send($event)->assertSuccessful();
         (new HandlePaymentEvent(app(PaymentGateway::class)->parseEvent(
             json_encode($event),
-            ['stripe-signature' => $this->signature(json_encode($event), self::SECRET)]
+            ['x-signature' => $this->signature(json_encode($event), self::SECRET)]
         )))->failed(new RuntimeException('too late, it already worked'));
 
         $this->assertSame(1, WebhookEvent::whereKey($event['id'])->count());
@@ -478,12 +478,11 @@ class PaymentWebhookTest extends TestCase
         $body = json_encode($event);
 
         return $this->call('POST', '/api/payments/webhook', [], [], [], [
-            'HTTP_STRIPE_SIGNATURE' => $this->signature($body, $secret),
+            'HTTP_X_SIGNATURE' => $this->signature($body, $secret),
             'CONTENT_TYPE' => 'application/json',
         ], $body);
     }
 
-    /** Stripe's own scheme: t=<unix>,v1=<hmac sha256 of "t.body">. */
     private function signature(string $body, string $secret, ?int $timestamp = null): string
     {
         $timestamp ??= now()->timestamp;

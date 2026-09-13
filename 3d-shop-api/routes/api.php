@@ -15,7 +15,6 @@ use App\Http\Controllers\SalesController;
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show'])
     ->where('id', '[0-9]+');
-Route::get('/products/search/{name}', [ProductController::class, 'search']);
 Route::get('/products/{id}/preview/{format}', [ProductController::class, 'previewModel'])
     ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
 Route::get('/products/{id}/proxy/{format}', [ProductController::class, 'viewerProxy'])
@@ -28,7 +27,6 @@ Route::get('/products/{id}/versions/{file}/download', [ProductController::class,
     ->middleware('signed:relative')
     ->name('products.download-version')
     ->where(['id' => '[0-9]+', 'file' => '[0-9]+']);
-Route::get('/products-by-user/{userId}', [ProductController::class, 'getProductsForUser']);
 Route::get('/previews/{preview}/attestation', [AttestationController::class, 'show'])
     ->name('previews.attestation');
 

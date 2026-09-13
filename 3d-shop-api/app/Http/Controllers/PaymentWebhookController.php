@@ -25,8 +25,8 @@ class PaymentWebhookController extends BaseController
         try {
             $event = $this->gateway->parseEvent(
                 $request->getContent(),
-                // Providers differ: Stripe signs with one header, PayPal sends
-                // several and wants them verified against its own API.
+                // Providers differ: some sign with one header, PayPal sends several
+                // and wants them verified against its own API.
                 array_map(fn (array $values) => $values[0] ?? '', $request->headers->all())
             );
         } catch (Throwable $exception) {
@@ -44,7 +44,7 @@ class PaymentWebhookController extends BaseController
             $accepted = WebhookEvent::query()->insertOrIgnore([
                 'id' => $event->id,
                 'type' => $event->providerType,
-                'gateway' => config('services.payments.gateway'),
+                'gateway' => $this->gateway->name(),
                 'received_at' => now(),
             ]);
 

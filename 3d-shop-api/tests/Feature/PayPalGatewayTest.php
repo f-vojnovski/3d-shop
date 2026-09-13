@@ -205,9 +205,9 @@ class PayPalGatewayTest extends TestCase
     }
 
     /**
-     * PayPal signs nothing we can check locally: verification is a call back to
-     * PayPal, which is why the offline tests here fake that call rather than
-     * computing an HMAC as the Stripe ones do.
+     * PayPal signs nothing that can be checked locally: verification is a call
+     * back to PayPal, which is why the offline tests here fake that call rather
+     * than computing an HMAC.
      */
     public function test_a_notification_paypal_vouches_for_is_accepted(): void
     {

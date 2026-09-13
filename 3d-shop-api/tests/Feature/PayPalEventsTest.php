@@ -32,8 +32,8 @@ class PayPalEventsTest extends TestCase
     }
 
     /**
-     * The distinction Stripe does not have: the buyer has agreed but no money
-     * has moved, so this asks for a capture rather than granting anything.
+     * PayPal's own step: the buyer has agreed but no money has moved, so this
+     * asks for a capture rather than granting anything.
      */
     public function test_an_approved_order_is_not_a_payment(): void
     {

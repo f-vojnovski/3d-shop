@@ -145,8 +145,8 @@ class CheckoutTest extends TestCase
     }
 
     /**
-     * Stripe will not open a session for nothing, and prices may be zero, so a
-     * free product has to be granted without one.
+     * A provider will not open a session for nothing, and prices may be zero,
+     * so a free product has to be granted without one.
      */
     public function test_a_free_product_is_granted_without_a_session(): void
     {

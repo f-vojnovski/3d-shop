@@ -56,16 +56,11 @@ class WithdrawListingTest extends TestCase
         $this->deleteJson("/api/products/{$this->product->id}")->assertStatus(401);
     }
 
-    public function test_a_withdrawn_listing_leaves_the_catalogue_and_search(): void
+    public function test_a_withdrawn_listing_leaves_the_catalogue(): void
     {
         $this->withdraw();
 
         $this->getJson('/api/products')->assertSuccessful()->assertJsonCount(0, 'data');
-        // Search is unpaginated, so its payload is a bare array.
-        $this->getJson('/api/products/search/Concept')->assertSuccessful()->assertJsonCount(0);
-        $this->getJson("/api/products-by-user/{$this->seller->id}")
-            ->assertSuccessful()
-            ->assertJsonCount(0, 'data');
     }
 
     public function test_the_seller_still_sees_it_among_their_own(): void

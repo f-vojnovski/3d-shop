@@ -10,10 +10,10 @@ use RuntimeException;
 /**
  * PayPal Orders v2.
  *
- * Two things differ from Stripe and shape everything here. Approval and payment
- * are separate calls, so an approved order still has to be captured. And a
- * notification carries no signature we can check ourselves: verifying it is an
- * API call back to PayPal, so there is no local equivalent of Stripe's HMAC.
+ * Two things shape everything here. Approval and payment are separate calls,
+ * so an approved order still has to be captured. And a notification carries no
+ * signature we can check ourselves: verifying it is an API call back to PayPal
+ * rather than a local HMAC.
  */
 class PayPalGateway implements PaymentGateway
 {
@@ -25,6 +25,11 @@ class PayPalGateway implements PaymentGateway
         private readonly string $secret,
         private readonly string $webhookId,
     ) {}
+
+    public function name(): string
+    {
+        return 'paypal';
+    }
 
     public function createSession(Order $order, string $successUrl, string $cancelUrl): CheckoutSession
     {

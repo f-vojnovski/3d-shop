@@ -477,35 +477,12 @@ class ProductController extends BaseController
         return $this->streamFile($version, inline: false);
     }
 
-    public function search($name)
-    {
-        return ProductResource::collection(
-            Product::with('files')
-                ->forViewer(Auth::id())
-                ->where('unlisted', false)
-                ->where('name', 'like', '%'.$name.'%')
-                ->get()
-        );
-    }
-
     public function getCurrentUserProducts()
     {
         return ProductResource::collection(
             Product::with('files')
                 ->forViewer(Auth::id())
                 ->where('user_id', Auth::id())
-                ->orderBy('id')
-                ->paginate(16)
-        );
-    }
-
-    public function getProductsForUser($userId)
-    {
-        return ProductResource::collection(
-            Product::with('files')
-                ->forViewer(Auth::id())
-                ->where('unlisted', false)
-                ->where('user_id', $userId)
                 ->orderBy('id')
                 ->paginate(16)
         );

@@ -5,10 +5,10 @@ namespace App\Payments;
 /**
  * A payment event in this project's vocabulary rather than a provider's.
  *
- * Stripe says `checkout.session.completed` and counts in integer cents; PayPal
- * says `PAYMENT.CAPTURE.COMPLETED` and counts in decimal strings, and needs the
- * payment captured after the buyer approves it. Translating at the edge keeps
- * one fulfilment path instead of one per provider.
+ * PayPal says `PAYMENT.CAPTURE.COMPLETED`, counts in decimal strings, and needs
+ * the payment captured after the buyer approves it; another provider will say
+ * something else. Translating at the edge keeps one fulfilment path instead of
+ * one per provider.
  */
 class PaymentEvent
 {
