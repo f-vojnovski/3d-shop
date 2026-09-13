@@ -80,6 +80,8 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
 
     private function draw(CustomView $view, ProductFile $opened, string $scratch, $runner, $log): void
     {
+        $started = microtime(true);
+
         try {
             $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
             RenderInput::fetch($opened, $modelPath);
@@ -94,7 +96,10 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
                     ? (string) ($view->source->meta['sniffed_format'] ?? $view->source->format)
                     : 'glb',
                 $modelPath,
-                $scratch
+                $scratch,
+                null,
+                null,
+                ['user_id' => $view->user_id, 'product_file_id' => $view->product_file_id]
             );
         } catch (Throwable $exception) {
             $log->error('Custom clip threw.', ['message' => $exception->getMessage()]);
@@ -110,7 +115,7 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $this->store($view, $scratch, $result['files'][0], $log);
+        $this->store($view, $scratch, $result['files'][0], $log, microtime(true) - $started);
         $this->announce($view, $log);
     }
 
@@ -125,7 +130,7 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
     }
 
     /** @param  array{pass?: string, file?: string}  $drawn */
-    private function store(CustomView $view, string $scratch, array $drawn, $log): void
+    private function store(CustomView $view, string $scratch, array $drawn, $log, float $seconds): void
     {
         $name = $drawn['file'] ?? '';
 
@@ -160,7 +165,11 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
             'failure_reason' => null,
         ]);
 
-        $log->info('Custom clip drawn.', ['bytes' => strlen($bytes), 'path' => $path]);
+        $log->info('Custom clip drawn.', [
+            'seconds' => round($seconds, 2),
+            'bytes' => strlen($bytes),
+            'path' => $path,
+        ]);
     }
 
     private function giveUp(CustomView $view, string $reason): void

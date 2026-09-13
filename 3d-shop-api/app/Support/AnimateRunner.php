@@ -36,7 +36,8 @@ class AnimateRunner
         string $modelPath,
         string $scratchDir,
         ?string $bundleDir = null,
-        ?string $entry = null
+        ?string $entry = null,
+        array $about = []
     ): array {
         $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
         $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
@@ -59,7 +60,7 @@ class AnimateRunner
             'scratch' => ContainerBroker::scratchName($scratchDir),
             'source' => basename($bundleDir ?? $modelPath),
             'bundle' => $bundleDir !== null,
-        ], $this->timeoutSeconds + 120);
+        ], $this->timeoutSeconds + 120, $about);
 
         Log::channel('render')->debug('Clip harness exited.', [
             'status' => $answer['status'],

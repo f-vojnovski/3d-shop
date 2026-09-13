@@ -13,7 +13,9 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 /** The viewer hears about their own view over Reverb, not by polling for it. */
@@ -103,6 +105,26 @@ class CustomViewBroadcastTest extends TestCase
             && $event->url === null);
     }
 
+    /**
+     * How long the person waited is the one number this feature is judged on,
+     * and it was not written down anywhere.
+     */
+    public function test_how_long_the_viewer_waited_is_recorded(): void
+    {
+        $channel = Mockery::spy();
+        $channel->shouldReceive('withContext')->andReturn($channel);
+        Log::shouldReceive('channel')->with('render')->andReturn($channel);
+
+        $this->render(ok: true);
+
+        $channel->shouldHaveReceived('info')->withArgs(
+            fn ($message, $context = []) => is_string($message)
+                && str_contains($message, 'Custom view drawn')
+                && isset($context['seconds'])
+                && is_float($context['seconds'])
+        )->once();
+    }
+
     public function test_the_renderer_is_asked_for_one_camera_and_one_pass(): void
     {
         Event::fake([CustomViewDrawn::class]);
@@ -126,7 +148,7 @@ class CustomViewBroadcastTest extends TestCase
                 parent::__construct();
             }
 
-            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null): array
+            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null, array $about = []): array
             {
                 $this->test->remember($request);
 

@@ -68,6 +68,20 @@ class BrokerWorkCommand extends Command
     }
 
     /**
+     * @param  array{memory: string, cpus: string, timeout: int}  $settings
+     * @return array{started_at: float, finished_at: float, cpu_quota: string, memory: string}
+     */
+    private static function spent(float $began, array $settings): array
+    {
+        return [
+            'started_at' => $began,
+            'finished_at' => microtime(true),
+            'cpu_quota' => $settings['cpus'],
+            'memory' => $settings['memory'],
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $job
      * @return array{status: string, exit?: int, output?: string, error?: string, reason?: string}
      */
@@ -87,18 +101,22 @@ class BrokerWorkCommand extends Command
             return ['status' => 'refused', 'reason' => $refusal->getMessage()];
         }
 
-        $timeout = $described->settings()['timeout'];
+        $settings = $described->settings();
         $process = new Process($command);
-        $process->setTimeout($timeout + 60);
+        $process->setTimeout($settings['timeout'] + 60);
+
+        // Reported back because only this side knows when the container really
+        // began: the gap before it is queue, and the gap after it is work.
+        $began = microtime(true);
 
         try {
             $process->run();
         } catch (ProcessTimedOutException) {
-            return ['status' => 'failed', 'reason' => 'The container ran past its time.'];
+            return ['status' => 'failed', 'reason' => 'The container ran past its time.'] + self::spent($began, $settings);
         } catch (Throwable $exception) {
             $log->error('Broker could not start a container.', ['message' => $exception->getMessage()]);
 
-            return ['status' => 'failed', 'reason' => 'The container would not start.'];
+            return ['status' => 'failed', 'reason' => 'The container would not start.'] + self::spent($began, $settings);
         }
 
         return [
@@ -106,6 +124,6 @@ class BrokerWorkCommand extends Command
             'exit' => (int) $process->getExitCode(),
             'output' => $process->getOutput(),
             'error' => substr($process->getErrorOutput(), -2000),
-        ];
+        ] + self::spent($began, $settings);
     }
 }

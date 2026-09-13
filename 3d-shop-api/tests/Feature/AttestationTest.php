@@ -151,7 +151,7 @@ class AttestationTest extends TestCase
 
         $this->app->instance(RenderRunner::class, new class extends RenderRunner
         {
-            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null): array
+            public function run(array $request, string $modelPath, string $scratchDir, ?string $bundleDir = null, array $about = []): array
             {
                 $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
                 File::makeDirectory($out, 0775, true, true);

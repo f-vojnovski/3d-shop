@@ -24,7 +24,9 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
     use Queueable;
 
     public int $tries = 2;
+
     public int $timeout = 600;
+
     public int $uniqueFor = 1320;
 
     public function __construct(public int $viewId) {}
@@ -72,6 +74,8 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
 
     private function draw(CustomView $view, ProductFile $opened, string $scratch, $runner, $log): void
     {
+        $started = microtime(true);
+
         try {
             $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
             RenderInput::fetch($opened, $modelPath);
@@ -93,7 +97,9 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
                     'output' => ['width' => 1200, 'height' => 900],
                 ],
                 $modelPath,
-                $scratch
+                $scratch,
+                null,
+                ['user_id' => $view->user_id, 'product_file_id' => $view->product_file_id]
             );
         } catch (Throwable $exception) {
             $log->error('Custom view threw.', ['message' => $exception->getMessage()]);
@@ -109,7 +115,7 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $this->store($view, $scratch, $result['images'][0], $log);
+        $this->store($view, $scratch, $result['images'][0], $log, microtime(true) - $started);
         $this->announce($view, $log);
     }
 
@@ -123,7 +129,7 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
             ]);
     }
 
-    private function store(CustomView $view, string $scratch, array $image, $log): void
+    private function store(CustomView $view, string $scratch, array $image, $log, float $seconds): void
     {
         $name = $image['file'] ?? '';
 
@@ -157,7 +163,11 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
             'failure_reason' => null,
         ]);
 
-        $log->info('Custom view drawn.', ['bytes' => strlen($bytes), 'path' => $path]);
+        $log->info('Custom view drawn.', [
+            'seconds' => round($seconds, 2),
+            'bytes' => strlen($bytes),
+            'path' => $path,
+        ]);
     }
 
     private function giveUp(CustomView $view, string $reason): void

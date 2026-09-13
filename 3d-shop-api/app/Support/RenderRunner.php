@@ -22,7 +22,8 @@ class RenderRunner
         array $request,
         string $modelPath,
         string $scratchDir,
-        ?string $bundleDir = null
+        ?string $bundleDir = null,
+        array $about = []
     ): array {
         $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
         $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
@@ -43,7 +44,10 @@ class RenderRunner
             'scratch' => ContainerBroker::scratchName($scratchDir),
             'source' => basename($bundleDir ?? $modelPath),
             'bundle' => $bundleDir !== null,
-        ], $this->timeoutSeconds + 120);
+        ], $this->timeoutSeconds + 120, $about + [
+            'source_bytes' => $request['source']['bytes'] ?? null,
+            'triangles' => ($request['source']['faces'] ?? 0) ?: null,
+        ]);
 
         Log::channel('render')->debug('Renderer exited.', [
             'status' => $answer['status'],
