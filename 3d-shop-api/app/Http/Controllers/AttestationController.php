@@ -23,6 +23,7 @@ class AttestationController extends BaseController
 
         $attestedSource = $preview->meta['source_checksum'] ?? null;
         $current = $preview->product->deliverables()->pluck('checksum')->all();
+        $conversion = $preview->source?->meta['conversion'] ?? null;
 
         return [
             'product_id' => $preview->product_id,
@@ -37,6 +38,9 @@ class AttestationController extends BaseController
             ],
             'camera' => $preview->meta['camera'] ?? null,
             'renderer' => $preview->meta['renderer'] ?? null,
+            // Set only for the formats no browser opens: the pixels came from
+            // the converted copy, not from the file named above.
+            'converted' => $conversion,
             'source_model' => [
                 'sha256' => $attestedSource,
                 'still_on_sale' => $attestedSource !== null && in_array($attestedSource, $current, true),
@@ -46,7 +50,9 @@ class AttestationController extends BaseController
                 'replacement_note' => $preview->source?->replacement_note,
             ],
             'reproduce' => [
-                'how' => 'Build the render container at the pinned three.js version, feed it this model and camera, and compare the image sha256.',
+                'how' => $conversion === null
+                    ? 'Build the render container at the pinned three.js version, feed it this model and camera, and compare the image sha256.'
+                    : 'Build the render container at the pinned three.js and assimp versions, convert this model to glb and check it against converted.derived_sha256, then feed that and the camera to the renderer and compare the image sha256.',
                 'command' => "php artisan render:verify {$preview->product_id}",
                 'why_it_works' => 'Software rasterization makes output byte-identical across runs of the same renderer image.',
                 'limit' => 'The server is restating its own record. Nothing here is signed, so this is internal consistency rather than third-party proof.',

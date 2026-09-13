@@ -6,6 +6,9 @@ ARG NODE_IMAGE=node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3
 # chromium builds out of the archive and an apt pin would eventually fail the
 # build with nothing to explain why.
 ARG EXPECTED_CHROMIUM=152.0.7977.82
+# An .fbx reaches the renderer only through assimp, so the converter is part of
+# what drew the pixels and is pinned the same way.
+ARG EXPECTED_ASSIMP=5.2
 
 FROM ${NODE_IMAGE} AS three
 ARG THREE_VERSION
@@ -22,6 +25,7 @@ RUN npm pack three@${THREE_VERSION} \
 
 FROM ${NODE_IMAGE}
 ARG EXPECTED_CHROMIUM
+ARG EXPECTED_ASSIMP
 # assimp converts the formats PHP cannot parse into glb.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium fonts-liberation assimp-utils \
@@ -31,6 +35,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
          echo "Chromium is not ${EXPECTED_CHROMIUM}. Stills attested by an" \
               "earlier image cannot be reproduced byte-for-byte by this one;" \
               "bump EXPECTED_CHROMIUM once you accept that."; \
+         exit 1; \
+       }; } \
+    && assimp version \
+    && { assimp version | grep -qE "Version[[:space:]]+${EXPECTED_ASSIMP}" || { \
+         echo "assimp is not ${EXPECTED_ASSIMP}. Every .fbx listing was drawn" \
+              "from a glb this converter produced, and another version makes" \
+              "different bytes; bump EXPECTED_ASSIMP once you accept that."; \
          exit 1; \
        }; }
 

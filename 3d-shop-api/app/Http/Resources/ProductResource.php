@@ -81,6 +81,9 @@ class ProductResource extends JsonResource
                 // What the buyer actually receives, named before they pay.
                 // What a buyer aims at when they ask for a view.
                 'proxy' => $this->proxyOf($file),
+                // No browser opens an .fbx, so its pictures were drawn from a
+                // converted copy.
+                'converted_to' => $file->meta['conversion']['to'] ?? null,
                 'bundle' => $this->bundleIn($file),
                 'images' => $this->stillsFrom($file),
                 'replaced' => $this->replacementsOf($file->format, $entitledViewerId),

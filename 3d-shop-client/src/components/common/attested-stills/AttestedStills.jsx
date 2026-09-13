@@ -22,6 +22,12 @@ const NOTES = {
 
 const nameOf = (clip, at) => clip.name || `Clip ${at + 1}`;
 
+// No browser opens an .fbx, so the server turns it into a .glb first and draws
+// that. The badge says so rather than leaving the extra step unsaid.
+const rendered = (preview) => (preview.converted_to
+  ? `System-rendered from the .${preview.format} file on sale, converted to .${preview.converted_to} first.`
+  : `System-rendered from the .${preview.format} file on sale.`);
+
 const shadedFirst = (clip) =>
   clip.passes.find((one) => one.pass === 'shaded') ?? clip.passes[0];
 
@@ -61,14 +67,15 @@ const AttestedStills = ({ product, onFormat }) => {
     onFormat?.(shown?.preview?.format ?? null);
   }, [onFormat, shown?.preview?.format]);
 
+  // Plain buttons, not a tablist: that role promises arrow-key navigation and a
+  // matching panel, neither of which is here.
   const switcher = tabs.length > 1 && (
-    <div className={styles.formats} role="tablist" aria-label="Images">
+    <div className={styles.formats} role="group" aria-label="Which pictures">
       {tabs.map((one) => (
         <button
           key={one.key}
           type="button"
-          role="tab"
-          aria-selected={one.key === shown.key}
+          aria-pressed={one.key === shown.key}
           className={one.key === shown.key ? styles.formatOn : styles.format}
           onClick={() => pick(one.key)}
         >
@@ -250,10 +257,10 @@ const AttestedStills = ({ product, onFormat }) => {
                 rel="noreferrer"
                 title="The camera, the file and the checksums this image was made from"
               >
-                System-rendered from the .{shown.preview.format} file on sale.
+                {rendered(shown.preview)}
               </a>
             ) : (
-              <>System-rendered from the .{shown.preview.format} file on sale.</>
+              <>{rendered(shown.preview)}</>
             )}
           </div>
         )

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Product;
 use App\Models\ProductFile;
+use App\Support\ModelConverter;
 use App\Support\RenderInput;
 use App\Support\RenderRunner;
 use Illuminate\Console\Command;
@@ -15,7 +16,7 @@ class VerifyRenderCommand extends Command
 
     protected $description = 'Re-render a product and compare the output hashes against its stored attestations';
 
-    public function handle(RenderRunner $runner): int
+    public function handle(RenderRunner $runner, ModelConverter $converter): int
     {
         $product = Product::with('files')->find($this->argument('product'));
 
@@ -39,7 +40,7 @@ class VerifyRenderCommand extends Command
         $verified = 0;
 
         foreach ($deliverables as $source) {
-            $outcome = $this->verifyFormat($runner, $product, $source);
+            $outcome = $this->verifyFormat($runner, $converter, $product, $source);
 
             $failures += $outcome['failures'];
             $verified += $outcome['verified'];
@@ -65,8 +66,12 @@ class VerifyRenderCommand extends Command
     }
 
     /** @return array{failures: int, verified: int} */
-    private function verifyFormat(RenderRunner $runner, Product $product, ProductFile $source): array
-    {
+    private function verifyFormat(
+        RenderRunner $runner,
+        ModelConverter $converter,
+        Product $product,
+        ProductFile $source
+    ): array {
         $stored = $source->stills()->get()->keyBy('sort');
 
         if ($stored->isEmpty()) {
@@ -93,6 +98,12 @@ class VerifyRenderCommand extends Command
             $opened->disk,
             $derived === null ? '' : ' (converted to glb)'
         ));
+
+        // Re-rendering the stored glb only proves the second half of a
+        // converted upload. This proves the first.
+        if ($derived !== null && ! $this->conversionHolds($converter, $source, $derived, $scratch)) {
+            return ['failures' => 1, 'verified' => 0];
+        }
 
         // Named here rather than left to show up as mismatched pixels: if the
         // stored bytes changed, every still is describing a file that is gone.
@@ -221,5 +232,51 @@ class VerifyRenderCommand extends Command
         }
 
         return ['failures' => $failures, 'verified' => $checked];
+    }
+
+    private function conversionHolds(
+        ModelConverter $converter,
+        ProductFile $source,
+        ProductFile $derived,
+        string $scratch
+    ): bool {
+        $original = $scratch.DIRECTORY_SEPARATOR.'original';
+        RenderInput::fetch($source, $original);
+
+        $again = $scratch.DIRECTORY_SEPARATOR.'again';
+        File::ensureDirectoryExists($again, 0775, true);
+
+        $result = $converter->toGlb($original, $again);
+
+        if (($result['status'] ?? 'failed') !== 'ok') {
+            $this->error(sprintf(
+                '.%s: the converter would not read the file on sale again (%s).',
+                $source->format,
+                $result['reason'] ?? 'no reason given'
+            ));
+
+            return false;
+        }
+
+        $produced = (string) hash_file('sha256', $result['path']);
+
+        if (! hash_equals((string) $derived->checksum, $produced)) {
+            $this->error(sprintf(
+                '.%s: converting the file on sale no longer produces the glb the stills came from (%s. now, %s. recorded).',
+                $source->format,
+                substr($produced, 0, 16),
+                substr((string) $derived->checksum, 0, 16)
+            ));
+
+            return false;
+        }
+
+        $this->line(sprintf(
+            '.%s: converted again with %s and got the same glb.',
+            $source->format,
+            $derived->meta['tool'] ?? 'the pinned converter'
+        ));
+
+        return true;
     }
 }

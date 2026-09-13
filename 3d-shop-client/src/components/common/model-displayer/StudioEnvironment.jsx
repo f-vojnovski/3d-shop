@@ -10,7 +10,10 @@ const StudioEnvironment = ({ intensity = 1 }) => {
 
   useEffect(() => {
     const pmrem = new PMREMGenerator(gl);
-    const target = pmrem.fromScene(new RoomEnvironment(), 0.04);
+    // Named so it can be disposed: one room's geometry per canvas otherwise
+    // stays put.
+    const room = new RoomEnvironment();
+    const target = pmrem.fromScene(room, 0.04);
 
     // eslint-disable-next-line react-hooks/immutability -- three.js scene state is set by mutation
     scene.environment = target.texture;
@@ -20,6 +23,7 @@ const StudioEnvironment = ({ intensity = 1 }) => {
       scene.environment = null;
       target.dispose();
       pmrem.dispose();
+      room.dispose();
     };
   }, [gl, scene, intensity]);
 

@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { fetchUploadedProductsForCurrentUser } from '../../../service/features/productsSlice';
 import ProductListingGrid from '../../common/products-listing/ProductListingGrid';
@@ -5,9 +6,11 @@ import ProductListingGrid from '../../common/products-listing/ProductListingGrid
 const CurrentUserProductList = () => {
   const dispatch = useDispatch();
 
-  const fetchFunction = (pageNumber) => {
+  // The grid fetches whenever this changes, so it must not change per render.
+  const fetchFunction = useCallback((pageNumber) => {
     dispatch(fetchUploadedProductsForCurrentUser(pageNumber));
-  };
+  }, [dispatch]);
+
   return (
     <>
       <ProductListingGrid

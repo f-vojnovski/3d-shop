@@ -112,7 +112,7 @@ describe('AttestedStills', () => {
   it("offers no wireframe of the seller's own images", async () => {
     render(<AttestedStills product={product([withWireframes('obj', 1)], [sellerImage(0)])} />);
 
-    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+    await userEvent.click(screen.getByRole('button', { name: 'From the seller' }));
 
     expect(screen.queryByRole('button', { name: 'Wireframe' })).not.toBeInTheDocument();
   });
@@ -127,18 +127,18 @@ describe('AttestedStills', () => {
   it('switches the gallery between formats', async () => {
     render(<AttestedStills product={product([preview('obj', 1), preview('gltf', 2)])} />);
 
-    await userEvent.click(screen.getByRole('tab', { name: '.gltf' }));
+    await userEvent.click(screen.getByRole('button', { name: '.gltf' }));
 
     expect(screen.getByAltText('Half-track, .gltf view 1')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '.gltf' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: '.obj' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('button', { name: '.gltf' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '.obj' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('starts from the first view again after switching format', async () => {
     render(<AttestedStills product={product([preview('obj', 3), preview('gltf', 2)])} />);
     await userEvent.click(screen.getByRole('button', { name: 'View 3' }));
 
-    await userEvent.click(screen.getByRole('tab', { name: '.gltf' }));
+    await userEvent.click(screen.getByRole('button', { name: '.gltf' }));
 
     expect(screen.getByAltText('Half-track, .gltf view 1')).toBeInTheDocument();
   });
@@ -193,7 +193,7 @@ describe('AttestedStills', () => {
   it("leaves the seller's own images unlabelled", async () => {
     render(<AttestedStills product={product([preview('obj', 1)], [sellerImage(0)])} />);
 
-    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+    await userEvent.click(screen.getByRole('button', { name: 'From the seller' }));
 
     expect(screen.queryByText(/System-rendered/)).not.toBeInTheDocument();
     expect(screen.queryByText(/supplied by the seller/i)).not.toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('AttestedStills', () => {
   it('offers no seller tab when there are no seller images', () => {
     render(<AttestedStills product={product([preview('obj', 1), preview('gltf', 1)])} />);
 
-    expect(screen.queryByRole('tab', { name: 'From the seller' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'From the seller' })).not.toBeInTheDocument();
   });
 
   it("shows the attested stills first, not the seller's images", () => {
@@ -256,7 +256,7 @@ describe('AttestedStills', () => {
     const failed = preview('obj', 0, { status: 'failed', error: 'blank' });
 
     render(<AttestedStills product={product([failed], [sellerImage(0)])} />);
-    await userEvent.click(screen.getByRole('tab', { name: 'From the seller' }));
+    await userEvent.click(screen.getByRole('button', { name: 'From the seller' }));
 
     expect(screen.getByAltText('Half-track, image 1 from the seller')).toBeInTheDocument();
   });
@@ -268,19 +268,19 @@ describe('AttestedStills', () => {
     it('offers animations as a tab beside the formats', () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
 
-      expect(screen.getByRole('tab', { name: 'Animations' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Animations' })).toBeInTheDocument();
     });
 
     it('says nothing about animations when there are none', () => {
       render(<AttestedStills product={product([preview('glb', 2)])} />);
 
-      expect(screen.queryByRole('tab', { name: 'Animations' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Animations' })).not.toBeInTheDocument();
     });
 
     it('puts the clip on the stage', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
 
       expect(screen.getByAltText('Half-track, Walk, shaded')).toHaveAttribute(
         'src',
@@ -291,7 +291,7 @@ describe('AttestedStills', () => {
     it('switches how the clip is painted', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
       await userEvent.click(screen.getByRole('button', { name: 'Skeleton' }));
 
       expect(screen.getByAltText('Half-track, Walk, bones')).toBeInTheDocument();
@@ -300,7 +300,7 @@ describe('AttestedStills', () => {
     it('switches between clips from the strip', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [walk, run])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
       await userEvent.click(screen.getByRole('button', { name: 'Run' }));
 
       expect(screen.getByAltText('Half-track, Run, shaded')).toBeInTheDocument();
@@ -310,7 +310,7 @@ describe('AttestedStills', () => {
     it('does not offer a paint that was never drawn', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [run])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
 
       expect(screen.queryByRole('button', { name: 'Skeleton' })).not.toBeInTheDocument();
     });
@@ -318,7 +318,7 @@ describe('AttestedStills', () => {
     it('says what the bone colours mean, because nobody would guess', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [walk])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
       await userEvent.click(screen.getByRole('button', { name: 'Which bone moves what' }));
 
       expect(screen.getByText(/coloured by the bone that pulls it/i)).toBeInTheDocument();
@@ -328,9 +328,24 @@ describe('AttestedStills', () => {
     it('names an unnamed clip rather than showing a blank', async () => {
       render(<AttestedStills product={product([preview('glb', 2)], [], [clip(0, null, ['shaded'])])} />);
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Animations' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Animations' }));
 
       expect(screen.getByAltText('Half-track, Clip 1, shaded')).toBeInTheDocument();
+    });
+  });
+
+  describe('a format the browser cannot open', () => {
+    it('says the picture came through a conversion', () => {
+      render(<AttestedStills product={product([preview('fbx', 1, { converted_to: 'glb' })])} />);
+
+      expect(screen.getByText(/converted to .glb first/)).toBeInTheDocument();
+    });
+
+    it('says nothing extra for a format that needed none', () => {
+      render(<AttestedStills product={product([preview('obj', 1)])} />);
+
+      expect(screen.getByText(/System-rendered from the .obj file on sale\./)).toBeInTheDocument();
+      expect(screen.queryByText(/converted/)).not.toBeInTheDocument();
     });
   });
 });

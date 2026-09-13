@@ -2,6 +2,10 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { getRequest, getRequestWithToken } from '../api/axiosClient';
 
 const initialState = {
+  // The catalogue, your uploads and your purchases all write to this one list.
+  // Whichever request is current wins, so a slow one cannot land your drafts in
+  // the public catalogue after you have navigated away.
+  latestRequest: null,
   products: [],
   status: 'idle',
   error: null,
@@ -23,8 +27,13 @@ export const productsSlice = createSlice({
     builder
       .addCase(fetchProducts.pending, (state, action) => {
         state.status = 'loading';
+        state.latestRequest = action.meta.requestId;
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
+        if (state.latestRequest !== action.meta.requestId) {
+          return;
+        }
+
         state.status = 'succeeded';
         state.products = action.payload.data;
         state.currentPage = action.payload.current_page;
@@ -38,8 +47,13 @@ export const productsSlice = createSlice({
       })
       .addCase(fetchUploadedProductsForCurrentUser.pending, (state, action) => {
         state.status = 'loading';
+        state.latestRequest = action.meta.requestId;
       })
       .addCase(fetchUploadedProductsForCurrentUser.fulfilled, (state, action) => {
+        if (state.latestRequest !== action.meta.requestId) {
+          return;
+        }
+
         state.status = 'succeeded';
         state.products = action.payload.data;
         state.currentPage = action.payload.current_page;
@@ -53,8 +67,13 @@ export const productsSlice = createSlice({
       })
       .addCase(fetchPurchasedProductsForCurrentUser.pending, (state, action) => {
         state.status = 'loading';
+        state.latestRequest = action.meta.requestId;
       })
       .addCase(fetchPurchasedProductsForCurrentUser.fulfilled, (state, action) => {
+        if (state.latestRequest !== action.meta.requestId) {
+          return;
+        }
+
         state.status = 'succeeded';
         state.products = action.payload.data;
         state.currentPage = action.payload.current_page;
