@@ -8,7 +8,6 @@ import SingleProductView from '../components/pages/product-view/SingleProductVie
 import ModelsListPage from '../components/pages/products-list/ModelsListPage';
 import RegisterPage from '../components/pages/register/RegisterPage';
 import SalesListing from '../components/pages/sales-list/SalesListing';
-import LandingPage from '../components/pages/landing/LandingPage';
 import PurchasedProducstPage from '../components/pages/purchased-products/PurchasedProductsPage';
 import NotFoundPage from '../components/pages/not-found/NotFoundPage';
 import RequireAuth from './RequireAuth';
@@ -38,7 +37,7 @@ const RoutesWrapper = () =>
     { path: '/my-sales', element: guarded(<SalesListing />) },
     { path: '/purchases', element: guarded(<PurchasedProducstPage />) },
     { path: '/purchases/:pageNumber', element: guarded(<PurchasedProducstPage />) },
-    { path: '/', element: <LandingPage /> },
+    { path: '/', element: <ModelsListPage /> },
     { path: '*', element: <NotFoundPage /> },
   ]);
 
