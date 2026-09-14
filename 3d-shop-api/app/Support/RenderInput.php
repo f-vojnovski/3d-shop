@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Product;
 use App\Models\ProductFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Shared by the render job and `render:verify`. If the two built the request
@@ -86,6 +87,12 @@ class RenderInput
     public static function fetch(ProductFile $source, string $target): int
     {
         $read = Storage::disk($source->disk)->readStream($source->path);
+
+        // The model disks are configured not to throw, so a missing object arrives as null.
+        if (! is_resource($read)) {
+            throw new RuntimeException("Nothing to read at {$source->path} on the {$source->disk} disk.");
+        }
+
         $write = fopen($target, 'wb');
         stream_copy_to_stream($read, $write);
         fclose($write);

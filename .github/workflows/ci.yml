@@ -46,7 +46,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -80,7 +80,7 @@ jobs:
       run:
         working-directory: 3d-shop-client
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
@@ -100,7 +100,7 @@ jobs:
     outputs:
       render: ${{ steps.filter.outputs.render }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -174,7 +174,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - id: repo
         name: Lowercase the registry path
@@ -234,6 +234,18 @@ jobs:
           echo "Verifying product ${id}."
 
           php artisan render:verify "$id"
+
+      # The broker logs what Docker said to a file nothing else would show.
+      - name: What the renderer reported
+        if: failure()
+        working-directory: 3d-shop-api
+        run: |
+          echo "--- images known to the daemon"
+          docker image ls
+          echo "--- render log"
+          tail -n 200 storage/logs/render-*.log || echo "no render log was written"
+          echo "--- scratch left behind"
+          find storage/app/private/render-verify -type f | head -50 || true
 
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main'
