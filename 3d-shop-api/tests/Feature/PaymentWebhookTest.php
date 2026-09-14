@@ -2,13 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\HandlePaymentEvent;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\User;
-use App\Jobs\HandlePaymentEvent;
 use App\Models\WebhookEvent;
+use App\Payments\Checkout;
 use App\Payments\FakeGateway;
+use App\Payments\PaymentEvent;
 use App\Payments\PaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -111,7 +113,7 @@ class PaymentWebhookTest extends TestCase
 
     public function test_fulfilling_after_the_reconciler_already_did_changes_nothing(): void
     {
-        app(\App\Payments\Checkout::class)->fulfil($this->order);
+        app(Checkout::class)->fulfil($this->order);
         $paidAt = $this->order->fresh()->paid_at;
 
         $this->send($this->completed())->assertSuccessful();
@@ -424,21 +426,21 @@ class PaymentWebhookTest extends TestCase
         };
         $this->app->instance(PaymentGateway::class, $gateway);
 
-        $event = new \App\Payments\PaymentEvent(
+        $event = new PaymentEvent(
             id: 'evt_capture_fails',
-            kind: \App\Payments\PaymentEvent::APPROVED,
+            kind: PaymentEvent::APPROVED,
             providerType: 'CHECKOUT.ORDER.APPROVED',
             orderReference: (string) $this->order->id,
             sessionId: (string) $this->order->session_id,
         );
 
         try {
-            (new \App\Jobs\HandlePaymentEvent($event))->handle(
-                app(\App\Payments\Checkout::class),
+            (new HandlePaymentEvent($event))->handle(
+                app(Checkout::class),
                 $gateway
             );
             $this->fail('the job should have thrown so the queue retries');
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // Expected: the queue retries rather than settling the order.
         }
 

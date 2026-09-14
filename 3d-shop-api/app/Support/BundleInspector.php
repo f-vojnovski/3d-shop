@@ -67,7 +67,7 @@ class BundleInspector
         }
 
         $archiveBytes = filesize($absolutePath) ?: 0;
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($absolutePath, ZipArchive::RDONLY) !== true) {
             return self::refuse('That file could not be read as a zip archive.', $archiveBytes);

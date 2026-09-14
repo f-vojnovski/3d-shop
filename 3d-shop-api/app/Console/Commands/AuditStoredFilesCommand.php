@@ -45,6 +45,7 @@ class AuditStoredFilesCommand extends Command
             if (! $disk->exists($file->path)) {
                 $this->error("product {$file->product_id} {$file->kind} #{$file->id}: gone from {$file->disk}:{$file->path}");
                 $missing++;
+
                 continue;
             }
 
@@ -53,6 +54,7 @@ class AuditStoredFilesCommand extends Command
             if ($found === null) {
                 $this->error("product {$file->product_id} {$file->kind} #{$file->id}: could not be read from {$file->disk}.");
                 $missing++;
+
                 continue;
             }
 
@@ -66,6 +68,7 @@ class AuditStoredFilesCommand extends Command
                     substr($found, 0, 16)
                 ));
                 $altered++;
+
                 continue;
             }
 

@@ -249,8 +249,8 @@ class ConvertedFormatTest extends TestCase
 
         $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
         $bin = $positions.str_repeat("\0", (4 - (strlen($positions) % 4)) % 4);
-        $body = pack('VV', strlen($json), 0x4e4f534a).$json
-            .pack('VV', strlen($bin), 0x004e4942).$bin;
+        $body = pack('VV', strlen($json), 0x4E4F534A).$json
+            .pack('VV', strlen($bin), 0x004E4942).$bin;
 
         $directory = storage_path('framework/testing/converted');
         File::ensureDirectoryExists($directory);

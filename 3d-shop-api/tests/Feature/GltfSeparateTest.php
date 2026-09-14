@@ -82,7 +82,7 @@ class GltfSeparateTest extends TestCase
     private function read(array $files): ModelUpload
     {
         $path = $this->directory.'/bundle-'.substr(md5(serialize($files)), 0, 8).'.zip';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($files as $name => $contents) {

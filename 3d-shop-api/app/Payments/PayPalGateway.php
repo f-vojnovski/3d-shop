@@ -17,7 +17,6 @@ use RuntimeException;
  */
 class PayPalGateway implements PaymentGateway
 {
-
     public function __construct(
         private readonly Http $http,
         private readonly string $base,

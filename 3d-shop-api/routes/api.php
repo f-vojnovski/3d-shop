@@ -1,17 +1,17 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttestationController;
-use App\Support\ModelFormats;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClipController;
 use App\Http\Controllers\CustomViewController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PaymentWebhookController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SalesController;
+use App\Support\ModelFormats;
+use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show'])
@@ -45,7 +45,7 @@ Route::middleware(StartSession::class)->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 });
 
-Route::group(['middleware' => ['auth:sanctum']], function() {
+Route::group(['middleware' => ['auth:sanctum']], function () {
     // Reads and unpacks every byte of every model inside the request, so it is
     // throttled the way the other endpoints that do container-shaped work are.
     Route::post('/products', [ProductController::class, 'store'])

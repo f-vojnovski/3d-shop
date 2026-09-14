@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
-use App\Models\Product;
 use App\Jobs\BuildViewerProxy;
 use App\Jobs\RenderProductPreviews;
 use App\Jobs\ScaleThumbnail;
+use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\MeshPrescan;
 use App\Support\ModelConverter;
@@ -562,7 +562,7 @@ class ProductController extends BaseController
      * and everything else packed beside them — which is not what the option
      * says, and not what anyone would pick knowingly.
      *
-     * @param  array<string, \App\Support\ModelUpload>  $uploads
+     * @param  array<string, ModelUpload>  $uploads
      */
     private function guardInteractiveBundles(string $mode, array $uploads): void
     {

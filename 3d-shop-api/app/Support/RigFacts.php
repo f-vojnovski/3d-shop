@@ -38,7 +38,7 @@ class RigFacts
     /**
      * @param  array<string, mixed>  $gltf
      * @param  resource|null  $handle
-     * @return array<string, mixed>|null  null when the file carries no rig at all
+     * @return array<string, mixed>|null null when the file carries no rig at all
      */
     public static function of(array $gltf, $handle, ?int $binOffset, ?float $size = null): ?array
     {
@@ -421,7 +421,7 @@ class RigFacts
     /**
      * @param  resource  $handle
      * @param  array{at: int, element: int, code: string, components: int}  $cursor
-     * @return array<int, float|int>|null  1-indexed, as unpack returns it
+     * @return array<int, float|int>|null 1-indexed, as unpack returns it
      */
     private static function batch($handle, array $cursor, int $from, int $count): ?array
     {

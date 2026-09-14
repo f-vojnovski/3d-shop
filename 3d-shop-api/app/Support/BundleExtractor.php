@@ -43,7 +43,7 @@ class BundleExtractor
             return new self([], 0, $inspection->refusal);
         }
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($archivePath, ZipArchive::RDONLY) !== true) {
             return new self([], 0, 'That file could not be read as a zip archive.');

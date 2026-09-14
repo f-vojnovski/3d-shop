@@ -48,6 +48,7 @@ class ReconcilePaymentsCommand extends Command
                 }
 
                 $granted++;
+
                 continue;
             }
 
@@ -75,6 +76,7 @@ class ReconcilePaymentsCommand extends Command
                 }
 
                 $failed++;
+
                 continue;
             }
 

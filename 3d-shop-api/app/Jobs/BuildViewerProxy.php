@@ -24,6 +24,7 @@ class BuildViewerProxy implements ShouldQueue
     use Queueable;
 
     public int $tries = 2;
+
     public int $timeout = 600;
 
     public function __construct(public int $sourceFileId) {}

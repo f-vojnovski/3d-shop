@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
-use App\Models\ProductFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -81,11 +80,11 @@ class BundleUploadTest extends TestCase
     public function test_a_lone_model_may_still_be_offered_that_way(): void
     {
         $this->postJson('/api/products', array_merge($this->payload(
-            UploadedFile::fake()->createWithContent('car.obj', "v 0 0 0
+            UploadedFile::fake()->createWithContent('car.obj', 'v 0 0 0
 v 1 0 0
 v 0 1 0
 f 1 2 3
-")
+')
         ), ['preview_mode' => 'interactive']))
             ->assertSuccessful();
     }
@@ -255,7 +254,7 @@ f 1 2 3
         ];
 
         $path = $this->directory.'/bundle-'.substr(md5(serialize($files)), 0, 8).'.zip';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($files as $name => $contents) {

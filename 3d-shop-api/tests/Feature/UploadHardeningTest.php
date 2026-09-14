@@ -159,7 +159,7 @@ class UploadHardeningTest extends TestCase
             'scenes' => [['nodes' => []]],
         ]);
         $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
-        $body = pack('VV', strlen($json), 0x4e4f534a).$json;
+        $body = pack('VV', strlen($json), 0x4E4F534A).$json;
 
         return UploadedFile::fake()->createWithContent(
             'model.glb',

@@ -226,8 +226,8 @@ class BundleExtractorTest extends TestCase
     public function test_a_nested_archive_is_never_picked_as_the_model(): void
     {
         $archive = $this->zip([
-            'car/car.obj' => "v 0 0 0
-",
+            'car/car.obj' => 'v 0 0 0
+',
             'source/project.zip' => 'PK-BYTES',
         ]);
 
@@ -310,7 +310,7 @@ class BundleExtractorTest extends TestCase
     private function zip(array $files, string $suffix = ''): string
     {
         $path = $this->directory.'/bundle-'.substr(md5(serialize($files)), 0, 8).$suffix.'.zip';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($files as $name => $contents) {

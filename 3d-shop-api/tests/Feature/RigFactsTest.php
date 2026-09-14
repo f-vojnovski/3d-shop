@@ -178,9 +178,9 @@ class RigFactsTest extends TestCase
     /**
      * Builds the glTF header and binary block for a skinned mesh.
      *
-     * @param  list<list<int>>|null  $joints    four bone numbers per vertex
-     * @param  list<list<float>>|null  $weights four pulls per vertex
-     * @param  list<string>|null  $names       what the bones are called
+     * @param  list<list<int>>|null  $joints  four bone numbers per vertex
+     * @param  list<list<float>>|null  $weights  four pulls per vertex
+     * @param  list<string>|null  $names  what the bones are called
      * @param  list<array{0: string, 1: float}>  $clips  name and length
      * @param  list<list<float>>|null  $travel  where the root sits, key by key
      * @return array{gltf: array<string, mixed>, bin: string}

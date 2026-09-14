@@ -301,8 +301,8 @@ class MeshFacts
                 // A `vt` block proves nothing: `f 1 2 3` references no texture
                 // coordinate however many sit above it in the file.
                 if (! $uvs || ! $normals) {
-                    $corner = strtok(substr($line, 2), " 	
-");
+                    $corner = strtok(substr($line, 2), ' 	
+');
                     $slots = $corner === false ? [] : explode('/', $corner);
                     $uvs = $uvs || (($slots[1] ?? '') !== '');
                     $normals = $normals || (($slots[2] ?? '') !== '');
@@ -462,9 +462,9 @@ class MeshFacts
 
             ['length' => $length, 'type' => $type] = unpack('Vlength/Vtype', $chunkHeader);
 
-            if ($type === 0x4e4f534a) {
+            if ($type === 0x4E4F534A) {
                 $gltf = json_decode((string) fread($handle, $length), true);
-            } elseif ($type === 0x004e4942) {
+            } elseif ($type === 0x004E4942) {
                 $binOffset = $at + 8;
                 $binLength = $length;
             }
@@ -838,7 +838,7 @@ class MeshFacts
             $marker = ord($head[$at + 1]);
             $segment = unpack('n', substr($head, $at + 2, 2))[1] ?? 0;
 
-            if ($marker >= 0xc0 && $marker <= 0xcf && ! in_array($marker, [0xc4, 0xc8, 0xcc], true)) {
+            if ($marker >= 0xC0 && $marker <= 0xCF && ! in_array($marker, [0xC4, 0xC8, 0xCC], true)) {
                 $frame = unpack('nheight/nwidth', substr($head, $at + 5, 4));
 
                 return ['width' => $frame['width'], 'height' => $frame['height']];

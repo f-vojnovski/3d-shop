@@ -78,8 +78,7 @@ class SignedEvents
     private function kind(string $type, array $object): string
     {
         return match ($type) {
-            'checkout.session.completed', 'checkout.session.async_payment_succeeded' =>
-                ($object['payment_status'] ?? 'paid') === 'paid'
+            'checkout.session.completed', 'checkout.session.async_payment_succeeded' => ($object['payment_status'] ?? 'paid') === 'paid'
                     ? PaymentEvent::PAID
                     : PaymentEvent::IGNORED,
             'checkout.session.expired' => PaymentEvent::EXPIRED,

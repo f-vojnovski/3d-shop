@@ -27,6 +27,7 @@ class ScaleThumbnail implements ShouldQueue
     public const MAX_PIXELS = 40_000_000;
 
     public int $tries = 3;
+
     public int $timeout = 120;
 
     public function __construct(public int $fileId) {}

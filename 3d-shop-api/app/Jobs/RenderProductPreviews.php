@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Events\PreviewRenderFinished;
-use App\Jobs\ScaleThumbnail;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\MeshFacts;
@@ -24,6 +23,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
     use Queueable;
 
     public int $tries = 2;
+
     public int $timeout = 600;
 
     /**

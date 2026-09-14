@@ -14,7 +14,7 @@ class RenderInput
 {
     /**
      * @return array{dir: string, entry: string, files: int, bytes: int}|string
-     *                                                                  the unpacked bundle, or why it could not be opened
+     *                                                                          the unpacked bundle, or why it could not be opened
      */
     public static function unpack(string $archivePath, string $scratch): array|string
     {

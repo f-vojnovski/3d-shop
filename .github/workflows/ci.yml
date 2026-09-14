@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Forces a render rebuild and reproducibility check without touching a file:
+  # with no base commit to compare, the filter below rebuilds rather than guess.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

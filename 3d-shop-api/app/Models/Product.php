@@ -12,10 +12,13 @@ class Product extends Model
     use HasFactory;
 
     public const PREVIEW_INTERACTIVE = 'interactive';
+
     public const PREVIEW_ATTESTED_STILLS = 'attested_stills';
 
     public const STATUS_OWNER = 'owner';
+
     public const STATUS_PURCHASED = 'purchased';
+
     public const STATUS_NOT_PURCHASED = 'not-purchased';
 
     protected $fillable = [
@@ -160,7 +163,9 @@ class Product extends Model
     }
 
     public const LISTING_DRAFT = 'draft';
+
     public const LISTING_LIVE = 'live';
+
     public const LISTING_WITHDRAWN = 'withdrawn';
 
     /**

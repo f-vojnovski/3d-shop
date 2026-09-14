@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\DB;
 
 class SalesController extends BaseController
 {
-    public function getSalesForAuthenticatedUser() {
+    public function getSalesForAuthenticatedUser()
+    {
         $userId = Auth::user()->getAuthIdentifier();
 
         $sales = DB::table('sales')

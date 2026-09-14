@@ -333,14 +333,15 @@ class MeshFactsTest extends TestCase
         $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
         $bin = $positions.str_repeat("\0", (4 - (strlen($positions) % 4)) % 4);
 
-        $body = pack('VV', strlen($json), 0x4e4f534a).$json
-            .pack('VV', strlen($bin), 0x004e4942).$bin;
+        $body = pack('VV', strlen($json), 0x4E4F534A).$json
+            .pack('VV', strlen($bin), 0x004E4942).$bin;
 
         $path = $this->directory.'/model.glb';
         File::put($path, 'glTF'.pack('VV', 2, 12 + strlen($body)).$body);
 
         return $path;
     }
+
     /**
      * The bug this guards: a 32-byte peek finds every PNG, because a PNG states
      * its size at a fixed offset, and no JPEG at all, because a JPEG hides it
@@ -391,7 +392,7 @@ class MeshFactsTest extends TestCase
         while ($at + 9 < strlen($jpeg)) {
             $marker = ord($jpeg[$at + 1]);
 
-            if ($marker >= 0xc0 && $marker <= 0xcf && ! in_array($marker, [0xc4, 0xc8, 0xcc], true)) {
+            if ($marker >= 0xC0 && $marker <= 0xCF && ! in_array($marker, [0xC4, 0xC8, 0xCC], true)) {
                 return $at;
             }
 
@@ -432,8 +433,8 @@ class MeshFactsTest extends TestCase
         $json = $gltf.str_repeat(' ', (4 - (strlen($gltf) % 4)) % 4);
         $padded = $bin.str_repeat("\0", (4 - (strlen($bin) % 4)) % 4);
 
-        $body = pack('VV', strlen($json), 0x4e4f534a).$json
-            .pack('VV', strlen($padded), 0x004e4942).$padded;
+        $body = pack('VV', strlen($json), 0x4E4F534A).$json
+            .pack('VV', strlen($padded), 0x004E4942).$padded;
 
         $path = $this->directory.'/textured.glb';
         File::put($path, 'glTF'.pack('VV', 2, 12 + strlen($body)).$body);

@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Events\PreviewRenderFinished;
 use App\Jobs\RenderProductPreviews;
 use App\Models\Product;
 use App\Models\ProductFile;
 use App\Models\User;
-use App\Events\PreviewRenderFinished;
 use App\Support\ModelConverter;
 use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -130,17 +130,14 @@ class RenderRetryTest extends TestCase
     private function runJob(Product $product, array $result, int $attempt): void
     {
         $job = new RenderProductPreviews($product->id, 'obj');
-        $job->job = tap(new FakeJob(), fn (FakeJob $fake) => $fake->attempts = $attempt);
+        $job->job = tap(new FakeJob, fn (FakeJob $fake) => $fake->attempts = $attempt);
 
         $job->handle($this->runner($result), new ModelConverter);
     }
 
     private function runner(array $result): RenderRunner
     {
-        return new class(array_merge([
-            'status' => 'failed',
-            'reason' => 'Rendering timed out.',
-        ], $result)) extends RenderRunner
+        return new class(array_merge(['status' => 'failed', 'reason' => 'Rendering timed out.'], $result)) extends RenderRunner
         {
             public int $calls = 0;
 

@@ -121,8 +121,8 @@ class BundleInspectorTest extends TestCase
     public function test_a_nested_archive_is_carried_rather_than_refused(): void
     {
         $inspection = BundleInspector::of($this->zip([
-            'car/car.obj' => "v 0 0 0
-",
+            'car/car.obj' => 'v 0 0 0
+',
             'source/project.zip' => 'PK-BYTES',
         ]));
 
@@ -176,7 +176,7 @@ class BundleInspectorTest extends TestCase
     public function test_directory_entries_are_ignored_rather_than_listed(): void
     {
         $path = $this->directory.'/dirs.zip';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
         $zip->addEmptyDir('car');
         $zip->addEmptyDir('car/textures');
@@ -219,7 +219,7 @@ class BundleInspectorTest extends TestCase
     private function zip(array $files): string
     {
         $path = $this->directory.'/bundle-'.substr(md5(serialize(array_keys($files))), 0, 8).'.zip';
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
         foreach ($files as $name => $contents) {
@@ -229,7 +229,7 @@ class BundleInspectorTest extends TestCase
         $zip->close();
 
         if ($files === []) {
-            File::put($path, "PK".str_repeat(" ", 18));
+            File::put($path, 'PK'.str_repeat(' ', 18));
         }
 
         return $path;

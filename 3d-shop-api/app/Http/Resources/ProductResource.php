@@ -6,8 +6,8 @@ use App\Models\Product;
 use App\Models\ProductFile;
 use App\Support\FormatAgreement;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 

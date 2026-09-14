@@ -117,7 +117,7 @@ class MeshPrescan
         }
 
         ['length' => $length, 'type' => $type] = unpack('Vlength/Vtype', substr($header, 12, 8));
-        $json = $type === 0x4e4f534a ? (string) fread($handle, $length) : '';
+        $json = $type === 0x4E4F534A ? (string) fread($handle, $length) : '';
         fclose($handle);
 
         return $json;
@@ -159,9 +159,9 @@ class MeshPrescan
         }
 
         // A bundle: the model and its textures, which is how they actually ship.
-        if (str_starts_with($head, "PK")
-            || str_starts_with($head, "PK")
-            || str_starts_with($head, "PK")) {
+        if (str_starts_with($head, 'PK')
+            || str_starts_with($head, 'PK')
+            || str_starts_with($head, 'PK')) {
             return 'zip';
         }
 

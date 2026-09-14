@@ -56,6 +56,7 @@ class PruneOrphanedFilesCommand extends Command
                 // A file uploaded seconds ago may not have its row yet.
                 if ($disk->lastModified($path) > $cutoff) {
                     $kept++;
+
                     continue;
                 }
 
