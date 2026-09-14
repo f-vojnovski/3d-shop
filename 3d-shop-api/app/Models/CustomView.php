@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
  * A view a signed-in viewer asked for, of a model they may not own. Nothing
  * here joins the product's record: it carries no attestation and it expires.
  */
+/** @property ?array<string, mixed> $camera */
 class CustomView extends Model
 {
     public const SHADED = 'shaded';

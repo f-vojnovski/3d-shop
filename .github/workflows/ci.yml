@@ -1,0 +1,255 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PHP_VERSION: '8.4'
+  NODE_VERSION: '22'
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 3d-shop-api
+    env:
+      REDIS_CLIENT: predis
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_DB: threedshop_test
+          POSTGRES_USER: threedshop
+          POSTGRES_PASSWORD: threedshop
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U threedshop"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo_pgsql, zip, gd, bcmath, pcntl
+          coverage: none
+
+      - uses: actions/cache@v4
+        with:
+          path: 3d-shop-api/vendor
+          key: composer-${{ hashFiles('3d-shop-api/composer.lock') }}
+          restore-keys: composer-
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Make an environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - run: vendor/bin/pint --test
+
+      - run: composer stan
+
+      - run: php artisan test
+
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 3d-shop-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: 3d-shop-client/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm test
+
+  changes:
+    name: Does the renderer change?
+    runs-on: ubuntu-latest
+    outputs:
+      render: ${{ steps.filter.outputs.render }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        name: Compare against .github/render-image-paths.txt
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          # A new branch has no usable base, so rebuild rather than guess.
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "No base commit to compare against; rebuilding."
+            echo "render=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$base" "${{ github.sha }}")"
+          echo "Changed files:"
+          echo "$changed"
+
+          while IFS= read -r pattern; do
+            case "$pattern" in ''|'#'*) continue ;; esac
+            if echo "$changed" | grep -q "^${pattern}"; then
+              echo "Matched ${pattern}; the render image is rebuilt."
+              echo "render=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done < .github/render-image-paths.txt
+
+          echo "Nothing the render image is built from changed."
+          echo "render=false" >> "$GITHUB_OUTPUT"
+
+  render:
+    name: Render image and reproducibility
+    needs: changes
+    if: needs.changes.outputs.render == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      REDIS_CLIENT: predis
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_DATABASE: threedshop
+      DB_USERNAME: threedshop
+      DB_PASSWORD: threedshop
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_DB: threedshop
+          POSTGRES_USER: threedshop
+          POSTGRES_PASSWORD: threedshop
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U threedshop"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: repo
+        name: Lowercase the registry path
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Loaded, not pushed, so the check below runs against this exact build.
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: 3d-shop-api/render/Dockerfile
+          load: true
+          tags: 3dshop-render:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo_pgsql, zip, gd, bcmath, pcntl
+          coverage: none
+
+      - uses: actions/cache@v4
+        with:
+          path: 3d-shop-api/vendor
+          key: composer-${{ hashFiles('3d-shop-api/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Prepare the application
+        working-directory: 3d-shop-api
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          php artisan key:generate
+          php artisan migrate --force
+          php artisan db:seed --class=RenderFixtureSeeder --force
+
+      - name: Re-render the fixture and compare it to the recorded hashes
+        working-directory: 3d-shop-api
+        run: |
+          set -euo pipefail
+
+          php artisan broker:work &
+          broker=$!
+          trap 'kill "$broker" 2>/dev/null || true' EXIT
+
+          id="$(php artisan tinker --execute="echo App\\Models\\Product::where('name','CI render fixture')->value('id');" | tail -1 | tr -d '[:space:]')"
+          echo "Verifying product ${id}."
+
+          php artisan render:verify "$id"
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only published once it has drawn the fixture correctly.
+      - id: push
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: 3d-shop-api/render/Dockerfile
+          push: true
+          tags: ghcr.io/${{ steps.repo.outputs.name }}/render:latest
+          cache-from: type=gha
+
+      # Public Sigstore, so a stranger can run:
+      #   gh attestation verify oci://ghcr.io/<owner>/<repo>/render --repo <owner>/<repo>
+      - name: Attest the published image
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.repo.outputs.name }}/render
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

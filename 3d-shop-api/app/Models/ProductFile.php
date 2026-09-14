@@ -2,20 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
+/** @property ?array<string, mixed> $meta */
 class ProductFile extends Model
 {
     use HasFactory;
 
     public const KIND_DELIVERABLE = 'deliverable';
+
     public const KIND_PREVIEW_IMAGE = 'preview_image';
+
     public const KIND_WIREFRAME = 'wireframe';
+
     public const KIND_DERIVED = 'derived';
 
     /**
@@ -31,6 +35,7 @@ class ProductFile extends Model
     public const KIND_CLIP = 'clip';
 
     public const KIND_SELLER_IMAGE = 'seller_image';
+
     public const KIND_THUMBNAIL = 'thumbnail';
 
     protected $fillable = [

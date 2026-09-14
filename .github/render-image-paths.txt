@@ -1,0 +1,8 @@
+# Paths that rebuild the render image in CI. A trailing / matches a directory.
+# The client files are here because render/Dockerfile COPYs them into the
+# container; RenderImagePathsTest fails if a COPY has no line here.
+3d-shop-api/render/
+docker-compose.yml
+3d-shop-client/src/components/common/model-displayer/fitToView.js
+3d-shop-client/src/components/common/model-displayer/simplify.js
+3d-shop-client/src/components/common/model-displayer/shrinkTextures.js
