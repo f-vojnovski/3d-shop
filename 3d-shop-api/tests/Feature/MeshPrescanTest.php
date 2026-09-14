@@ -112,16 +112,17 @@ class MeshPrescanTest extends TestCase
         $this->assertStringContainsString('not a recognised', $scan->rejection());
     }
 
+    /** Small enough to pass every other limit, so only the face count can refuse it. */
     public function test_it_rejects_a_model_over_the_triangle_limit(): void
     {
         $scan = new MeshPrescan(
-            bytes: 900_000_000,
+            bytes: 1024,
             faces: MeshPrescan::MAX_FACES + 1,
             format: 'obj',
         );
 
         $this->assertFalse($scan->withinLimits());
-        $this->assertStringContainsString('over the', $scan->rejection());
+        $this->assertStringContainsString('faces', (string) $scan->rejection());
     }
 
     public function test_it_accepts_a_model_exactly_at_the_limit(): void

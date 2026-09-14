@@ -460,7 +460,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
         $bytes = (string) file_get_contents(
             $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$file
         );
-        $path = 'preview_images/'.uniqid().'.png';
+        $path = 'preview_images/'.ProductFile::storedName('png');
         Storage::disk('public')->put($path, $bytes);
 
         $product->files()->create([
@@ -503,7 +503,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             // Copied, never pointed at: the scaling job rewrites what a
             // thumbnail holds, and the still it came from is attested.
             $bytes = (string) Storage::disk($still->disk)->get($still->path);
-            $path = 'thumbnails/'.uniqid().'.png';
+            $path = 'thumbnails/'.ProductFile::storedName('png');
             Storage::disk('public')->put($path, $bytes);
 
             $adopted = $fresh->files()->create([

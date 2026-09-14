@@ -119,6 +119,18 @@ class ProductFile extends Model
             ->where('kind', self::KIND_DERIVED);
     }
 
+    /**
+     * A name for a newly stored object.
+     *
+     * Random rather than time-based: `uniqid()` is microsecond precision, so two
+     * workers storing in the same microsecond produce one name and the second
+     * write silently replaces the first.
+     */
+    public static function storedName(string $extension = ''): string
+    {
+        return bin2hex(random_bytes(16)).($extension === '' ? '' : '.'.$extension);
+    }
+
     public function angles(): array
     {
         return $this->meta['angles'] ?? [];

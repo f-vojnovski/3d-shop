@@ -695,7 +695,7 @@ class ProductController extends BaseController
     {
         $bytes = (string) Storage::disk($source->disk)->get($source->path);
         $extension = pathinfo($source->path, PATHINFO_EXTENSION) ?: 'png';
-        $path = 'thumbnails/'.uniqid().'.'.$extension;
+        $path = 'thumbnails/'.ProductFile::storedName($extension);
 
         Storage::disk('public')->put($path, $bytes);
 
@@ -737,7 +737,7 @@ class ProductController extends BaseController
             $upload->isBundle() => 'zip',
             default => $upload->scan->format,
         };
-        $name = uniqid().($extension === '' ? '' : '.'.$extension);
+        $name = ProductFile::storedName($extension);
         $path = Storage::disk($disk)->putFileAs($directory, $file, $name);
 
         $stored = $product->files()->create([

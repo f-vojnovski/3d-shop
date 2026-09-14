@@ -63,7 +63,7 @@ class ScaleThumbnail implements ShouldQueue
         }
 
         $was = $file->path;
-        $path = 'thumbnails/'.uniqid().'.'.$scaled['extension'];
+        $path = 'thumbnails/'.ProductFile::storedName($scaled['extension']);
 
         Storage::disk($file->disk)->put($path, $scaled['bytes']);
 

@@ -106,10 +106,10 @@ class UploadHardeningTest extends TestCase
     }
 
     /**
-     * The prescan already refuses oversized models in the render job. Doing it
-     * at upload means the row and the bytes never exist in the first place.
+     * The face limit itself is pinned in MeshPrescanTest: reaching it here would
+     * need a forty megabyte fixture. This covers the path around it.
      */
-    public function test_a_model_over_the_face_limit_is_refused_at_upload(): void
+    public function test_a_model_within_the_limits_is_accepted_at_upload(): void
     {
         $faces = str_repeat("f 1 1 1\n", 40);
 

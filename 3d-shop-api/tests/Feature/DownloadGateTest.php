@@ -135,6 +135,22 @@ class DownloadGateTest extends TestCase
         $this->get(str_replace('user='.$seller->id, 'user=999', $url))->assertForbidden();
     }
 
+    /**
+     * The two tests above pass with the signature middleware removed, because
+     * they ask with a user id that would be refused anyway. Supplying the right
+     * one is the thing the signature exists to stop.
+     */
+    public function test_a_correct_user_id_without_a_signature_is_rejected(): void
+    {
+        $seller = $this->user('seller');
+        $product = $this->upload($seller);
+
+        app('auth')->forgetGuards();
+
+        $this->get("/api/products/{$product->id}/download/obj?user={$seller->id}")
+            ->assertForbidden();
+    }
+
     public function test_a_download_url_expires(): void
     {
         $seller = $this->user('seller');
