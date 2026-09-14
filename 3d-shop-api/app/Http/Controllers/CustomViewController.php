@@ -27,7 +27,7 @@ class CustomViewController extends BaseController
      */
     public function store(Request $request, $id)
     {
-        $product = Product::with('files')->findOrFail($id);
+        $product = Product::with('files')->visibleTo(Auth::id())->findOrFail($id);
 
         $fields = $request->validate([
             'format' => 'required|in:'.ModelFormats::rule(),
@@ -159,7 +159,7 @@ class CustomViewController extends BaseController
      */
     public function publish(Request $request, $id, $viewId)
     {
-        $product = Product::with('files')->findOrFail($id);
+        $product = Product::with('files')->visibleTo(Auth::id())->findOrFail($id);
 
         if ((int) $product->user_id !== (int) Auth::user()->getAuthIdentifier()) {
             abort(403, 'You are not the owner of this product!');

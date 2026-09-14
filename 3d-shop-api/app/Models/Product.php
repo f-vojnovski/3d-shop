@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -163,6 +164,26 @@ class Product extends Model
             [self::STATUS_OWNER, self::STATUS_PURCHASED],
             true
         );
+    }
+
+    /**
+     * What this viewer may see at all.
+     *
+     * A withdrawn listing stays reachable by whoever bought it, so this is not
+     * simply "listed": it is listed, or theirs, or paid for. `forViewer` below
+     * only eager-loads and decides nothing.
+     */
+    public function scopeVisibleTo(Builder $query, ?int $userId): Builder
+    {
+        return $query->where(function (Builder $visible) use ($userId) {
+            $visible->where('unlisted', false);
+
+            if ($userId !== null) {
+                $visible
+                    ->orWhere('user_id', $userId)
+                    ->orWhereHas('sales', fn (Builder $sales) => $sales->where('buyer_id', $userId));
+            }
+        });
     }
 
     public function scopeForViewer($query, ?int $userId)

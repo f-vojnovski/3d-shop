@@ -162,6 +162,8 @@ f 1 2 3
             'car/textures/spare.png' => $this->png(8, 8),
         ]));
 
+        Product::whereKey($id)->update(['unlisted' => false]);
+
         Sanctum::actingAs(User::create([
             'name' => 'buyer',
             'email' => 'buyer@example.com',

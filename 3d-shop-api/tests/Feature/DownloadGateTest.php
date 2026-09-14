@@ -37,7 +37,11 @@ class DownloadGateTest extends TestCase
             'thumbnails' => [UploadedFile::fake()->image('thumb.png')],
         ], $extra))->assertSuccessful();
 
-        return Product::with('files')->sole();
+        // A stranger is only ever shown a published listing, so these are.
+        $product = Product::with('files')->sole();
+        $product->update(['unlisted' => false]);
+
+        return $product->refresh();
     }
 
     protected function setUp(): void

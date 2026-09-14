@@ -244,7 +244,7 @@ class ProductController extends BaseController
     public function show($id)
     {
         return new ProductResource(
-            Product::with('files')->forViewer(Auth::id())->findOrFail($id)
+            Product::with('files')->forViewer(Auth::id())->visibleTo(Auth::id())->findOrFail($id)
         );
     }
 
@@ -420,7 +420,7 @@ class ProductController extends BaseController
      */
     public function viewerProxy($id, string $format): StreamedResponse
     {
-        $product = Product::with('files')->findOrFail($id);
+        $product = Product::with('files')->visibleTo(Auth::id())->findOrFail($id);
         $proxy = $product->deliverableFor($format)?->proxy();
 
         if ($proxy === null) {

@@ -217,6 +217,7 @@ class ReplaceFileTest extends TestCase
     public function test_nobody_without_the_product_is_offered_an_old_file(): void
     {
         $this->replace()->assertSuccessful();
+        $this->product->update(['unlisted' => false]);
 
         Sanctum::actingAs(User::create([
             'name' => 'stranger',
