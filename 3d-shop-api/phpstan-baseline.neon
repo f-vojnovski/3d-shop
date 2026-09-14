@@ -25,7 +25,7 @@ parameters:
 			path: app/Console/Commands/VerifyRenderCommand.php
 
 		-
-			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string\|null, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Console/Commands/VerifyRenderCommand.php
@@ -187,7 +187,7 @@ parameters:
 			path: app/Http/Controllers/ProductController.php
 
 		-
-			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string\|null, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Http/Controllers/ProductController.php
@@ -337,7 +337,7 @@ parameters:
 			path: app/Jobs/BuildViewerProxy.php
 
 		-
-			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string\|null, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Jobs/BuildViewerProxy.php
@@ -361,7 +361,7 @@ parameters:
 			path: app/Jobs/RenderClipPreview.php
 
 		-
-			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string\|null, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Jobs/RenderClipPreview.php
@@ -439,7 +439,7 @@ parameters:
 			path: app/Jobs/RenderProductPreviews.php
 
 		-
-			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''status'' on array\{status\: string, path\?\: string, tool\?\: string\|null, reason\?\: string, retryable\?\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Jobs/RenderProductPreviews.php
@@ -611,30 +611,6 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Support/MaterialLibrary.php
-
-		-
-			message: '#^Call to an undefined method App\\Support\\ModelConverter\:\:identity\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Support/ModelConverter.php
-
-		-
-			message: '#^Static property App\\Support\\ModelConverter\:\:\$identity \(string\|null\) is never assigned string so it can be removed from the property type\.$#'
-			identifier: property.unusedType
-			count: 1
-			path: app/Support/ModelConverter.php
-
-		-
-			message: '#^Static property App\\Support\\ModelConverter\:\:\$identity is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Support/ModelConverter.php
-
-		-
-			message: '#^Offset ''image'' on array\{status\: string, exit\?\: int, output\?\: string, error\?\: string, reason\?\: string\} on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Support/RenderRunner.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Schema\\ForeignIdColumnDefinition\:\:nullOnDelete\(\)\.$#'

@@ -30,7 +30,7 @@ class ContainerBroker
     /**
      * @param  array<string, mixed>  $job  as ContainerJob::from() reads it
      * @param  array<string, mixed>  $about  what this work was for, for the record
-     * @return array{status: string, exit?: int, output?: string, error?: string, reason?: string}
+     * @return array{status: string, exit?: int, output?: string, error?: string, reason?: string, image?: ?string}
      */
     public function run(array $job, int $waitSeconds, array $about = []): array
     {

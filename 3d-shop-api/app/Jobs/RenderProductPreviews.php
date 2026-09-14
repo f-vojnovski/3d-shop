@@ -122,8 +122,10 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 [$bundleDir, $entry] = [$unpacked['dir'], $unpacked['entry']];
             }
 
-            if ($bundleDir === null && ModelConverter::needsConverting($scan->format)) {
-                $conversion = $converter->toGlb($modelPath, $scratch);
+            if (ModelConverter::needsConverting($scan->format)) {
+                $conversion = $bundleDir === null
+                    ? $converter->toGlb($modelPath, $scratch)
+                    : $converter->toGlb($bundleDir.DIRECTORY_SEPARATOR.$entry, $scratch, $bundleDir);
 
                 if (($conversion['status'] ?? 'failed') !== 'ok') {
                     $log->error('Conversion failed.', ['result' => $conversion]);
@@ -144,6 +146,9 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                 // than a mount racing the container that filled it.
                 $modelPath = $scratch.DIRECTORY_SEPARATOR.'model.glb';
                 RenderInput::fetch($derived, $modelPath);
+
+                // The converted glb stands alone, so the archive is no longer what is opened.
+                [$bundleDir, $entry] = [null, null];
             }
 
             $result = $runner->run(
