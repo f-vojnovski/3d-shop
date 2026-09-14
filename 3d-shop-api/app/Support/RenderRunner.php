@@ -68,10 +68,17 @@ class RenderRunner
             ];
         }
 
-        return json_decode((string) file_get_contents($resultFile), true) ?? [
+        $result = json_decode((string) file_get_contents($resultFile), true) ?? [
             'status' => 'failed',
             'reason' => 'The renderer result could not be read.',
             'retryable' => true,
         ];
+
+        // The tag names the renderer asked for; only the broker saw which answered.
+        if (is_array($result['renderer'] ?? null)) {
+            $result['renderer']['image'] = $answer['image'] ?? null;
+        }
+
+        return $result;
     }
 }

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Support\ContainerBroker;
 use App\Support\ContainerCommand;
 use App\Support\ContainerJob;
+use App\Support\RenderRunner;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -69,16 +70,33 @@ class BrokerWorkCommand extends Command
 
     /**
      * @param  array{memory: string, cpus: string, timeout: int}  $settings
-     * @return array{started_at: float, finished_at: float, cpu_quota: string, memory: string}
+     * @return array{started_at: float, finished_at: float, cpu_quota: string, memory: string, image: ?string}
      */
-    private static function spent(float $began, array $settings): array
+    private static function spent(float $began, array $settings, ?string $image): array
     {
         return [
             'started_at' => $began,
             'finished_at' => microtime(true),
             'cpu_quota' => $settings['cpus'],
             'memory' => $settings['memory'],
+            'image' => $image,
         ];
+    }
+
+    private function imageDigest(): ?string
+    {
+        $inspect = new Process(['docker', 'image', 'inspect', '--format', '{{.Id}}', RenderRunner::IMAGE]);
+        $inspect->setTimeout(20);
+
+        try {
+            $inspect->run();
+        } catch (Throwable) {
+            return null;
+        }
+
+        $id = trim($inspect->getOutput());
+
+        return preg_match('/^sha256:[0-9a-f]{64}$/', $id) === 1 ? $id : null;
     }
 
     /**
@@ -102,6 +120,7 @@ class BrokerWorkCommand extends Command
         }
 
         $settings = $described->settings();
+        $image = $this->imageDigest();
         $process = new Process($command);
         $process->setTimeout($settings['timeout'] + 60);
 
@@ -112,11 +131,11 @@ class BrokerWorkCommand extends Command
         try {
             $process->run();
         } catch (ProcessTimedOutException) {
-            return ['status' => 'failed', 'reason' => 'The container ran past its time.'] + self::spent($began, $settings);
+            return ['status' => 'failed', 'reason' => 'The container ran past its time.'] + self::spent($began, $settings, $image);
         } catch (Throwable $exception) {
             $log->error('Broker could not start a container.', ['message' => $exception->getMessage()]);
 
-            return ['status' => 'failed', 'reason' => 'The container would not start.'] + self::spent($began, $settings);
+            return ['status' => 'failed', 'reason' => 'The container would not start.'] + self::spent($began, $settings, $image);
         }
 
         return [
@@ -124,6 +143,6 @@ class BrokerWorkCommand extends Command
             'exit' => (int) $process->getExitCode(),
             'output' => $process->getOutput(),
             'error' => substr($process->getErrorOutput(), -2000),
-        ] + self::spent($began, $settings);
+        ] + self::spent($began, $settings, $image);
     }
 }

@@ -204,6 +204,8 @@ class VerifyRenderCommand extends Command
 
         $this->table(['format', 'angle', 'pass', 'attested', 're-rendered', ''], $rows);
 
+        $this->reportRenderer($source, $stored->first(), $result);
+
         // Every hash it did produce would still match, so count as well.
         $missing = $stored->count() + $outlines->count() - $checked;
 
@@ -232,6 +234,41 @@ class VerifyRenderCommand extends Command
         }
 
         return ['failures' => $failures, 'verified' => $checked];
+    }
+
+    /**
+     * Reported, not counted: the same pixels from a different build is a
+     * stronger result than a match, not a failure.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    private function reportRenderer(ProductFile $source, ?ProductFile $still, array $result): void
+    {
+        $attested = $still?->meta['renderer']['image'] ?? null;
+        $ran = $result['renderer']['image'] ?? null;
+
+        if (! is_string($ran)) {
+            $this->line(".{$source->format}: the renderer build was not reported.");
+
+            return;
+        }
+
+        $now = substr($ran, 7, 12);
+
+        if (! is_string($attested)) {
+            $this->line(".{$source->format}: drawn now by build {$now}…, none attested to compare.");
+
+            return;
+        }
+
+        $this->line(hash_equals($attested, $ran)
+            ? ".{$source->format}: same renderer build as the attestation ({$now}…)."
+            : sprintf(
+                '.%s: a different renderer build drew these (%s… now, %s… attested).',
+                $source->format,
+                $now,
+                substr($attested, 7, 12)
+            ));
     }
 
     private function conversionHolds(

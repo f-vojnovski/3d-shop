@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\RenderRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -35,8 +36,38 @@ class AttestationTest extends TestCase
         $this->assertSame($preview->checksum, $body['image']['sha256']);
         $this->assertSame(75, $body['camera']['fov']);
         $this->assertSame('0.186.0', $body['renderer']['three']);
+        $this->assertSame('sha256:'.str_repeat('d', 64), $body['renderer']['image']);
         $this->assertSame(self::SOURCE_HASH, $body['source_model']['sha256']);
         $this->assertTrue($body['source_model']['still_on_sale']);
+    }
+
+    /** A tag can be rebuilt, so a tag alone names a renderer that may no longer exist. */
+    public function test_a_still_records_the_renderer_build_and_not_just_the_tag(): void
+    {
+        $scratch = storage_path('app/private/render-scratch/attestation-test');
+        File::deleteDirectory($scratch);
+        File::makeDirectory($scratch.'/out', 0775, true);
+        File::put($scratch.'/out/result.json', json_encode([
+            'status' => 'ok',
+            'images' => [],
+            'renderer' => ['engine' => 'three.js', 'three' => '0.186.0'],
+        ]));
+
+        // result.json comes from the container; only the broker can see Docker.
+        Redis::shouldReceive('rpush')->andReturnTrue();
+        Redis::shouldReceive('expire')->andReturnTrue();
+        Redis::shouldReceive('blpop')->andReturn(['key', json_encode([
+            'status' => 'ran',
+            'exit' => 0,
+            'image' => 'sha256:'.str_repeat('c', 64),
+        ])]);
+
+        $result = (new RenderRunner)->run([], $scratch.'/model', $scratch);
+
+        File::deleteDirectory($scratch);
+
+        $this->assertSame('ok', $result['status']);
+        $this->assertSame('sha256:'.str_repeat('c', 64), $result['renderer']['image']);
     }
 
     public function test_it_reports_when_the_model_on_sale_is_no_longer_the_one_rendered(): void
@@ -233,6 +264,7 @@ class AttestationTest extends TestCase
                     'three' => '0.186.0',
                     'browser' => 'Chromium 152.0.7977.82',
                     'rasterizer' => 'swiftshader',
+                    'image' => 'sha256:'.str_repeat('d', 64),
                 ],
                 'source_checksum' => self::SOURCE_HASH,
             ],
