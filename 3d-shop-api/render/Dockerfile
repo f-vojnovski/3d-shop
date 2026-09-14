@@ -60,6 +60,12 @@ COPY 3d-shop-client/src/components/common/model-displayer/fitToView.js /app/fitT
 COPY 3d-shop-client/src/components/common/model-displayer/simplify.js /app/simplify.js
 COPY 3d-shop-client/src/components/common/model-displayer/shrinkTextures.js /app/shrinkTextures.js
 
+# The root filesystem is read-only, and Chromium treats a home it cannot write
+# as fatal: the crash handler it starts first gets no database directory, exits,
+# and the browser dies on the reset socket before drawing anything. /tmp is the
+# one writable mount.
+ENV HOME=/tmp
+
 ARG THREE_VERSION
 ENV CHROME_BIN=/usr/bin/chromium \
     THREE_VERSION=${THREE_VERSION}
