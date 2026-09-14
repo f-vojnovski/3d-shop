@@ -7,6 +7,7 @@ use App\Models\ProductFile;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /** A committed model and the hashes it must still produce, recorded by hand so drift fails the job. */
 class RenderFixtureSeeder extends Seeder
@@ -42,7 +43,10 @@ class RenderFixtureSeeder extends Seeder
         $checksum = hash('sha256', $bytes);
         $path = 'ci/cube.gltf';
 
-        Storage::disk('models')->put($path, $bytes);
+        // The models disk is configured not to throw, so an unchecked write fails silently.
+        if (! Storage::disk('models')->put($path, $bytes)) {
+            throw new RuntimeException('Could not write the fixture to the models disk.');
+        }
 
         $user = User::firstOrCreate(
             ['name' => 'ci-fixture'],

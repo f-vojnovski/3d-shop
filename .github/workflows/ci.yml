@@ -208,9 +208,16 @@ jobs:
       - name: Prepare the application
         working-directory: 3d-shop-api
         run: |
+          set -euo pipefail
+
           composer install --no-interaction --prefer-dist --no-progress
           cp .env.example .env
           php artisan key:generate
+
+          # The example points at MinIO, and this job is about rendered bytes.
+          sed -i 's|^MODELS_DISK=.*|MODELS_DISK=local|' .env
+          sed -i "s|^MODELS_DISK_ROOT=.*|MODELS_DISK_ROOT=${PWD}/storage/app/private/models|" .env
+
           php artisan migrate --force
           php artisan db:seed --class=RenderFixtureSeeder --force
 
