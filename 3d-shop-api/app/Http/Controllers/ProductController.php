@@ -413,17 +413,6 @@ class ProductController extends BaseController
         return response()->noContent();
     }
 
-    public function previewModel($id, string $format): StreamedResponse
-    {
-        $product = Product::with('files')->findOrFail($id);
-
-        if (! $product->servesInteractivePreview()) {
-            abort(403, 'This product does not offer an interactive preview.');
-        }
-
-        return $this->streamDeliverable($product, $format, inline: true);
-    }
-
     /**
      * The cut-down copy a buyer aims a camera at. Public on purpose — aiming
      * happens before paying — but this route can only ever reach a proxy, and

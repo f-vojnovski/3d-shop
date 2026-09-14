@@ -290,7 +290,15 @@ class ProductResource extends JsonResource
         $urls = [];
 
         foreach ($formats as $format) {
-            $urls[$format] = "/api/products/{$this->id}/preview/{$format}";
+            $file = $this->deliverableFor($format);
+
+            // No proxy means there is nothing safe to hand over, and the viewer
+            // falls back to the measured bounding box.
+            if ($file === null || $this->proxyOf($file) === null) {
+                continue;
+            }
+
+            $urls[$format] = "/api/products/{$this->id}/proxy/{$format}";
         }
 
         return $urls;

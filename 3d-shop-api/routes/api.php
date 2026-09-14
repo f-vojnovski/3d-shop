@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show'])
     ->where('id', '[0-9]+');
-Route::get('/products/{id}/preview/{format}', [ProductController::class, 'previewModel'])
-    ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
 Route::get('/products/{id}/proxy/{format}', [ProductController::class, 'viewerProxy'])
     ->where(['id' => '[0-9]+', 'format' => ModelFormats::pattern()]);
 Route::get('/products/{id}/download/{format}', [ProductController::class, 'download'])

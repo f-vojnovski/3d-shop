@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Models\ProductFile;
 use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -143,18 +144,44 @@ class DownloadGateTest extends TestCase
         $this->get($url)->assertForbidden();
     }
 
-    public function test_an_interactive_product_serves_a_public_preview(): void
+    /** Nothing safe to show means no url at all, never the file itself. */
+    public function test_an_interactive_product_without_a_proxy_offers_no_viewer_url(): void
     {
         $product = $this->upload($this->user('seller'));
         app('auth')->forgetGuards();
 
-        $url = $this->getJson("/api/products/{$product->id}")->json('preview_urls.obj');
-
-        $this->assertNotNull($url);
-        $this->get($url)->assertSuccessful();
+        $this->assertSame([], $this->getJson("/api/products/{$product->id}")->json('preview_urls'));
     }
 
-    public function test_an_attested_stills_product_offers_no_preview_url(): void
+    /** With a proxy, the viewer is pointed at the proxy route and nowhere else. */
+    public function test_an_interactive_product_is_pointed_at_its_proxy(): void
+    {
+        $product = $this->upload($this->user('seller'));
+        $source = $product->deliverables()->first();
+
+        Storage::disk('models')->put('proxies/cut-down.glb', 'a cut down copy');
+
+        ProductFile::create([
+            'product_id' => $product->id,
+            'source_file_id' => $source->id,
+            'kind' => ProductFile::KIND_PROXY,
+            'format' => 'glb',
+            'disk' => 'models',
+            'path' => 'proxies/cut-down.glb',
+            'sort' => 0,
+            'bytes' => 15,
+            'checksum' => hash('sha256', 'a cut down copy'),
+        ]);
+
+        app('auth')->forgetGuards();
+
+        $this->assertSame(
+            "/api/products/{$product->id}/proxy/obj",
+            $this->getJson("/api/products/{$product->id}")->json('preview_urls.obj')
+        );
+    }
+
+    public function test_an_attested_stills_product_offers_no_viewer_url(): void
     {
         $product = $this->upload($this->user('seller'), [
             'preview_mode' => Product::PREVIEW_ATTESTED_STILLS,
@@ -167,6 +194,5 @@ class DownloadGateTest extends TestCase
         $body = $this->getJson("/api/products/{$product->id}")->json();
 
         $this->assertSame([], $body['preview_urls']);
-        $this->get("/api/products/{$product->id}/preview/obj")->assertForbidden();
     }
 }
