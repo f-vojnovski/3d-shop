@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ProductFile;
+use App\Support\MeshFacts;
 use App\Support\ModelConverter;
 use App\Support\ProxyRunner;
 use App\Support\RenderInput;
@@ -118,11 +119,29 @@ class BuildViewerProxy implements ShouldQueue
                 return;
             }
 
-            $this->store($source, $path, $result);
+            // Measured rather than taken from the result file, and only tested
+            // for being smaller: `careful` deliberately undershoots the ratio on
+            // a model of many pieces. A proxy no smaller than the original is
+            // the full mesh on a public route.
+            $faces = (int) (MeshFacts::of($path, 'glb')->toArray()['faces'] ?? 0);
+            $original = (int) ($source->facts()['faces'] ?? 0);
+
+            if ($original > 0 && $faces >= $original) {
+                $log->warning('Proxy was not cut down, so it is not published.', [
+                    'product_file_id' => $source->id,
+                    'faces' => $faces,
+                    'original' => $original,
+                ]);
+
+                return;
+            }
+
+            $this->store($source, $path, $result, $faces);
 
             $log->info('Proxy built.', [
                 'product_file_id' => $source->id,
                 'triangles' => $result['triangles'] ?? null,
+                'faces' => $faces,
                 'bytes' => $result['bytes'] ?? null,
             ]);
         } finally {
@@ -131,7 +150,7 @@ class BuildViewerProxy implements ShouldQueue
     }
 
     /** @param  array<string, mixed>  $result */
-    private function store(ProductFile $source, string $path, array $result): void
+    private function store(ProductFile $source, string $path, array $result, int $faces): void
     {
         $source->proxy()?->delete();
 
@@ -155,6 +174,7 @@ class BuildViewerProxy implements ShouldQueue
             'meta' => [
                 'ratio' => $source->meta['proxy']['ratio'] ?? null,
                 'triangles' => $result['triangles'] ?? null,
+                'faces' => $faces,
             ],
         ]);
     }
