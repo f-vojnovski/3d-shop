@@ -119,7 +119,7 @@ class RemeasureFilesCommand extends Command
             $root = null;
 
             if (RenderInput::isBundle($file)) {
-                $unpacked = RenderInput::unpack($path, $scratch);
+                $unpacked = RenderInput::unpack($path, $scratch, $file->format);
 
                 if (is_string($unpacked)) {
                     return null;

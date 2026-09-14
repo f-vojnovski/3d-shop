@@ -72,7 +72,7 @@ class RenderClipPreview implements ShouldBeUnique, ShouldQueue
             $entry = null;
 
             if (RenderInput::isBundle($source)) {
-                $unpacked = RenderInput::unpack($modelPath, $scratch);
+                $unpacked = RenderInput::unpack($modelPath, $scratch, $source->format);
 
                 if (is_string($unpacked)) {
                     $log->warning('Clip skipped: bundle could not be unpacked.', ['reason' => $unpacked]);

@@ -123,12 +123,7 @@ class ModelUpload
     /** @return string|array{0: string} the entry, or a reason there is not one */
     private static function modelIn(BundleExtractor $unpacked, string $format): string|array
     {
-        $wanted = ModelFormats::extensionsFor($format);
-
-        $matching = array_values(array_filter(
-            $unpacked->models(),
-            fn (string $file) => in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $wanted, true)
-        ));
+        $matching = $unpacked->modelsFor($format);
 
         if ($matching === []) {
             $found = $unpacked->models();

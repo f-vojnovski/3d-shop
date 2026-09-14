@@ -110,7 +110,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
             $entry = null;
 
             if (RenderInput::isBundle($source)) {
-                $unpacked = RenderInput::unpack($modelPath, $scratch);
+                $unpacked = RenderInput::unpack($modelPath, $scratch, $source->format);
 
                 if (is_string($unpacked)) {
                     $this->failOrRetry($product, $log, $unpacked, retryable: false);

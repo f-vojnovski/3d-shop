@@ -86,6 +86,24 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
             $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
             RenderInput::fetch($opened, $modelPath);
 
+            $bundleDir = null;
+            $entry = null;
+
+            // Handed straight to the renderer, an archive is a zip header where
+            // a mesh should be — and the viewer is charged for the attempt.
+            if (RenderInput::isBundle($opened)) {
+                $unpacked = RenderInput::unpack($modelPath, $scratch, $opened->format);
+
+                if (is_string($unpacked)) {
+                    $log->warning('Custom clip skipped.', ['reason' => $unpacked]);
+                    $this->giveUp($view, 'That view could not be drawn.');
+
+                    return;
+                }
+
+                [$bundleDir, $entry] = [$unpacked['dir'], $unpacked['entry']];
+            }
+
             $result = $runner->run(
                 (int) $view->clip,
                 self::FRAMES,
@@ -97,8 +115,8 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
                     : 'glb',
                 $modelPath,
                 $scratch,
-                null,
-                null,
+                $bundleDir,
+                $entry,
                 ['user_id' => $view->user_id, 'product_file_id' => $view->product_file_id]
             );
         } catch (Throwable $exception) {

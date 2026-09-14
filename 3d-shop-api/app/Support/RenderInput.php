@@ -17,7 +17,13 @@ class RenderInput
      * @return array{dir: string, entry: string, files: int, bytes: int}|string
      *                                                                          the unpacked bundle, or why it could not be opened
      */
-    public static function unpack(string $archivePath, string $scratch): array|string
+    /**
+     * @param  string|null  $format  the format the listing claims, so the file
+     *                               that gets drawn is the one that was
+     *                               measured. Null only where nothing has been
+     *                               claimed yet, such as a bare conversion.
+     */
+    public static function unpack(string $archivePath, string $scratch, ?string $format = null): array|string
     {
         $inspection = BundleInspector::of($archivePath);
 
@@ -32,10 +38,12 @@ class RenderInput
             return (string) $unpacked->failure;
         }
 
-        $models = $unpacked->models();
+        $models = $format === null ? $unpacked->models() : $unpacked->modelsFor($format);
 
         if ($models === []) {
-            return 'That archive holds no model file.';
+            return $format === null
+                ? 'That archive holds no model file.'
+                : sprintf('That archive holds no .%s file to draw.', $format);
         }
 
         return [

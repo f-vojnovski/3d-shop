@@ -124,7 +124,7 @@ class VerifyRenderCommand extends Command
         $entry = null;
 
         if (RenderInput::isBundle($source)) {
-            $unpacked = RenderInput::unpack($modelPath, $scratch);
+            $unpacked = RenderInput::unpack($modelPath, $scratch, $source->format);
 
             if (is_string($unpacked)) {
                 $this->error(".{$source->format}: {$unpacked}");

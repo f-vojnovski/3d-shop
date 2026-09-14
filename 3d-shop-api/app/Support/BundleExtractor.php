@@ -155,6 +155,25 @@ class BundleExtractor
         return $candidates;
     }
 
+    /**
+     * The models in here that a listing of `$format` could be selling.
+     *
+     * An archive can carry several: an .stl export beside the .obj, or a decoy
+     * beside the real thing. Whoever measures the file and whoever draws it have
+     * to land on the same one, so both ask this.
+     *
+     * @return list<string>
+     */
+    public function modelsFor(string $format): array
+    {
+        $wanted = ModelFormats::extensionsFor($format);
+
+        return array_values(array_filter(
+            $this->models(),
+            fn (string $file) => in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $wanted, true)
+        ));
+    }
+
     /** Archives are carried but never opened, so one is never the model. */
     private static function isArchive(string $path): bool
     {

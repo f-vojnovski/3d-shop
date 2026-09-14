@@ -63,7 +63,7 @@ class BuildViewerProxy implements ShouldQueue
             $entry = null;
 
             if (RenderInput::isBundle($source)) {
-                $unpacked = RenderInput::unpack($modelPath, $scratch);
+                $unpacked = RenderInput::unpack($modelPath, $scratch, $source->format);
 
                 if (is_string($unpacked)) {
                     $log->warning('Proxy skipped: bundle could not be unpacked.', ['reason' => $unpacked]);

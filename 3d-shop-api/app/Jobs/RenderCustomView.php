@@ -80,10 +80,29 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
             $modelPath = $scratch.DIRECTORY_SEPARATOR.'model';
             RenderInput::fetch($opened, $modelPath);
 
+            $bundleDir = null;
+            $entry = null;
+
+            // Handed straight to the renderer, an archive is a zip header where
+            // a mesh should be — and the viewer is charged for the attempt.
+            if (RenderInput::isBundle($opened)) {
+                $unpacked = RenderInput::unpack($modelPath, $scratch, $opened->format);
+
+                if (is_string($unpacked)) {
+                    $log->warning('Custom view skipped.', ['reason' => $unpacked]);
+                    $this->giveUp($view, 'That view could not be drawn.');
+
+                    return;
+                }
+
+                [$bundleDir, $entry] = [$unpacked['dir'], $unpacked['entry']];
+            }
+
             $result = $runner->run(
                 [
                     'product_id' => $view->product_id,
-                    'source' => [
+                    'source' => array_filter([
+                        'entry' => $entry,
                         'path' => $opened->path,
                         'format' => $opened === $view->source
                             ? (string) ($view->source->meta['sniffed_format'] ?? $view->source->format)
@@ -91,14 +110,14 @@ class RenderCustomView implements ShouldBeUnique, ShouldQueue
                         'checksum' => $opened->checksum,
                         'bytes' => (int) $opened->bytes,
                         'faces' => 0,
-                    ],
+                    ], fn ($value) => $value !== null),
                     'angles' => [$view->camera],
                     'passes' => [$view->pass],
                     'output' => ['width' => 1200, 'height' => 900],
                 ],
                 $modelPath,
                 $scratch,
-                null,
+                $bundleDir,
                 ['user_id' => $view->user_id, 'product_file_id' => $view->product_file_id]
             );
         } catch (Throwable $exception) {
