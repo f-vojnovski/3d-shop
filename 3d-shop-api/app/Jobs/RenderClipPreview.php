@@ -85,7 +85,7 @@ class RenderClipPreview implements ShouldBeUnique, ShouldQueue
                 // a browser. The converted copy is what a render draws anyway.
                 $converted = $converter->toGlb($modelPath, $scratch);
 
-                if (($converted['status'] ?? 'failed') !== 'ok') {
+                if ($converted['status'] !== 'ok') {
                     $log->warning('Clip skipped: conversion failed.', ['result' => $converted]);
 
                     return;
@@ -108,7 +108,7 @@ class RenderClipPreview implements ShouldBeUnique, ShouldQueue
                 $entry
             );
 
-            if (($result['status'] ?? 'failed') !== 'ok') {
+            if ($result['status'] !== 'ok') {
                 $log->warning('Clip not drawn.', ['product_file_id' => $source->id, 'result' => $result]);
 
                 if ($result['retryable'] ?? false) {

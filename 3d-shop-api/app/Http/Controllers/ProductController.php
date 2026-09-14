@@ -226,7 +226,7 @@ class ProductController extends BaseController
 
             $result = $converter->toGlb($source, $scratch, $root);
 
-            if (($result['status'] ?? 'failed') !== 'ok') {
+            if ($result['status'] !== 'ok') {
                 throw ValidationException::withMessages([
                     'model' => $result['reason'] ?? 'That file could not be converted.',
                 ]);

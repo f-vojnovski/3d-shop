@@ -127,7 +127,7 @@ class RenderProductPreviews implements ShouldBeUnique, ShouldQueue
                     ? $converter->toGlb($modelPath, $scratch)
                     : $converter->toGlb($bundleDir.DIRECTORY_SEPARATOR.$entry, $scratch, $bundleDir);
 
-                if (($conversion['status'] ?? 'failed') !== 'ok') {
+                if ($conversion['status'] !== 'ok') {
                     $log->error('Conversion failed.', ['result' => $conversion]);
                     $this->failOrRetry(
                         $product,

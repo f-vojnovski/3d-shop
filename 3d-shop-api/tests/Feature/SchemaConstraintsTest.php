@@ -7,6 +7,7 @@ use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -122,6 +123,10 @@ class SchemaConstraintsTest extends TestCase
             'price_cents' => $product->price_cents,
         ]);
 
-        $this->assertNotNull($sale->fresh()->created_at);
+        // Read the column, not the model: the cast would answer for a row the
+        // database never filled in.
+        $stored = DB::table('sales')->where('id', $sale->id)->value('created_at');
+
+        $this->assertNotNull($stored, 'The sales table left created_at empty.');
     }
 }

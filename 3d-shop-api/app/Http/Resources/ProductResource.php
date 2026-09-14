@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
+/** @mixin Product */
 class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array

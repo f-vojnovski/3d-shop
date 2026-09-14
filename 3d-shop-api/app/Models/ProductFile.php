@@ -64,16 +64,19 @@ class ProductFile extends Model
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<ProductFile, $this> */
     public function source(): BelongsTo
     {
         return $this->belongsTo(self::class, 'source_file_id');
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function stills(): HasMany
     {
         return $this->hasMany(self::class, 'source_file_id')
@@ -81,6 +84,7 @@ class ProductFile extends Model
             ->orderBy('sort');
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function wireframes(): HasMany
     {
         return $this->hasMany(self::class, 'source_file_id')
@@ -96,6 +100,7 @@ class ProductFile extends Model
             ->first();
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function clips(): HasMany
     {
         return $this->hasMany(self::class, 'source_file_id')
@@ -103,7 +108,11 @@ class ProductFile extends Model
             ->orderBy('sort');
     }
 
-    /** What the renderer actually opened, when the upload needed converting. */
+    /**
+     * What the renderer actually opened, when the upload needed converting.
+     *
+     * @return HasMany<ProductFile, $this>
+     */
     public function derived(): HasMany
     {
         return $this->hasMany(self::class, 'source_file_id')

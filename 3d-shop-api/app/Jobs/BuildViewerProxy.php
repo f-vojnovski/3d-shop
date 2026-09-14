@@ -76,7 +76,7 @@ class BuildViewerProxy implements ShouldQueue
                 // a browser. The converted copy is what a render draws anyway.
                 $converted = $converter->toGlb($modelPath, $scratch);
 
-                if (($converted['status'] ?? 'failed') !== 'ok') {
+                if ($converted['status'] !== 'ok') {
                     $log->warning('Proxy skipped: conversion failed.', ['result' => $converted]);
 
                     return;
@@ -96,7 +96,7 @@ class BuildViewerProxy implements ShouldQueue
                 $entry
             );
 
-            if (($result['status'] ?? 'failed') !== 'ok') {
+            if ($result['status'] !== 'ok') {
                 $log->warning('Proxy not built.', ['product_file_id' => $source->id, 'result' => $result]);
 
                 if ($result['retryable'] ?? false) {

@@ -42,7 +42,7 @@ class HostPaths
             return self::$mounts = [];
         }
 
-        $configured = (string) env('RENDER_HOST_STORAGE', '');
+        $configured = (string) config('render.host_storage', '');
 
         if ($configured !== '') {
             return self::$mounts = [rtrim(storage_path(), '/\\') => rtrim($configured, '/\\')];

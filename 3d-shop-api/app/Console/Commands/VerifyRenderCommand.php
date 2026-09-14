@@ -284,7 +284,7 @@ class VerifyRenderCommand extends Command
 
         $result = $converter->toGlb($original, $again);
 
-        if (($result['status'] ?? 'failed') !== 'ok') {
+        if ($result['status'] !== 'ok') {
             $this->error(sprintf(
                 '.%s: the converter would not read the file on sale again (%s).',
                 $source->format,

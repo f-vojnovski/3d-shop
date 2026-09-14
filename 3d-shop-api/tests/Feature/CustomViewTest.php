@@ -326,7 +326,6 @@ class CustomViewTest extends TestCase
         $this->assertSame(1, CustomView::count());
     }
 
-    /** @return array<string, mixed> */
     public function test_the_owner_can_put_a_view_they_asked_for_on_the_listing(): void
     {
         Sanctum::actingAs($this->seller);

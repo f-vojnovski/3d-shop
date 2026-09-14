@@ -14,6 +14,10 @@ use ZipArchive;
  * that flattens entry paths, which breaks the sibling references a bundle
  * exists for, stops halfway on one bad entry, and silently drops an entry that
  * collides with another by case while still reporting success.
+ *
+ * An archive nested inside the upload is never opened. Downloads routinely
+ * carry the original project as `source/whatever.zip`, so not recursing is the
+ * defence rather than refusing the upload.
  */
 class BundleInspector
 {
@@ -38,13 +42,6 @@ class BundleInspector
         'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
         'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9',
     ];
-
-    /**
-     * Never opened. Real downloads routinely carry the original project as
-     * `source/whatever.zip`, so not recursing is the defence rather than
-     * refusing the upload.
-     */
-    private const ARCHIVES = ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz'];
 
     public function __construct(
         /**

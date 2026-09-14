@@ -11,7 +11,6 @@ use App\Support\ProxyRunner;
 use App\Support\RenderRunner;
 use Illuminate\Support\Facades\Queue;
 use ReflectionClass;
-use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
 
@@ -132,7 +131,6 @@ class QueueTimingTest extends TestCase
         $found = [];
 
         foreach ((new Finder)->files()->in(app_path('Jobs'))->name('*.php') as $file) {
-            /** @var SplFileInfo $file */
             $class = sprintf('App\Jobs\%s', $file->getBasename('.php'));
             $properties = (new ReflectionClass($class))->getDefaultProperties();
 

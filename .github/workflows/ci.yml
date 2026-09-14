@@ -193,6 +193,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Everything below assumes this works. Seconds here saves waiting out a
+      # five minute broker timeout to learn the same thing.
+      - name: Prove the image runs on this machine
+        run: |
+          set -euo pipefail
+
+          docker image ls 3dshop-render
+          docker run --rm --network=none --entrypoint node 3dshop-render --version
+          docker run --rm --network=none --entrypoint /usr/bin/chromium 3dshop-render --version
+          docker run --rm --network=none --entrypoint assimp 3dshop-render version | head -3
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
@@ -242,6 +253,10 @@ jobs:
         run: |
           echo "--- images known to the daemon"
           docker image ls
+          echo "--- containers, including ones that exited"
+          docker ps -a
+          echo "--- what is on the broker's list"
+          docker exec "$(docker ps -qf ancestor=redis:7-alpine | head -1)" redis-cli keys '*containers*' || true
           echo "--- render log"
           tail -n 200 storage/logs/render-*.log || echo "no render log was written"
           echo "--- scratch left behind"

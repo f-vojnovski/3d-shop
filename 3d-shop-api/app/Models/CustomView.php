@@ -115,16 +115,19 @@ class CustomView extends Model
         return $this->clip !== null;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<ProductFile, $this> */
     public function source(): BelongsTo
     {
         return $this->belongsTo(ProductFile::class, 'product_file_id');

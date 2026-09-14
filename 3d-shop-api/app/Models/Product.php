@@ -52,22 +52,29 @@ class Product extends Model
         ];
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function files(): HasMany
     {
         return $this->hasMany(ProductFile::class);
     }
 
+    /** @return HasMany<Sale, $this> */
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
     }
 
-    /** What is on sale now. Replaced files stay in `files`, not here. */
+    /**
+     * What is on sale now. Replaced files stay in `files`, not here.
+     *
+     * @return HasMany<ProductFile, $this>
+     */
     public function deliverables(): HasMany
     {
         return $this->files()->where('kind', ProductFile::KIND_DELIVERABLE)->current();
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function supersededDeliverables(): HasMany
     {
         return $this->files()
@@ -76,6 +83,7 @@ class Product extends Model
             ->orderBy('superseded_at');
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function previewImages(): HasMany
     {
         return $this->files()
@@ -84,6 +92,7 @@ class Product extends Model
             ->orderBy('sort');
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function sellerImages(): HasMany
     {
         return $this->files()
@@ -92,6 +101,7 @@ class Product extends Model
             ->orderBy('sort');
     }
 
+    /** @return HasMany<ProductFile, $this> */
     public function thumbnails(): HasMany
     {
         return $this->files()

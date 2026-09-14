@@ -96,7 +96,7 @@ class AuditStoredFilesCommand extends Command
     {
         $stream = $disk->readStream($path);
 
-        if ($stream === null || $stream === false) {
+        if (! is_resource($stream)) {
             return null;
         }
 

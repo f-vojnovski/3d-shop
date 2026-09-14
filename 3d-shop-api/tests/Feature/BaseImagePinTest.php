@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
 
@@ -51,7 +50,6 @@ class BaseImagePinTest extends TestCase
         $found = [];
 
         foreach ($files as $file) {
-            /** @var SplFileInfo $file */
             $found[$file->getRelativePathname()] = (string) $file->getContents();
         }
 
