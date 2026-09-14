@@ -89,8 +89,7 @@ class RenderCustomClip implements ShouldBeUnique, ShouldQueue
             $bundleDir = null;
             $entry = null;
 
-            // Handed straight to the renderer, an archive is a zip header where
-            // a mesh should be — and the viewer is charged for the attempt.
+            // Unpacked here, or the renderer gets a zip header and the viewer is billed for it.
             if (RenderInput::isBundle($opened)) {
                 $unpacked = RenderInput::unpack($modelPath, $scratch, $opened->format);
 

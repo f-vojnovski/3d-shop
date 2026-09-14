@@ -87,7 +87,7 @@ class CustomViewController extends BaseController
 
         // Counted before the row is made, so a repeat of something already
         // asked for still comes back rather than being turned away.
-        $asked = CustomView::query()
+        $asked = CustomView::withTrashed()
             ->where('user_id', $viewerId)
             ->where('created_at', '>=', now()->subDay())
             ->count();

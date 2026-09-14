@@ -156,11 +156,8 @@ class BundleExtractor
     }
 
     /**
-     * The models in here that a listing of `$format` could be selling.
-     *
-     * An archive can carry several: an .stl export beside the .obj, or a decoy
-     * beside the real thing. Whoever measures the file and whoever draws it have
-     * to land on the same one, so both ask this.
+     * The models a listing of `$format` could be selling. Whoever measures the
+     * file and whoever draws it both ask this, so they cannot pick differently.
      *
      * @return list<string>
      */

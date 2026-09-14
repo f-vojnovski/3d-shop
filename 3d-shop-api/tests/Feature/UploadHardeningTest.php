@@ -250,9 +250,8 @@ class UploadHardeningTest extends TestCase
     }
 
     /**
-     * Three files decide whether an upload arrives, and only one of them is PHP
-     * code. With PHP's own defaults the shipped image rejects at 8 MB every
-     * model the validator says it accepts, before any validation runs.
+     * Three files decide whether an upload arrives and only one is PHP code. On
+     * PHP's defaults the image rejects at 8 MB before validation ever runs.
      */
     public function test_the_shipped_stack_accepts_the_size_the_validator_allows(): void
     {

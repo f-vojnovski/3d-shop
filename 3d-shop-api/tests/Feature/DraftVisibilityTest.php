@@ -12,10 +12,8 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * The seller's own screen says nobody can see an unpublished listing but them.
- *
- * The catalogue honoured that and every route taking an id did not, so the rule
- * only held for people who arrived the expected way.
+ * The seller's screen says nobody can see an unpublished listing but them. The
+ * catalogue honoured that; every route taking an id did not.
  */
 class DraftVisibilityTest extends TestCase
 {

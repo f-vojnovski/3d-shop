@@ -10,9 +10,8 @@ use Tests\TestCase;
 use ZipArchive;
 
 /**
- * An archive can hold more than one model. Whoever measures the file and whoever
- * draws it have to land on the same one, or a listing shows a picture of one
- * mesh beside the specifications of another and every hash still checks out.
+ * An archive can hold more than one model. Pick differently on each side and a
+ * listing shows one mesh beside another's specifications, with every hash valid.
  */
 class BundleEntryAgreementTest extends TestCase
 {
@@ -51,7 +50,6 @@ class BundleEntryAgreementTest extends TestCase
         $this->assertSame('real.obj', $unpacked['entry'], 'A listing selling .obj was about to be drawn from the .stl.');
     }
 
-    /** The same archive read as what it is not. */
     public function test_an_archive_without_the_claimed_format_is_refused(): void
     {
         $archive = $this->archiveWith([

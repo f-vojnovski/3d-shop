@@ -13,12 +13,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /**
- * The promise is that a stranger cannot obtain the file that is for sale.
- *
- * Asserting that one flag produces one status code has missed this three times,
- * because the bug was never the guard — it was a writer that left the flag wrong.
- * So this asks the question the promise actually makes: walk every public GET
- * route, in every preview mode, and check whether any of them returns the bytes.
+ * Asks the question the promise makes rather than checking one flag: walk every
+ * public GET route, in every preview mode, and see if any returns the bytes.
  */
 class NoPublicRouteServesTheModelTest extends TestCase
 {
@@ -60,7 +56,6 @@ class NoPublicRouteServesTheModelTest extends TestCase
         $this->assertSame([], $served, "These public routes handed over the model in {$mode} mode: ".implode(', ', $served));
     }
 
-    /** The same question for a product the seller has not published. */
     public function test_no_public_route_returns_a_draft(): void
     {
         $product = $this->productSellingAModel(Product::PREVIEW_INTERACTIVE);
@@ -80,7 +75,6 @@ class NoPublicRouteServesTheModelTest extends TestCase
         $this->assertSame([], $leaked, 'These routes handed over an unpublished draft: '.implode(', ', $leaked));
     }
 
-    /** Works for a streamed file and an ordinary JSON response alike. */
     private function bodyOf($response): string
     {
         $base = $response->baseResponse;
@@ -96,9 +90,8 @@ class NoPublicRouteServesTheModelTest extends TestCase
     }
 
     /**
-     * Every GET the router exposes without auth, with this product's id and
-     * format filled in. Taken from the route table rather than a list here, so
-     * a new public route is covered the day it is added.
+     * Read from the route table rather than listed here, so a new public route
+     * is covered the day it is added.
      *
      * @return list<string>
      */

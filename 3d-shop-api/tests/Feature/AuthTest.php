@@ -124,11 +124,7 @@ class AuthTest extends TestCase
         $this->assertGuest();
     }
 
-    /**
-     * Deliberately not `getJson`. Every other test here sets an Accept header,
-     * which is what hid this: without one the auth middleware looked for a
-     * `login` route to redirect to, found none, and answered 500.
-     */
+    /** Deliberately not `getJson`: the Accept header every other test sets is what hid this. */
     public function test_a_missing_credential_is_refused_rather_than_a_server_error(): void
     {
         $response = $this->get('/api/current-user-products');

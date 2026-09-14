@@ -14,6 +14,12 @@ class MeshPrescan
     // a 2 GB container cap.
     public const MAX_BYTES = 600 * 1024 * 1024;
 
+    /**
+     * MAX_BYTES above is the container's limit. This one is the web request's,
+     * where `json_decode` peaks at about 13x the text it reads.
+     */
+    public const MAX_JSON_BYTES = 16 * 1024 * 1024;
+
     private const CHUNK = 1 << 22;
 
     /**
@@ -30,24 +36,42 @@ class MeshPrescan
         public readonly int $faces,
         public readonly string $format,
         public readonly array $unsupported = [],
+        public readonly int $jsonBytes = 0,
     ) {}
 
     public static function of(string $absolutePath): self
     {
         $bytes = filesize($absolutePath) ?: 0;
         $format = self::sniff($absolutePath);
+        $jsonBytes = self::jsonBytes($absolutePath, $format, $bytes);
+
+        // Reading the extensions means decoding the whole document.
+        $readable = $format !== 'obj' && $jsonBytes <= self::MAX_JSON_BYTES;
 
         return new self(
             bytes: $bytes,
             faces: $format === 'obj' ? self::countObjFaces($absolutePath) : 0,
             format: $format,
-            unsupported: $format === 'obj' ? [] : self::unsupportedExtensions($absolutePath, $format),
+            unsupported: $readable ? self::unsupportedExtensions($absolutePath, $format) : [],
+            jsonBytes: $jsonBytes,
         );
+    }
+
+    /** How much text a parser would have to hold. Zero for the formats that are streamed. */
+    private static function jsonBytes(string $path, string $format, int $bytes): int
+    {
+        return match ($format) {
+            'gltf' => $bytes,
+            'glb' => strlen(self::glbJson($path)),
+            default => 0,
+        };
     }
 
     public function withinLimits(): bool
     {
-        return $this->faces <= self::MAX_FACES && $this->bytes <= self::MAX_BYTES;
+        return $this->faces <= self::MAX_FACES
+            && $this->bytes <= self::MAX_BYTES
+            && $this->jsonBytes <= self::MAX_JSON_BYTES;
     }
 
     public function rejection(): ?string
@@ -66,6 +90,14 @@ class MeshPrescan
                 'This model is %s MB, over the %s MB limit for preview rendering.',
                 number_format($this->bytes / 1048576, 1),
                 number_format(self::MAX_BYTES / 1048576)
+            );
+        }
+
+        if ($this->jsonBytes > self::MAX_JSON_BYTES) {
+            return sprintf(
+                'This model describes itself in %s MB of text, over the %s MB a single request can read. Export it as .glb so the geometry is binary.',
+                number_format($this->jsonBytes / 1048576, 1),
+                number_format(self::MAX_JSON_BYTES / 1048576)
             );
         }
 
@@ -117,7 +149,9 @@ class MeshPrescan
         }
 
         ['length' => $length, 'type' => $type] = unpack('Vlength/Vtype', substr($header, 12, 8));
-        $json = $type === 0x4E4F534A ? (string) fread($handle, $length) : '';
+        $json = $type === 0x4E4F534A
+            ? (string) fread($handle, min((int) $length, self::MAX_JSON_BYTES + 1))
+            : '';
         fclose($handle);
 
         return $json;

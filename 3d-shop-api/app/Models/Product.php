@@ -167,11 +167,8 @@ class Product extends Model
     }
 
     /**
-     * What this viewer may see at all.
-     *
-     * A withdrawn listing stays reachable by whoever bought it, so this is not
-     * simply "listed": it is listed, or theirs, or paid for. `forViewer` below
-     * only eager-loads and decides nothing.
+     * Listed, or theirs, or paid for — a withdrawn listing stays reachable by
+     * whoever bought it. `forViewer` below only eager-loads and decides nothing.
      */
     public function scopeVisibleTo(Builder $query, ?int $userId): Builder
     {

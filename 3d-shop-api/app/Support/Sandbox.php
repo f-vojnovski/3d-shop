@@ -45,13 +45,10 @@ class Sandbox
     }
 
     /**
-     * A file the container reports having produced, resolved inside the outbox.
+     * A file the container says it produced, resolved inside the outbox.
      *
-     * The container is the least trusted thing in the system and the name it
-     * reports reaches a path join, so anything that is not a single plain
-     * filename, or that resolves outside the outbox, is refused. Callers that
-     * know the exact name to expect should compare against it instead; this is
-     * for the jobs where the container legitimately chooses among several.
+     * Callers that know the exact name to expect should compare against it; this
+     * is for the jobs where the container picks among several.
      */
     public static function produced(string $outDir, mixed $named): ?string
     {

@@ -7,11 +7,7 @@ use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
-/**
- * The container picks the names in its own result file, and those names reach a
- * path join. A compromised renderer that answers `../../../.env` must publish
- * nothing at all.
- */
+/** Names from the container's own result file reach a path join. `../../../.env` must publish nothing. */
 class ContainerNamedFileTest extends TestCase
 {
     private string $outbox;

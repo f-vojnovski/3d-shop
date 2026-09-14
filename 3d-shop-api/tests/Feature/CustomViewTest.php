@@ -266,7 +266,7 @@ class CustomViewTest extends TestCase
             ->assertJsonCount(1, 'views');
     }
 
-    public function test_pruning_removes_the_expired_row_and_its_image(): void
+    public function test_pruning_removes_the_expired_image_and_retires_the_row(): void
     {
         Storage::disk('public')->put('custom_views/1/1/abc-shaded.png', 'bytes');
 
@@ -286,8 +286,10 @@ class CustomViewTest extends TestCase
 
         $this->artisan('views:prune')->assertExitCode(0);
 
-        $this->assertNull($view->fresh());
         Storage::disk('public')->assertMissing('custom_views/1/1/abc-shaded.png');
+
+        $this->assertNull(CustomView::find($view->id));
+        $this->assertNotNull(CustomView::withTrashed()->find($view->id), 'The quota counts this row.');
     }
 
     public function test_a_dry_run_deletes_nothing(): void

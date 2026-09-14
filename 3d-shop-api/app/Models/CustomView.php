@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Storage;
 /** @property ?array<string, mixed> $camera */
 class CustomView extends Model
 {
+    // The daily quota counts these rows, so pruning frees the picture and keeps the row.
+    use SoftDeletes;
+
     public const SHADED = 'shaded';
 
     public const WIREFRAME = 'wireframe';
