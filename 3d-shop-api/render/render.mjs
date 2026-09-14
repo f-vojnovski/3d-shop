@@ -251,16 +251,43 @@ async function main() {
   let stderr = '';
   chrome.stderr.on('data', (chunk) => { stderr = (stderr + chunk).slice(-2000); });
 
+  let exit = null;
+  // A dead browser is not a slow render. `close` rather than `exit`, so the
+  // stderr that explains it has arrived.
+  const died = new Promise((resolve) => {
+    chrome.on('close', (code, signal) => {
+      exit = signal ?? `code ${code}`;
+
+      if (! state.done && state.failed === null) {
+        resolve('browser gone');
+      }
+    });
+  });
+
   const startedAt = Date.now();
-  const timedOut = await Promise.race([
-    finished.then(() => false),
-    new Promise((resolve) => setTimeout(() => resolve(true), TIMEOUT_MS)),
+  const outcome = await Promise.race([
+    finished.then(() => 'harness'),
+    died,
+    new Promise((resolve) => setTimeout(() => resolve('timeout'), TIMEOUT_MS)),
   ]);
   const seconds = Number(((Date.now() - startedAt) / 1000).toFixed(2));
 
   chrome.kill('SIGTERM');
 
-  if (timedOut) {
+  if (outcome === 'browser gone') {
+    await writeResult({
+      status: 'failed',
+      reason: `The browser stopped before drawing anything (${exit}).`,
+      retryable: true,
+      seconds,
+      progress: { drawn: state.images.size, expected, served: seen },
+      stderr: stderr.slice(-600),
+    });
+
+    return 6;
+  }
+
+  if (outcome === 'timeout') {
     // Where it got to, because a bare timeout names no suspect.
     await writeResult({
       status: 'failed',
