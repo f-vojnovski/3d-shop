@@ -19,6 +19,22 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->throttleApi();
+
+        // There is no login page to send anyone to. Without this the auth
+        // middleware asks for the `login` route, does not find one, and a
+        // missing credential answers 500 instead of 401.
+        $middleware->redirectGuestsTo(fn () => null);
+
+        // Only believe a forwarded address from inside the compose network,
+        // which is where nginx is. The API is also published on its own port,
+        // and trusting everything there would let any caller choose the IP
+        // every rate limit is counted against.
+        $middleware->trustProxies(at: [
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+            '127.0.0.1/32',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

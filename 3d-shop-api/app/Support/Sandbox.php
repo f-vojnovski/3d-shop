@@ -44,6 +44,35 @@ class Sandbox
         return $out;
     }
 
+    /**
+     * A file the container reports having produced, resolved inside the outbox.
+     *
+     * The container is the least trusted thing in the system and the name it
+     * reports reaches a path join, so anything that is not a single plain
+     * filename, or that resolves outside the outbox, is refused. Callers that
+     * know the exact name to expect should compare against it instead; this is
+     * for the jobs where the container legitimately chooses among several.
+     */
+    public static function produced(string $outDir, mixed $named): ?string
+    {
+        if (! is_string($named) || preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/', $named) !== 1) {
+            return null;
+        }
+
+        if (str_contains($named, '..')) {
+            return null;
+        }
+
+        $root = realpath($outDir);
+        $real = realpath($outDir.DIRECTORY_SEPARATOR.$named);
+
+        if ($root === false || $real === false || ! str_starts_with($real, $root.DIRECTORY_SEPARATOR)) {
+            return null;
+        }
+
+        return $real;
+    }
+
     /** @return list<string> */
     public static function confinement(string $memory, string $cpus): array
     {

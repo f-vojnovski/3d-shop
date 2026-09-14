@@ -6,6 +6,7 @@ use App\Models\ProductFile;
 use App\Support\AnimateRunner;
 use App\Support\ModelConverter;
 use App\Support\RenderInput;
+use App\Support\Sandbox;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -144,7 +145,18 @@ class RenderClipPreview implements ShouldBeUnique, ShouldQueue
             ->each(fn (ProductFile $old) => $old->delete());
 
         foreach ($result['files'] ?? [] as $sort => $one) {
-            $bytes = (string) file_get_contents($outDir.DIRECTORY_SEPARATOR.$one['file']);
+            $path = Sandbox::produced($outDir, $one['file'] ?? null);
+
+            if ($path === null) {
+                Log::channel('render')->warning('Renderer named a file it was not allowed to.', [
+                    'product_file_id' => $source->id,
+                    'file' => $one['file'] ?? null,
+                ]);
+
+                continue;
+            }
+
+            $bytes = (string) file_get_contents($path);
             $checksum = hash('sha256', $bytes);
             $stored = 'clips/'.$source->product_id.'-'.$this->clip.'-'.$one['pass']
                 .'-'.substr($checksum, 0, 12).'.webp';

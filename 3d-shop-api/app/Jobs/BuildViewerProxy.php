@@ -6,6 +6,7 @@ use App\Models\ProductFile;
 use App\Support\ModelConverter;
 use App\Support\ProxyRunner;
 use App\Support\RenderInput;
+use App\Support\Sandbox;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\File;
@@ -106,7 +107,18 @@ class BuildViewerProxy implements ShouldQueue
                 return;
             }
 
-            $this->store($source, $scratch.DIRECTORY_SEPARATOR.'out'.DIRECTORY_SEPARATOR.$result['file'], $result);
+            $path = Sandbox::produced($scratch.DIRECTORY_SEPARATOR.'out', $result['file'] ?? null);
+
+            if ($path === null) {
+                $log->warning('Simplifier named a file it was not allowed to.', [
+                    'product_file_id' => $source->id,
+                    'file' => $result['file'] ?? null,
+                ]);
+
+                return;
+            }
+
+            $this->store($source, $path, $result);
 
             $log->info('Proxy built.', [
                 'product_file_id' => $source->id,

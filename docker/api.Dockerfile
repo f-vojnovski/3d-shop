@@ -29,6 +29,8 @@ RUN mkdir -p storage/app/private storage/logs bootstrap/cache \
     && chmod -R 0777 storage bootstrap/cache \
     && composer dump-autoload --optimize
 
+COPY docker/php.ini /usr/local/etc/php/conf.d/99-3dshop.ini
+
 COPY docker/api-entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 

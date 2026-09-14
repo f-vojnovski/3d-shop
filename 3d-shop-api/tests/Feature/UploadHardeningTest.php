@@ -248,4 +248,36 @@ class UploadHardeningTest extends TestCase
             ->assertSuccessful()
             ->json('id');
     }
+
+    /**
+     * Three files decide whether an upload arrives, and only one of them is PHP
+     * code. With PHP's own defaults the shipped image rejects at 8 MB every
+     * model the validator says it accepts, before any validation runs.
+     */
+    public function test_the_shipped_stack_accepts_the_size_the_validator_allows(): void
+    {
+        preg_match(
+            '/\|max:(\d+)\|extensions:/',
+            (string) file_get_contents(app_path('Http/Controllers/ProductController.php')),
+            $rule
+        );
+
+        $this->assertNotEmpty($rule, 'No model size rule was found to check.');
+
+        $allowedMb = (int) $rule[1] / 1024;
+        $ini = (string) file_get_contents(base_path('../docker/php.ini'));
+        $nginx = (string) file_get_contents(base_path('../docker/client-nginx.conf'));
+
+        preg_match('/post_max_size\s*=\s*(\d+)M/', $ini, $post);
+        preg_match('/upload_max_filesize\s*=\s*(\d+)M/', $ini, $upload);
+        preg_match('/client_max_body_size\s+(\d+)m/', $nginx, $body);
+
+        $this->assertNotEmpty($post, 'The image sets no post_max_size, so PHP defaults to 8M.');
+        $this->assertNotEmpty($upload, 'The image sets no upload_max_filesize, so PHP defaults to 2M.');
+        $this->assertNotEmpty($body, 'nginx sets no client_max_body_size.');
+
+        $this->assertGreaterThan($allowedMb, (int) $post[1], "post_max_size must exceed the {$allowedMb} MB the validator allows.");
+        $this->assertGreaterThan($allowedMb, (int) $upload[1], "upload_max_filesize must exceed the {$allowedMb} MB the validator allows.");
+        $this->assertGreaterThanOrEqual((int) $post[1], (int) $body[1], 'nginx must not reject a body PHP would accept.');
+    }
 }
