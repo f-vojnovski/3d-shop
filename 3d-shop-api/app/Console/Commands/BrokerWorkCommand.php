@@ -33,9 +33,20 @@ class BrokerWorkCommand extends Command
     /** How long to wait on the list before looking at whether to stop. */
     private const POLL_SECONDS = 5;
 
+    private bool $stopping = false;
+
     public function handle(): int
     {
         $log = Log::channel('render');
+
+        // A job is off the list before it runs, so the one in hand must finish or it is lost.
+        if (extension_loaded('pcntl')) {
+            $this->trap([SIGTERM, SIGINT], function () use ($log): void {
+                $this->stopping = true;
+                $log->info('Broker asked to stop; finishing the job in hand.');
+            });
+        }
+
         $this->info('Broker waiting for work.');
 
         do {
@@ -46,7 +57,7 @@ class BrokerWorkCommand extends Command
             }
 
             $this->take((string) ($message[1] ?? ''), $log);
-        } while (! $this->option('once'));
+        } while (! $this->option('once') && ! $this->stopping);
 
         return self::SUCCESS;
     }

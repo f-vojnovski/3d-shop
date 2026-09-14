@@ -160,6 +160,8 @@ services:
   broker:
     image: 3dshop-api:local
     command: ["php", "artisan", "broker:work"]
+    # Long enough for the slowest container it starts to finish and be answered.
+    stop_grace_period: 660s
     environment: *api-env
     volumes:
       - storage:/app/storage

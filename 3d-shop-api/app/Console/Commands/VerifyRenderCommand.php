@@ -237,8 +237,7 @@ class VerifyRenderCommand extends Command
     }
 
     /**
-     * Reported, not counted: the same pixels from a different build is a
-     * stronger result than a match, not a failure.
+     * Reported, not counted: the same pixels from a different build is a stronger result.
      *
      * @param  array<string, mixed>  $result
      */

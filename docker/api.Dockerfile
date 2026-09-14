@@ -1,4 +1,4 @@
-FROM php:8.4-cli-bookworm
+FROM php:8.4-cli-bookworm@sha256:9cc9310a457019cd6b682109eb3c5dd8bf73498e7d3b9ee5c33d0d0b83d0faf3
 
 # zip is not optional here: bundles are read with ZipArchive. The docker CLI is
 # installed because the worker starts the render container as a sibling.
