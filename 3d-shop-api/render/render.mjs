@@ -88,6 +88,10 @@ const ASSET_TYPES = {
 // appear, which is the seller's problem to hear about rather than ours to hide.
 const asked = [];
 
+// Unlike `asked`, this keeps the three.js modules: a timeout has to tell a
+// browser that never connected from one that died loading its libraries.
+const seen = [];
+
 // The browser normalises "../" out of a URL before sending it, so a path that
 // climbs out of the bundle arrives as a plain request for another route and
 // never reaches the containment check. Once the harness has what it needs,
@@ -154,6 +158,10 @@ function libraryRoute(path) {
 
 const server = createServer(async (request, response) => {
   const path = request.url.split('?')[0];
+
+  if (seen.length < 40) {
+    seen.push(path);
+  }
 
   if (request.method === 'POST') {
     const body = JSON.parse((await readBody(request)).toString() || '{}');
@@ -253,7 +261,21 @@ async function main() {
   chrome.kill('SIGTERM');
 
   if (timedOut) {
-    await writeResult({ status: 'failed', reason: 'Rendering timed out.', retryable: true, seconds, stderr: stderr.slice(-600) });
+    // Where it got to, because a bare timeout names no suspect.
+    await writeResult({
+      status: 'failed',
+      reason: 'Rendering timed out.',
+      retryable: true,
+      seconds,
+      progress: {
+        drawn: state.images.size,
+        expected,
+        triangles: state.triangles,
+        reported: state.failed,
+        served: seen,
+      },
+      stderr: stderr.slice(-600),
+    });
     return 3;
   }
 

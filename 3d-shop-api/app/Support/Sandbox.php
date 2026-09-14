@@ -34,7 +34,9 @@ class Sandbox
     {
         $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
 
-        if (! is_dir($out) && ! mkdir($out, 0777, true) && ! is_dir($out)) {
+        // Silenced because the failure is the return value, and Laravel turns a
+        // warning into an exception.
+        if (! is_dir($out) && ! @mkdir($out, 0777, true) && ! is_dir($out)) {
             return null;
         }
 

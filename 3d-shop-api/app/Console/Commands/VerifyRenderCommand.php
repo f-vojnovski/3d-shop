@@ -157,6 +157,14 @@ class VerifyRenderCommand extends Command
         if (($result['status'] ?? 'failed') !== 'ok') {
             $this->error(".{$source->format}: re-render failed: ".($result['reason'] ?? 'unknown'));
 
+            // On a build machine nobody can attach a debugger to, this is the
+            // whole diagnosis.
+            foreach (['seconds', 'progress', 'stderr'] as $key) {
+                if (isset($result[$key])) {
+                    $this->line("  {$key}: ".(is_scalar($result[$key]) ? $result[$key] : json_encode($result[$key])));
+                }
+            }
+
             return ['failures' => 1, 'verified' => 0];
         }
 
