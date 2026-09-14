@@ -31,9 +31,9 @@ class ProxyRunner
         ?string $entry = null
     ): array {
         $jobFile = $scratchDir.DIRECTORY_SEPARATOR.'job.json';
-        $outDir = $scratchDir.DIRECTORY_SEPARATOR.'out';
+        $outDir = Sandbox::outbox($scratchDir);
 
-        if (! is_dir($outDir) && ! mkdir($outDir, 0775, true) && ! is_dir($outDir)) {
+        if ($outDir === null) {
             return [
                 'status' => 'failed',
                 'reason' => 'The simplifier had nowhere to write.',

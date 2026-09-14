@@ -31,13 +31,13 @@ class ModelConverter
      */
     public function toGlb(string $sourcePath, string $scratchDir, ?string $root = null): array
     {
-        // The container may only write to /out, which is this directory.
-        $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
-        $target = $out.DIRECTORY_SEPARATOR.'converted.glb';
+        $out = Sandbox::outbox($scratchDir);
 
-        if (! is_dir($out) && ! mkdir($out, 0775, true) && ! is_dir($out)) {
+        if ($out === null) {
             return ['status' => 'failed', 'reason' => 'The converter had nowhere to write.', 'retryable' => true];
         }
+
+        $target = $out.DIRECTORY_SEPARATOR.'converted.glb';
 
         @unlink($target);
 

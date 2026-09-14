@@ -21,6 +21,29 @@ class Sandbox
      */
     public const TMPFS = '/tmp:rw,nosuid,noexec,size=512m';
 
+    /**
+     * The one directory a container writes into, created before it starts.
+     *
+     * World-writable deliberately: `--cap-drop=ALL` takes CAP_DAC_OVERRIDE away
+     * from root inside the container, so it obeys the mode bits like anyone
+     * else, and the host user that made this directory is not its owner.
+     *
+     * @return string|null the path, or null if it could not be made
+     */
+    public static function outbox(string $scratchDir): ?string
+    {
+        $out = $scratchDir.DIRECTORY_SEPARATOR.'out';
+
+        if (! is_dir($out) && ! mkdir($out, 0777, true) && ! is_dir($out)) {
+            return null;
+        }
+
+        // mkdir's mode is masked by the umask, so say it again plainly.
+        @chmod($out, 0777);
+
+        return $out;
+    }
+
     /** @return list<string> */
     public static function confinement(string $memory, string $cpus): array
     {
