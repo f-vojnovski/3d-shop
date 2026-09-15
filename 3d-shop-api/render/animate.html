@@ -167,6 +167,10 @@ async function main() {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(1);
   renderer.setSize(width, height);
+  // Said out loud rather than left to the three.js default, so a clip and a
+  // still of the same model are graded the same way.
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const url = job.entry ? '/bundle/' + job.entry : '/model';
   const gltf = await new Promise((done, fail) =>

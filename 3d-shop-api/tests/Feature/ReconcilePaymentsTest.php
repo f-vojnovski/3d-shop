@@ -73,6 +73,24 @@ class ReconcilePaymentsTest extends TestCase
     }
 
     /**
+     * An outage looks nothing like a missing order, and treating it as one
+     * takes the download off a buyer who has paid. The command only ever looks
+     * at pending orders, so a wrong answer here is never revisited.
+     */
+    public function test_a_gateway_that_cannot_be_reached_leaves_the_order_alone(): void
+    {
+        $order = $this->stale();
+        $this->gateway->statuses[$order->session_id] = PaymentGateway::UNREACHABLE;
+
+        $this->artisan('payments:reconcile')
+            ->expectsOutputToContain('left 1 unanswered')
+            ->assertSuccessful();
+
+        $this->assertSame(Order::PENDING, $order->fresh()->status, 'An outage failed a pending order.');
+        $this->assertNull($order->fresh()->failure_reason);
+    }
+
+    /**
      * PayPal splits approval from payment, so a lost approval notification
      * leaves a buyer who agreed and a payment nobody took.
      */

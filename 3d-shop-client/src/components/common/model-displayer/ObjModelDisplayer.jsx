@@ -22,7 +22,7 @@ const ObjModel = ({ fileUrl }) => {
 };
 
 const ObjModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
-  <Canvas>
+  <Canvas flat>
     <SceneLighting format="obj" />
 
     {/* Loading suspends: without a boundary here it reaches the app shell. */}

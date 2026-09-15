@@ -21,7 +21,7 @@ const GltfModel = ({ fileUrl }) => {
 };
 
 const GltfModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
-  <Canvas>
+  <Canvas flat>
     <SceneLighting format="gltf" />
 
     {/* Loading suspends: without a boundary here it reaches the app shell. */}

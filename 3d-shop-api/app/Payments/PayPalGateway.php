@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 use App\Models\Order;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
@@ -106,13 +107,20 @@ class PayPalGateway implements PaymentGateway
 
     public function capture(string $sessionId): bool
     {
-        $response = $this->request()
-            // Retrying a capture must not take the money twice.
-            ->withHeaders(['PayPal-Request-Id' => 'capture-'.$sessionId])
-            // An empty body is not valid JSON, and PayPal refuses the call with
-            // MALFORMED_REQUEST_JSON rather than reading the intent from the URL.
-            ->withBody('{}', 'application/json')
-            ->post("{$this->base}/v2/checkout/orders/{$sessionId}/capture");
+        try {
+            $response = $this->request()
+                // Retrying a capture must not take the money twice.
+                ->withHeaders(['PayPal-Request-Id' => 'capture-'.$sessionId])
+                // An empty body is not valid JSON, and PayPal refuses the call with
+                // MALFORMED_REQUEST_JSON rather than reading the intent from the URL.
+                ->withBody('{}', 'application/json')
+                ->post("{$this->base}/v2/checkout/orders/{$sessionId}/capture");
+        } catch (ConnectionException|RuntimeException) {
+            // The reconciler runs on a schedule over many orders, so a gateway
+            // that is down leaves this one for the next pass rather than ending
+            // the run on whichever order happened to be first.
+            return false;
+        }
 
         // Already captured is a success from our side, not a failure.
         if ($response->status() === 422 && str_contains($response->body(), 'ORDER_ALREADY_CAPTURED')) {
@@ -124,10 +132,21 @@ class PayPalGateway implements PaymentGateway
 
     public function sessionStatus(string $sessionId): ?string
     {
-        $response = $this->request()->get("{$this->base}/v2/checkout/orders/{$sessionId}");
+        try {
+            $response = $this->request()->get("{$this->base}/v2/checkout/orders/{$sessionId}");
+        } catch (ConnectionException|RuntimeException) {
+            // A refused token counts too, and it is what fails first.
+            return self::UNREACHABLE;
+        }
+
+        // Only a 404 says the session never existed. Any other failure is no
+        // reason to take an order away from a buyer who may well have paid.
+        if ($response->status() === 404) {
+            return null;
+        }
 
         if ($response->failed()) {
-            return null;
+            return self::UNREACHABLE;
         }
 
         // Spoken in the words the reconciler uses. `approved` is PayPal's alone:
@@ -136,7 +155,8 @@ class PayPalGateway implements PaymentGateway
             'COMPLETED' => 'paid',
             'APPROVED' => 'approved',
             'CREATED', 'SAVED', 'PAYER_ACTION_REQUIRED' => 'unpaid',
-            default => null,
+            // A status this code does not know is not a missing order either.
+            default => self::UNREACHABLE,
         };
     }
 

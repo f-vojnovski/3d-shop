@@ -72,10 +72,14 @@ class ContainerCommand
         $joined = $parentReal.DIRECTORY_SEPARATOR.$name;
         $real = realpath($joined);
 
+        // Every runner writes the model, the job file and the outbox before it
+        // enqueues, so nothing that resolves here is missing by accident.
         if ($real === false) {
-            // Written by the container rather than for it, so it may not exist
-            // yet. The name is a single plain segment, so the join is the path.
-            return $joined;
+            throw new RuntimeException(
+                is_link($joined)
+                    ? "That path leaves its directory: {$name}"
+                    : "No such directory: {$joined}"
+            );
         }
 
         $prefix = $parentReal.DIRECTORY_SEPARATOR;

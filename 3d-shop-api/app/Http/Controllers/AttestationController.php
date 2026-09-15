@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\ProductFile;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class AttestationController extends BaseController
@@ -20,6 +22,12 @@ class AttestationController extends BaseController
     public function show(ProductFile $preview): array
     {
         abort_unless(in_array($preview->kind, self::ATTESTED, true), 404);
+
+        // Public for a listing the caller can already see, and ids run in order.
+        abort_unless(
+            Product::whereKey($preview->product_id)->visibleTo(Auth::id())->exists(),
+            404
+        );
 
         $attestedSource = $preview->meta['source_checksum'] ?? null;
         $current = $preview->product->deliverables()->pluck('checksum')->all();

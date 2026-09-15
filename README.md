@@ -12,7 +12,7 @@ A seller comes to the app with a bare model file or a zipped bundle (which inclu
 
 Here the app gives the seller the option to "decimate" the model, a cut-down copy of the mesh at a ratio they pick, or just a bounding box if they'd rather give away nothing at all. That's what a buyer gets to spin around later, so the real geometry never has to leave.
 
-The seller frames the shot in a browser, but the server draws it minutes later in a container, possibly on a different machine, and those two have to agree or the seller would compose one picture and the listing would show another. So the render container is built with the same three.js version and the literal same framing code. `fitToView.js`, `simplify.js` and `shrinkTextures.js` are copied into the image straight out of the client source. Since this is the kind of thing that breaks quietly, a test fails the build if one of those files gets copied into the image without also being added to the list that tells CI to rebuild it.
+The seller frames the shot in a browser, but the server draws it minutes later in a container, possibly on a different machine, and those two have to agree or the seller would compose one picture and the listing would show another. So the render container is built with the same three.js version, the literal same framing code, and the same renderer settings, since a camera in the right place still gives you the wrong picture if one side is tone mapping and the other is not. `fitToView.js`, `simplify.js` and `shrinkTextures.js` are copied into the image straight out of the client source. Since this is the kind of thing that breaks quietly, a test fails the build if one of those files gets copied into the image without also being added to the list that tells CI to rebuild it.
 
 ### Rendering
 
@@ -64,7 +64,7 @@ Three of the obvious ways to handle an uploaded model are exploitable, which is 
 
 A glTF file is a tree of nodes, and the natural way to read one is to walk into each node's children. A 360 byte file that lists itself as its own child will exhaust a 64MB PHP process in under a second, and since this runs inside the web request, sending it a few times takes down every worker. The reader keeps a set of the nodes it has already visited, plus a depth limit.
 
-Images are worse, since `getimagesizefromstring` reports the dimensions a file claims rather than the ones it has. A few kilobytes claiming 30,000 by 30,000 pixels asks for gigabytes the moment anything tries to decode it, so the dimensions get checked before any decoding happens.
+Images are worse, since `getimagesizefromstring` reports the dimensions a file claims rather than the ones it has. A few kilobytes claiming 30,000 by 30,000 pixels asks for gigabytes the moment anything tries to decode it, so the dimensions are checked while the file is still a candidate, before it is stored and long before anything tries to decode it.
 
 Archives have to be accepted, because that is how a model arrives with its textures beside it. The index gets read first and nothing is written until it passes checks on entry count, declared size, compression ratio, path traversal, path length, Windows reserved names and case collisions. `ZipArchive::extractTo` goes unused on purpose, since it flattens entry paths which breaks the sibling references the archive exists for, it stops halfway through on a bad entry, and it will quietly drop a file that collides with another by case while still reporting success.
 
@@ -86,7 +86,7 @@ A buyer who wants an angle nobody framed can ask for one, and the server renders
 
 Checkout opens an order and hands off to PayPal, and the app only acts on what comes back through the webhook once it has verified the signature. Providers redeliver, so every event is recorded and a second copy of the same one does not grant a second sale. A refund takes the download back, and a paid notification that turns up after a refund does not hand it over again.
 
-Webhooks also go missing, which is the worse case, since that is a customer who paid and got nothing. A reconcile command goes through orders still sitting pending, asks the provider what actually happened to them, and settles them.
+Webhooks also go missing, which is the worse case, since that is a customer who paid and got nothing. A scheduled command goes back over orders still sitting pending, asks the provider what actually happened to each one, and settles them. If the provider cannot be reached at all, those orders stay pending and get asked again later, because an outage is not evidence that an order never existed.
 
 The download itself is a signed link behind a purchase check, and anything else gets a 403. Whoever is allowed to download the current file can also fetch the versions it replaced, so a seller updating their model does not take away what somebody already bought.
 
@@ -111,13 +111,15 @@ vendor/bin/pint --test   # formatting
 
 The API suite needs Postgres and Redis up. Tests that need a container skip themselves when Redis is not there rather than failing.
 
-CI runs the same checks, and rebuilds the render image only when a file it is built from has changed. When it does rebuild, the image has to reproduce the committed fixture before anything gets published.
+CI runs the same checks, and rebuilds the render image only when a file it is built from has changed. When it does rebuild, the image that gets published is the exact one that reproduced the committed fixture, rather than a second build of the same source.
 
 ## Known limitations
 
 Nothing in the attestation is signed. Closing that gap properly would mean signing each record and publishing a running digest of them somewhere append-only, which is a known approach and would sit on top of this without changing any of it.
 
 Payments run against PayPal's sandbox. Signatures are verified and orders are reconciled against the provider, but no real money moves.
+
+A worker that has been taken over still has one narrow opening left. The broker checks that every mount source sits inside the job's own folder, but Docker resolves that path again when the container starts, so a worker that swaps the folder for a link in the gap between those two moments gets whatever it planted. Closing it properly means the broker staging the inputs somewhere the worker cannot reach, rather than reading them out of a directory the worker owns.
 
 The render quotas are set for a demonstration rather than a business. A buyer can ask for far more renders in a day than anything real would allow, because a realistic ceiling would stop anyone from trying the feature at all.
 

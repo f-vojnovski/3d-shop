@@ -43,6 +43,26 @@ class ThumbnailsTest extends TestCase
         $this->assertSame([0, 1, 2], array_column($body['thumbnails'], 'sort'));
     }
 
+    /** A header claiming 30,000 square is read before the file is kept at all. */
+    public function test_a_picture_that_claims_more_pixels_than_it_holds_is_refused(): void
+    {
+        $id = $this->publish();
+
+        $before = ProductFile::where('kind', ProductFile::KIND_THUMBNAIL)->count();
+
+        $this->postJson("/api/products/{$id}/thumbnails", [
+            'images' => [
+                UploadedFile::fake()->createWithContent('huge.png', $this->pngClaiming(30000, 30000)),
+            ],
+        ])->assertStatus(422);
+
+        $this->assertSame(
+            $before,
+            ProductFile::where('kind', ProductFile::KIND_THUMBNAIL)->count(),
+            'The picture was stored and left for the shrinker to refuse later.'
+        );
+    }
+
     public function test_every_added_picture_is_queued_for_shrinking(): void
     {
         $id = $this->publish();

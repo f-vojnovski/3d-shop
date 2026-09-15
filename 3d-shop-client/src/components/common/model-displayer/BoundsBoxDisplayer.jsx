@@ -36,7 +36,7 @@ const BoundsBox = ({ size }) => {
 const BoundsBoxDisplayer = ({ size, probeRef }) => (
   // Three-quarter to start: down an axis a box is a flat rectangle, which is
   // what made the outline unreadable.
-  <Canvas camera={{ position: [3.4, 2.6, 3.4], fov: 75 }}>
+  <Canvas flat camera={{ position: [3.4, 2.6, 3.4], fov: 75 }}>
     <ambientLight intensity={0.6} />
     <directionalLight color="white" position={[4, 6, 3]} intensity={1} />
     <directionalLight color="white" position={[-4, -2, -4]} intensity={0.35} />

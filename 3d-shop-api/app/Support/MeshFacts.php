@@ -31,6 +31,9 @@ class MeshFacts
     /** Deeper than any real scene graph, and shallow enough not to exhaust the stack. */
     private const MAX_NODE_DEPTH = 256;
 
+    /** Shared with the prescan, because two readers disagreeing about it is a hole. */
+    private const MAX_JSON_BYTES = MeshPrescan::MAX_JSON_BYTES;
+
     public function __construct(
         public readonly ?int $vertices,
         public readonly ?int $faces,
@@ -463,7 +466,7 @@ class MeshFacts
             ['length' => $length, 'type' => $type] = unpack('Vlength/Vtype', $chunkHeader);
 
             if ($type === 0x4E4F534A) {
-                $gltf = json_decode((string) fread($handle, $length), true);
+                $gltf = json_decode((string) fread($handle, min((int) $length, self::MAX_JSON_BYTES)), true);
             } elseif ($type === 0x004E4942) {
                 $binOffset = $at + 8;
                 $binLength = $length;

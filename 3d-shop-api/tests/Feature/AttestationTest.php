@@ -93,6 +93,30 @@ class AttestationTest extends TestCase
         $this->getJson("/api/previews/{$thumbnail->id}/attestation")->assertNotFound();
     }
 
+    /**
+     * The record is public for a listing anyone can already open. Ids run in
+     * order, so without a visibility check the endpoint is a way to read the
+     * stills of every draft on the site by counting upwards.
+     */
+    public function test_a_draft_listing_has_no_public_record(): void
+    {
+        $fixture = $this->attestedProduct();
+        $fixture['product']->update(['unlisted' => true]);
+
+        $this->getJson("/api/previews/{$fixture['preview']->id}/attestation")->assertNotFound();
+    }
+
+    /** The seller checking their own work before publishing it is the first reader. */
+    public function test_the_owner_can_read_the_record_for_their_own_draft(): void
+    {
+        $fixture = $this->attestedProduct();
+        $fixture['product']->update(['unlisted' => true]);
+
+        $this->actingAs(User::findOrFail($fixture['product']->user_id))
+            ->getJson("/api/previews/{$fixture['preview']->id}/attestation")
+            ->assertSuccessful();
+    }
+
     public function test_the_product_payload_links_each_still_to_its_record(): void
     {
         $fixture = $this->attestedProduct();

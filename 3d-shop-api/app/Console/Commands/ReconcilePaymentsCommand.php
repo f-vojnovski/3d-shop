@@ -36,6 +36,7 @@ class ReconcilePaymentsCommand extends Command
 
         $granted = 0;
         $failed = 0;
+        $unreachable = 0;
 
         foreach ($orders as $order) {
             $status = $gateway->sessionStatus((string) $order->session_id);
@@ -65,6 +66,13 @@ class ReconcilePaymentsCommand extends Command
                 continue;
             }
 
+            if ($status === PaymentGateway::UNREACHABLE) {
+                $this->line("order {$order->id}: the gateway did not answer, leaving it for the next run.");
+                $unreachable++;
+
+                continue;
+            }
+
             if ($status === null) {
                 $this->line("order {$order->id}: the gateway has never heard of it".($dryRun ? '' : ', failing'));
 
@@ -84,10 +92,11 @@ class ReconcilePaymentsCommand extends Command
         }
 
         $this->info(sprintf(
-            '%s %d order(s), failed %d, of %d waiting.',
+            '%s %d order(s), failed %d, left %d unanswered, of %d waiting.',
             $dryRun ? 'Would grant' : 'Granted',
             $granted,
             $failed,
+            $unreachable,
             $orders->count()
         ));
 

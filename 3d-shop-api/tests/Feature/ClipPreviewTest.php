@@ -115,8 +115,12 @@ class ClipPreviewTest extends TestCase
     /** The sandbox is argv, so nothing else in the suite would notice it going. */
     public function test_a_clip_is_drawn_confined(): void
     {
+        // Laid out the way a runner leaves it: the broker refuses a job whose
+        // inputs are not already sitting there.
         $scratch = storage_path('app/private/clip-scratch/1186-0');
-        File::ensureDirectoryExists($scratch, 0775, true);
+        File::ensureDirectoryExists($scratch.'/out', 0775, true);
+        File::put($scratch.'/model', 'bytes');
+        File::put($scratch.'/job.json', '{}');
 
         $argv = ContainerCommand::for(
             ContainerJob::from(['kind' => 'animate', 'scratch' => 'clip-scratch/1186-0', 'source' => 'model']),

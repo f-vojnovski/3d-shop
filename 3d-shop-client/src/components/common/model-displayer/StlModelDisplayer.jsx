@@ -30,7 +30,7 @@ const StlModel = ({ fileUrl }) => {
 };
 
 const StlModelDisplayer = ({ fileUrl, isLocalFile, probeRef, sync }) => (
-  <Canvas>
+  <Canvas flat>
     <SceneLighting format="stl" />
 
     <Suspense fallback={null}>

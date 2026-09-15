@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Payments\PaymentEvent;
+use App\Payments\PaymentGateway;
 use App\Payments\PayPalGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
@@ -283,6 +284,27 @@ class PayPalGatewayTest extends TestCase
         $this->assertSame('approved', $gateway->sessionStatus('AGREED'));
         $this->assertSame('unpaid', $gateway->sessionStatus('WAITING'));
         $this->assertNull($gateway->sessionStatus('GONE'));
+    }
+
+    /**
+     * The reconciler fails an order the gateway has never heard of, so these two
+     * answers must not look alike: one is a session that never existed, the
+     * other is PayPal having a bad afternoon.
+     */
+    public function test_a_missing_session_and_an_unreachable_gateway_are_different_answers(): void
+    {
+        Http::fake([
+            self::BASE.'/v1/oauth2/token' => Http::response(['access_token' => 'A1']),
+            self::BASE.'/v2/checkout/orders/GONE' => Http::response([], 404),
+            self::BASE.'/v2/checkout/orders/SICK' => Http::response([], 500),
+            self::BASE.'/v2/checkout/orders/ODD' => Http::response(['status' => 'VOIDED']),
+        ]);
+
+        $gateway = $this->gateway();
+
+        $this->assertNull($gateway->sessionStatus('GONE'), 'A 404 is the gateway saying it never existed.');
+        $this->assertSame(PaymentGateway::UNREACHABLE, $gateway->sessionStatus('SICK'), 'A 500 failed an order.');
+        $this->assertSame(PaymentGateway::UNREACHABLE, $gateway->sessionStatus('ODD'), 'An unknown status failed an order.');
     }
 
     private function gateway(): PayPalGateway

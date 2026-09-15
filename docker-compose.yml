@@ -154,6 +154,18 @@ services:
       render-image:
         condition: service_completed_successfully
 
+  # Without this, everything routes/console.php schedules is written, tested and
+  # never called.
+  scheduler:
+    image: 3dshop-api:local
+    command: ["php", "artisan", "schedule:work"]
+    environment: *api-env
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      api:
+        condition: service_started
+
   # The only thing here that may talk to Docker. It takes a described job off a
   # Redis list and builds the command itself, so a worker that has been taken
   # over can ask for a render of a directory it already owns and nothing else.

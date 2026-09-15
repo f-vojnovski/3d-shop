@@ -26,13 +26,20 @@ Route::get('/products/{id}/versions/{file}/download', [ProductController::class,
     ->middleware('signed:relative')
     ->name('products.download-version')
     ->where(['id' => '[0-9]+', 'file' => '[0-9]+']);
+// Opened as a plain link in a new tab, which carries no Origin and, with
+// `rel="noreferrer"`, no Referer either. Sanctum starts a session off those, so
+// without this the seller reading their own draft is an anonymous caller.
 Route::get('/previews/{preview}/attestation', [AttestationController::class, 'show'])
+    ->middleware(StartSession::class)
     ->name('previews.attestation');
 
 // The gateway calls this, not a browser: no session, no token, and a signature
 // instead of either.
+// Verifying a notification is an API call back to the provider, so each
+// forgery costs two outbound round trips.
 Route::post('/payments/webhook', [PaymentWebhookController::class, 'handle'])
-    ->withoutMiddleware(['throttle:api']);
+    ->withoutMiddleware(['throttle:api'])
+    ->middleware('throttle:120,1');
 
 // Login refuses a wrong name and a wrong password identically, which only
 // slows an attacker down if the guesses are also rate limited.

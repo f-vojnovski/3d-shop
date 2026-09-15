@@ -6,6 +6,13 @@ use App\Models\Order;
 
 interface PaymentGateway
 {
+    /**
+     * The gateway could not be asked. Distinct from null, which is the gateway
+     * answering that it has never heard of the session: one is a reason to ask
+     * again later, the other is a reason to give up on the order.
+     */
+    public const UNREACHABLE = 'unreachable';
+
     /** Recorded against the order and the event, so a row says what handled it. */
     public function name(): string;
 

@@ -270,16 +270,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Only published once it has drawn the fixture correctly.
+      # Retagged, not built again: the attestation names the bytes that drew
+      # the fixture, so those are the bytes that have to be published.
       - id: push
+        name: Publish the image that was verified
         if: github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: 3d-shop-api/render/Dockerfile
-          push: true
-          tags: ghcr.io/${{ steps.repo.outputs.name }}/render:latest
-          cache-from: type=gha
+        run: |
+          set -euo pipefail
+
+          target="ghcr.io/${{ steps.repo.outputs.name }}/render:latest"
+          docker tag 3dshop-render:latest "$target"
+          docker push "$target"
+
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$target" | cut -d@ -f2)"
+          echo "Published ${target} as ${digest}."
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       # Public Sigstore, so a stranger can run:
       #   gh attestation verify oci://ghcr.io/<owner>/<repo>/render --repo <owner>/<repo>

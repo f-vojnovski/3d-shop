@@ -205,7 +205,7 @@ const Proxy = ({ format, uri, keep, method, obscured, onCounts }) => {
  * was still drawing sixty times a second.
  */
 const ProxyPreview = ({ format, uri, keep, method, obscured, paused, onCounts, sync }) => (
-  <Canvas frameloop={paused ? 'never' : 'always'}>
+  <Canvas flat frameloop={paused ? 'never' : 'always'}>
     <SceneLighting format={format} />
 
     <Suspense fallback={null}>

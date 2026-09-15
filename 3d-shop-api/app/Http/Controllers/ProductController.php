@@ -13,6 +13,7 @@ use App\Support\ModelConverter;
 use App\Support\ModelFormats;
 use App\Support\ModelUpload;
 use App\Support\RenderInput;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller as BaseController;
@@ -46,6 +47,22 @@ class ProductController extends BaseController
         'preview_angles.*.*.fov' => 'required|numeric|min:1|max:179',
     ];
 
+    /**
+     * Admitted on the dimensions it declares, not the space it takes up.
+     *
+     * @return list<mixed>
+     */
+    private static function pictureRules(): array
+    {
+        return ['bail', 'file', 'image', 'mimes:jpeg,png,webp', 'max:5120', function (string $attribute, mixed $value, Closure $fail) {
+            $size = $value instanceof UploadedFile ? @getimagesize($value->getPathname()) : false;
+
+            if ($size === false || (int) $size[0] * (int) $size[1] > ScaleThumbnail::MAX_PIXELS) {
+                $fail('That picture declares more pixels than the server will open.');
+            }
+        }];
+    }
+
     public function index()
     {
         return ProductResource::collection(
@@ -78,9 +95,9 @@ class ProductController extends BaseController
             'proxy_method' => 'sometimes|in:careful,parts',
             ...self::modelRules(),
             'thumbnails' => 'sometimes|array|max:8',
-            'thumbnails.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
+            'thumbnails.*' => self::pictureRules(),
             'images' => 'sometimes|array|max:8',
-            'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
+            'images.*' => self::pictureRules(),
             ...self::ANGLE_RULES,
         ]);
 
@@ -613,7 +630,7 @@ class ProductController extends BaseController
 
         $request->validate([
             'images' => 'sometimes|array|max:8',
-            'images.*' => 'file|image|mimes:jpeg,png,webp|max:5120',
+            'images.*' => self::pictureRules(),
             'from' => 'sometimes|array|max:8',
             'from.*' => 'integer',
         ]);

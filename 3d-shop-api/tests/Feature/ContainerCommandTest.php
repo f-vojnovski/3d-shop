@@ -93,6 +93,34 @@ class ContainerCommandTest extends TestCase
         }
     }
 
+    /**
+     * The dangerous link is not one pointing somewhere real, which realpath
+     * resolves and the check above catches. It is one realpath cannot follow at
+     * all: it answers false, and the same path then goes to Docker, which
+     * resolves it again on the host where it may well point at something.
+     */
+    public function test_an_output_link_this_process_cannot_follow_is_refused(): void
+    {
+        $out = $this->root.'/render-scratch/44-gltf/out';
+        @rmdir($out);
+
+        if (! @symlink($this->root.'/render-scratch/44-gltf/not-a-real-place', $out)) {
+            $this->markTestSkipped('This machine will not make a dangling symlink.');
+        }
+
+        try {
+            $this->assertTrue(is_link($out), 'The fixture is meant to be a link.');
+            $this->assertFalse(realpath($out), 'The fixture is meant to be a link realpath cannot follow.');
+
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('leaves its directory');
+
+            $this->build('render');
+        } finally {
+            self::unlink($out);
+        }
+    }
+
     /** The same trick one level in: the model itself pointing out of the scratch. */
     public function test_a_source_that_points_outside_the_scratch_is_refused(): void
     {

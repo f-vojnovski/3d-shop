@@ -152,8 +152,12 @@ class ViewerProxyTest extends TestCase
     /** The sandbox is argv, so nothing else in the suite would notice it going. */
     public function test_the_simplifier_runs_confined(): void
     {
+        // Laid out the way a runner leaves it: the broker refuses a job whose
+        // inputs are not already sitting there.
         $scratch = storage_path('app/private/proxy-scratch/1186');
-        File::ensureDirectoryExists($scratch, 0775, true);
+        File::ensureDirectoryExists($scratch.'/out', 0775, true);
+        File::put($scratch.'/model', 'bytes');
+        File::put($scratch.'/job.json', '{}');
 
         $argv = ContainerCommand::for(
             ContainerJob::from(['kind' => 'proxy', 'scratch' => 'proxy-scratch/1186', 'source' => 'model']),

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Support\MeshFacts;
 use App\Support\MeshPrescan;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
@@ -34,6 +35,34 @@ class PrescanMemoryTest extends TestCase
             MeshPrescan::MAX_JSON_BYTES,
             'The limit protecting a web worker cannot be the one sized for a 2 GB container.'
         );
+    }
+
+    /** `fread` reserves the length it is asked for before finding the file is shorter. */
+    public function test_a_declared_chunk_length_buys_no_memory(): void
+    {
+        $path = $this->scratch.DIRECTORY_SEPARATOR.'liar.glb';
+        File::put($path, $this->glbClaimingJsonBytes(400 * 1024 * 1024));
+
+        $this->assertLessThan(4096, filesize($path), 'The file itself is meant to be tiny.');
+
+        $before = memory_get_peak_usage(true);
+        MeshFacts::of($path, 'glb');
+        $spent = memory_get_peak_usage(true) - $before;
+
+        $this->assertLessThan(
+            64 * 1024 * 1024,
+            $spent,
+            'A header claiming 400 MB was believed and reserved.'
+        );
+    }
+
+    /** A valid glb container whose JSON chunk header lies about its length. */
+    private function glbClaimingJsonBytes(int $claimed): string
+    {
+        $json = '{"asset":{"version":"2.0"}}';
+
+        return 'glTF'.pack('V', 2).pack('V', 12 + 8 + strlen($json))
+            .pack('V', $claimed).'JSON'.$json;
     }
 
     /** Refused without being decoded on the way to finding out it is too large. */
