@@ -123,6 +123,10 @@ The render quotas are set for a demonstration rather than a business. A buyer ca
 
 Reproducibility has been shown on two machines rather than on all of them. SwiftShader compiles itself for the processor it finds, so identical output across different hardware is something the CI run demonstrates for one fixture, not something the design guarantees everywhere.
 
+## The original project
+
+This started life as a university project in 2022, and the coursework that went with it is still in `docs/`: the write-up, the presentation and the submitted documentation. They describe the version that was marked rather than this one, since almost everything above was built later.
+
 ## Credits
 
 Models used in the screenshots and for testing:
